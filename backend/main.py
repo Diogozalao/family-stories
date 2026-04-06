@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.core.database import init_db
 from backend.api.routes.upload import router as upload_router
+from backend.api.routes.timeline import router as timeline_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -26,6 +27,7 @@ app.add_middleware(
 )
 
 app.include_router(upload_router)
+app.include_router(timeline_router)
 
 @app.get("/")
 async def root():
@@ -35,7 +37,7 @@ async def root():
         "status": "online",
         "modules": {
             "M1": "Ingestão Multimodal ✓",
-            "M2": "Organização Temporal (pendente)",
+            "M2": "Organização Temporal ✓",
             "M3": "Geração Narrativa (pendente)",
             "M4": "Geração Multimédia (pendente)",
         }

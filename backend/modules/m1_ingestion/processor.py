@@ -51,7 +51,7 @@ class M1Processor:
         for sub in ["photos", "videos", "documents", "gedcom"]:
             (settings.RAW_DIR / sub).mkdir(exist_ok=True)
 
-    async def process(self, file_path: Path, original_filename: str, db: AsyncSession) -> MediaFile:
+    async def process(self, file_path: Path, original_filename: str, db: AsyncSession, ai_override: dict = None) -> MediaFile:
         log.info("m1_start", file=original_filename)
 
         # Detecta tipo MIME
@@ -99,7 +99,7 @@ class M1Processor:
             # 3. Gemini Vision (apenas fotos)
             if media_type == MediaType.PHOTO:
                 log.info("m1_gemini", file=original_filename)
-                ai_data = self.gemini.analyze(file_path)
+                ai_data = ai_override if ai_override else self.gemini.analyze(file_path)
                 record.ai_description    = ai_data.get("ai_description")
                 record.ai_people_count   = ai_data.get("ai_people_count")
                 record.ai_setting        = ai_data.get("ai_setting")
