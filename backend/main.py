@@ -5,6 +5,7 @@ from backend.core.config import settings
 from backend.core.database import init_db
 from backend.api.routes.upload import router as upload_router
 from backend.api.routes.timeline import router as timeline_router
+from backend.api.routes.narrative import router as narrative_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,17 +29,18 @@ app.add_middleware(
 
 app.include_router(upload_router)
 app.include_router(timeline_router)
+app.include_router(narrative_router)
 
 @app.get("/")
 async def root():
     return {
-        "app": settings.APP_NAME,
+        "app":     settings.APP_NAME,
         "version": settings.APP_VERSION,
-        "status": "online",
+        "status":  "online",
         "modules": {
             "M1": "Ingestão Multimodal ✓",
             "M2": "Organização Temporal ✓",
-            "M3": "Geração Narrativa (pendente)",
+            "M3": "Geração Narrativa ✓",
             "M4": "Geração Multimédia (pendente)",
         }
     }

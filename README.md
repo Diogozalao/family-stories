@@ -15,3 +15,18 @@ Adicionar apenas ficheiros específicos (em vez de git add .)
     git add backend/app.py        # Apenas um ficheiro
     git add backend/              # Toda uma pasta
     git add *.py                  # Todos os ficheiros .py
+
+
+
+------------------------------------
+rm -f ~/family-stories/family_stories.db
+rm -f ~/family-stories/data/raw/photos/*
+
+
+fuser -k 8000/tcp
+cd ~/family-stories
+source venv/bin/activate
+uvicorn backend.main:app --reload --port 8000
+
+
+
