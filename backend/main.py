@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.core.database import init_db
-from backend.api.routes.upload import router as upload_router
-from backend.api.routes.timeline import router as timeline_router
+from backend.api.routes.upload    import router as upload_router
+from backend.api.routes.timeline  import router as timeline_router
 from backend.api.routes.narrative import router as narrative_router
+from backend.api.routes.genealogy import router as genealogy_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,23 +14,24 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    description="Sistema de Geração Automática de Histórias Familiares com IA Generativa",
-    lifespan=lifespan,
+    title       = settings.APP_NAME,
+    version     = settings.APP_VERSION,
+    description = "Sistema de Geração Automática de Histórias Familiares com IA Generativa",
+    lifespan    = lifespan,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins     = ["http://localhost:5173"],
+    allow_credentials = True,
+    allow_methods     = ["*"],
+    allow_headers     = ["*"],
 )
 
 app.include_router(upload_router)
 app.include_router(timeline_router)
 app.include_router(narrative_router)
+app.include_router(genealogy_router)
 
 @app.get("/")
 async def root():
@@ -41,7 +43,7 @@ async def root():
             "M1": "Ingestão Multimodal ✓",
             "M2": "Organização Temporal ✓",
             "M3": "Geração Narrativa ✓",
-            "M4": "Geração Multimédia (pendente)",
+            "M4": "Geração Multimédia — em construção",
         }
     }
 

@@ -129,7 +129,7 @@ class TimelineBuilder:
         if not date:
             return "Data desconhecida"
         if confidence == ConfidenceLevel.HIGH:
-            return date.strftime("%d de %B de %Y")
+            return data_para_portugues(date.strftime("%d de %B de %Y"))
         if confidence == ConfidenceLevel.MEDIUM:
             return f"~{date.strftime('%Y')}"
         decade = (date.year // 10) * 10

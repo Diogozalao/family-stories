@@ -1,0 +1,71 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+1 CHAR UTF-8
+1 GEDC
+2 VERS 5.5.1
+0 @I1@ INDI
+1 NAME João Manuel /Silva/
+1 SEX M
+1 BIRT
+2 DATE 12 MAR 1945
+2 PLAC Lisboa, Portugal
+1 DEAT
+2 DATE 3 JUN 2018
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 NOTE Emigrou para França em 1965. Regressou a Portugal em 1978.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Maria Conceição /Ferreira/
+1 SEX F
+1 BIRT
+2 DATE 28 AGO 1948
+2 PLAC Porto, Portugal
+1 NOTE Professora primária. Casou com João em 1969.
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME António João /Silva/
+1 SEX M
+1 BIRT
+2 DATE 15 JUN 1970
+2 PLAC Paris, França
+1 NOTE Nasceu em Paris durante a emigração dos pais.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Ana Filipa /Rodrigues/
+1 SEX F
+1 BIRT
+2 DATE 22 FEV 1972
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 FAMS @F2@
+0 @I5@ INDI
+1 NAME Diogo António /Silva/
+1 SEX M
+1 BIRT
+2 DATE 8 ABR 2002
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 NOTE Estudante universitário na UBI.
+1 FAMC @F2@
+0 @I6@ INDI
+1 NAME Marta Isabel /Silva/
+1 SEX F
+1 BIRT
+2 DATE 14 SET 2004
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 FAMC @F2@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I3@
+1 MARR
+2 DATE 20 SET 1969
+2 PLAC Lisboa, Portugal
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 CHIL @I5@
+1 CHIL @I6@
+1 MARR
+2 DATE 14 JUN 1998
+2 PLAC Covilhã, Castelo Branco, Portugal
+0 TRLR
