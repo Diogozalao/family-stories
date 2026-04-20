@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     DATA_DIR: Path = BASE_DIR / "data"
     RAW_DIR: Path = DATA_DIR / "raw"
     PROCESSED_DIR: Path = DATA_DIR / "processed"
+    VIDEOS_DIR: Path = PROCESSED_DIR / "videos"
+    AUDIO_DIR: Path = PROCESSED_DIR / "audio"
     
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./family_stories.db"

@@ -68,6 +68,59 @@ class FamilyGraph:
             "relatives": relatives,
         }
 
+    def get_persons_context(self, person_ids: list) -> str:
+        """
+        Gera contexto narrativo para uma lista específica de pessoas.
+        Inclui nome, datas, locais e relações familiares diretas.
+        """
+        if not person_ids or not self.graph.nodes:
+            return self.get_narrative_summary()
+
+        # Normaliza IDs (JSON pode converter int→str)
+        node_set = set(self.graph.nodes)
+        def resolve(pid):
+            if pid in node_set:
+                return pid
+            if str(pid) in node_set:
+                return str(pid)
+            return None
+
+        lines = []
+        for pid in person_ids:
+            nid = resolve(pid)
+            if nid is None:
+                continue
+            node = self.graph.nodes[nid]
+            name = node.get("name", f"Pessoa {pid}")
+
+            info_parts = [name]
+            birth = node.get("birth_date", "")
+            birth_place = node.get("birth_place")
+            if birth and len(birth) >= 4:
+                info_parts.append(f"nascido(a) em {birth[:4]}")
+            if birth_place:
+                info_parts.append(f"natural de {birth_place}")
+
+            rels = []
+            for _, to_nid, data in self.graph.out_edges(nid, data=True):
+                to_name = self.graph.nodes[to_nid].get("name", "")
+                rel = data.get("relation", "familiar")
+                if to_name:
+                    rels.append(f"{rel} de {to_name}")
+            # Also check incoming edges
+            for from_nid, _, data in self.graph.in_edges(nid, data=True):
+                from_name = self.graph.nodes[from_nid].get("name", "")
+                rel = data.get("relation", "familiar")
+                if from_name and f"{rel} de {from_name}" not in rels:
+                    rels.append(f"{rel} de {from_name}")
+
+            entry = ", ".join(info_parts)
+            if rels:
+                entry += f" ({'; '.join(rels[:4])})"
+            lines.append(entry)
+
+        return "; ".join(lines) if lines else self.get_narrative_summary()
+
     def get_narrative_summary(self) -> str:
         """
         Gera um resumo textual do grafo para passar ao LLM.

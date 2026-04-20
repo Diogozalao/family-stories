@@ -57,6 +57,11 @@ class NarrativeGenerator:
 
         log.info("generating_narrative", title=title, type=event_type)
 
+        # Recarrega grafo para apanhar GEDCOMs importados após o arranque
+        graph_path = settings.PROCESSED_DIR / "family_graph.json"
+        self.graph = FamilyGraph()
+        self.graph.load(graph_path)
+
         template = get_template(event_type)
 
         # Vai buscar os media reais directamente da BD
@@ -132,7 +137,11 @@ class NarrativeGenerator:
         return "\n\n".join(lines)
 
     def _build_family_context(self, person_ids: list = None) -> str:
-        summary = self.graph.get_narrative_summary()
-        if summary and summary != "Família sem dados genealógicos definidos.":
-            return f"Relações familiares: {summary}"
-        return "Sem dados genealógicos. Baseia-te apenas nos momentos descritos."
+        if person_ids:
+            context = self.graph.get_persons_context(person_ids)
+        else:
+            context = self.graph.get_narrative_summary()
+
+        if context and context not in ("Família sem dados genealógicos definidos.", ""):
+            return f"Relações familiares conhecidas: {context}"
+        return "Sem dados genealógicos disponíveis. Baseia-te apenas nos momentos descritos."

@@ -33,6 +33,7 @@ chromadb==0.4.24
 # M4 - Multimédia
 moviepy==1.0.3
 gTTS==2.5.1
+mutagen==1.47.0
 
 # Segurança
 bcrypt==4.1.3

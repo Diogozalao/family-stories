@@ -13,6 +13,7 @@ async def init_db():
     from backend.models.media import MediaFile
     from backend.models.timeline import TimelineEvent, Person
     from backend.models.narrative import Story
+    from backend.models.video import VideoOutput
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
