@@ -1,16 +1,24 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, Enum, ForeignKey
-from backend.models.media import Base
-from datetime import datetime
+"""Persistence model for generated documentary videos."""
+
 import enum
+from datetime import datetime
+
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+
+from backend.models.media import Base
 
 
 class VideoStatus(str, enum.Enum):
+    """Lifecycle state of a single video rendering job."""
+
     PROCESSING = "processing"
     COMPLETED  = "completed"
     FAILED     = "failed"
 
 
 class VideoOutput(Base):
+    """One row per generated (or attempted) documentary video."""
+
     __tablename__ = "video_outputs"
 
     id            = Column(Integer, primary_key=True, index=True)

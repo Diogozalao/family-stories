@@ -1,9 +1,9 @@
 # Sistema de Geração Automática de Histórias Familiares
 
 Fluxo Básico (Sempre que alteras ficheiros)
-    git add .              # 1. Adiciona TODAS as alterações
-    git commit -m "msg"    # 2. Cria um snapshot com descrição
-    git push               # 3. Envia para o GitHub
+git add .              # 1. Adiciona TODAS as alterações
+git commit -m "msg"    # 2. Cria um snapshot com descrição
+git push               # 3. Envia para o GitHub
 
 
 Ver o que mudou antes de adicionar:

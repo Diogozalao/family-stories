@@ -57,20 +57,22 @@ class NarrativeGenerator:
 
         log.info("generating_narrative", title=title, type=event_type)
 
-        # Recarrega grafo para apanhar GEDCOMs importados após o arranque
+        # Reload the graph so GEDCOM files imported after server start are
+        # picked up — otherwise narratives would miss freshly added people.
         graph_path = settings.PROCESSED_DIR / "family_graph.json"
         self.graph = FamilyGraph()
         self.graph.load(graph_path)
 
         template = get_template(event_type)
 
-        # Vai buscar os media reais directamente da BD
+        # Pull the real media rows directly from the DB.
         media_result = await db.execute(
             select(MediaFile).where(MediaFile.status == ProcessingStatus.COMPLETED)
         )
         all_media = media_result.scalars().all()
 
-        # Constrói contexto directamente dos media — evita alucinações
+        # Build the context straight from the DB facts — anchors the LLM on
+        # real data and prevents hallucinated names/dates/events.
         events_context = self._build_events_from_media(all_media)
         family_context = self._build_family_context(person_ids)
 
@@ -106,9 +108,10 @@ class NarrativeGenerator:
         return story
 
     def _build_events_from_media(self, media_list: list) -> str:
-        """
-        Constrói contexto directamente dos media processados pelo M1.
-        Isto previne alucinações — o LLM só tem acesso a factos reais.
+        """Build the event context straight from M1 media records.
+
+        Grounds the LLM on real, persisted facts so it cannot invent
+        photos, dates or descriptions that were never ingested.
         """
         if not media_list:
             return "Sem fotografias ou documentos disponíveis."

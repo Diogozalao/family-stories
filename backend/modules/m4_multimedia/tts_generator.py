@@ -1,77 +1,80 @@
-"""
-Geração de narração por síntese de voz (Text-to-Speech).
+"""Text-to-speech narration generation.
 
-Usa gTTS (Google Text-to-Speech) com suporte a português europeu.
-A narrativa é dividida em parágrafos para melhor controlo do áudio.
+Uses gTTS (Google Text-to-Speech). The ``pt`` voice is the closest match
+for European Portuguese that gTTS offers; using ``tld='pt'`` pins the
+endpoint to the Portuguese localisation and consistently picks the
+European variant over the Brazilian one.
 """
+
+from pathlib import Path
 
 import structlog
-from pathlib import Path
 from gtts import gTTS
 
 log = structlog.get_logger()
 
 
 class TTSGenerator:
-    def __init__(self, lang: str = "pt"):
+    """Generate narration audio files from text."""
+
+    def __init__(self, lang: str = "pt", tld: str = "pt"):
         self.lang = lang
+        self.tld  = tld
 
     def generate(self, text: str, output_path: Path) -> float:
-        """
-        Converte texto em áudio MP3.
-        Retorna a duração em segundos.
+        """Synthesize ``text`` into an MP3 at ``output_path``.
+
+        Returns the resulting audio duration in seconds.
         """
         try:
-            tts = gTTS(text=text, lang=self.lang, slow=False)
+            tts = gTTS(text=text, lang=self.lang, tld=self.tld, slow=False)
             tts.save(str(output_path))
             log.info("tts_generated", path=str(output_path), chars=len(text))
-
-            duration = self._get_duration(output_path)
-            return duration
-
-        except Exception as e:
-            log.error("tts_error", error=str(e))
+            return self._get_duration(output_path)
+        except Exception as exc:
+            log.error("tts_error", error=str(exc))
             raise
 
     def generate_paragraphs(self, text: str, output_dir: Path) -> list[dict]:
-        """
-        Divide a narrativa em parágrafos e gera um ficheiro de áudio por parágrafo.
-        Retorna lista de {path, duration, text}.
+        """Generate one MP3 per paragraph.
+
+        Returns a list of ``{path, duration, text}`` for each paragraph
+        successfully rendered.
         """
         output_dir.mkdir(parents=True, exist_ok=True)
         paragraphs = [p.strip() for p in text.split("\n") if p.strip()]
         if not paragraphs:
             paragraphs = [text.strip()]
 
-        results = []
-        for i, para in enumerate(paragraphs):
-            if not para:
+        results: list[dict] = []
+        for index, paragraph in enumerate(paragraphs):
+            if not paragraph:
                 continue
-            out = output_dir / f"para_{i:02d}.mp3"
+            out = output_dir / f"para_{index:02d}.mp3"
             try:
-                tts = gTTS(text=para, lang=self.lang, slow=False)
+                tts = gTTS(text=paragraph, lang=self.lang, tld=self.tld, slow=False)
                 tts.save(str(out))
-                dur = self._get_duration(out)
-                results.append({"path": out, "duration": dur, "text": para})
-                log.info("tts_paragraph", index=i, duration=round(dur, 1))
-            except Exception as e:
-                log.warning("tts_paragraph_skip", index=i, error=str(e))
+                duration = self._get_duration(out)
+                results.append({"path": out, "duration": duration, "text": paragraph})
+                log.info("tts_paragraph", index=index, duration=round(duration, 1))
+            except Exception as exc:
+                log.warning("tts_paragraph_skip", index=index, error=str(exc))
 
         return results
 
     def _get_duration(self, path: Path) -> float:
-        """Obtém duração de ficheiro MP3 sem carregar o ficheiro inteiro."""
+        """Read the duration of an MP3 without loading the full file."""
         try:
             from moviepy.editor import AudioFileClip
             clip = AudioFileClip(str(path))
-            dur = clip.duration
+            duration = clip.duration
             clip.close()
-            return dur
+            return duration
         except Exception:
-            # Fallback: estima pela velocidade média de fala (150 palavras/min)
+            # Fallback: parse MP3 header metadata directly.
             try:
                 import mutagen.mp3
-                audio = mutagen.mp3.MP3(str(path))
-                return audio.info.length
+                return mutagen.mp3.MP3(str(path)).info.length
             except Exception:
+                # Last resort: assume average speaking rate (~150 wpm).
                 return 8.0

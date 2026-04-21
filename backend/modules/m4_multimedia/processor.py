@@ -1,55 +1,56 @@
-"""
-Módulo 4 — Geração Multimédia.
+"""Module 4 — Multimedia generation orchestrator.
 
-Orquestra:
-1. Recolha de fotografias do M1 (ordenadas cronologicamente)
-2. Geração de narração TTS a partir da história do M3
-3. Montagem do vídeo documentário com efeito Ken Burns
-4. Persistência do resultado na BD
+Ties together:
+    1. Photo selection from M1 (chronologically ordered, completed only).
+    2. TTS narration of the M3 story.
+    3. Video assembly via ``video_builder``.
+    4. Persistence of the resulting ``VideoOutput`` record.
 """
 
-import uuid
 import asyncio
-import structlog
+import shutil
+import uuid
 from pathlib import Path
-from sqlalchemy.ext.asyncio import AsyncSession
+
+import structlog
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.config import settings
 from backend.models.media import MediaFile, MediaType, ProcessingStatus
 from backend.models.narrative import Story
 from backend.models.video import VideoOutput, VideoStatus
-from backend.modules.m4_multimedia.tts_generator import TTSGenerator
 from backend.modules.m4_multimedia import video_builder
+from backend.modules.m4_multimedia.tts_generator import TTSGenerator
 
 log = structlog.get_logger()
 
 
 class M4Processor:
+    """Coordinate narration, video assembly and persistence for a story."""
 
     def __init__(self):
-        self.tts = TTSGenerator(lang="pt")
+        self.tts = TTSGenerator(lang="pt", tld="pt")
         (settings.PROCESSED_DIR / "audio").mkdir(parents=True, exist_ok=True)
         (settings.PROCESSED_DIR / "videos").mkdir(parents=True, exist_ok=True)
 
     async def generate_video(self, story_id: int, db: AsyncSession) -> VideoOutput:
+        """Generate the documentary for ``story_id`` and persist the result.
+
+        If a completed video already exists on disk for this story, it is
+        reused instead of rebuilt.
         """
-        Gera o vídeo documentário para uma história.
-        Devolve o registo VideoOutput persistido na BD.
-        """
-        # Verifica se já existe um vídeo para esta história
         existing = await db.execute(
             select(VideoOutput).where(
                 VideoOutput.story_id == story_id,
-                VideoOutput.status == VideoStatus.COMPLETED,
+                VideoOutput.status   == VideoStatus.COMPLETED,
             )
         )
-        if vid := existing.scalar_one_or_none():
-            if Path(vid.file_path).exists():
-                log.info("m4_reuse", story_id=story_id, file=vid.filename)
-                return vid
+        cached = existing.scalar_one_or_none()
+        if cached and cached.file_path and Path(cached.file_path).exists():
+            log.info("m4_reuse", story_id=story_id, file=cached.filename)
+            return cached
 
-        # Cria registo de estado "a processar"
         record = VideoOutput(story_id=story_id, status=VideoStatus.PROCESSING)
         db.add(record)
         await db.commit()
@@ -58,67 +59,71 @@ class M4Processor:
         try:
             result = await self._run(story_id, db)
 
-            record.filename    = result["filename"]
-            record.file_path   = result["file_path"]
+            record.filename     = result["filename"]
+            record.file_path    = result["file_path"]
             record.file_size_mb = result["size_mb"]
-            record.photos_used = result["photos_used"]
-            record.status      = VideoStatus.COMPLETED
+            record.photos_used  = result["photos_used"]
+            record.status       = VideoStatus.COMPLETED
             await db.commit()
             await db.refresh(record)
             return record
 
-        except Exception as e:
-            log.error("m4_failed", story_id=story_id, error=str(e))
+        except Exception as exc:
+            log.error("m4_failed", story_id=story_id, error=str(exc))
             record.status        = VideoStatus.FAILED
-            record.error_message = str(e)
+            record.error_message = str(exc)
             await db.commit()
             raise
 
     async def _run(self, story_id: int, db: AsyncSession) -> dict:
+        """Do the actual narration + video assembly work for a story."""
         story = await db.get(Story, story_id)
         if not story:
-            raise ValueError(f"História {story_id} não encontrada")
+            raise ValueError(f"Story {story_id} not found")
 
-        # Fotografias ordenadas cronologicamente
-        q = await db.execute(
-            select(MediaFile).where(
-                MediaFile.status == ProcessingStatus.COMPLETED,
+        # Pick every completed photo, oldest first; photos with no date go last.
+        query = await db.execute(
+            select(MediaFile)
+            .where(
+                MediaFile.status     == ProcessingStatus.COMPLETED,
                 MediaFile.media_type == MediaType.PHOTO,
-            ).order_by(MediaFile.date_taken.asc().nulls_last(), MediaFile.created_at)
+            )
+            .order_by(MediaFile.date_taken.asc().nulls_last(), MediaFile.created_at)
         )
-        photos = q.scalars().all()
+        photos = query.scalars().all()
         photo_paths = [Path(p.file_path) for p in photos if Path(p.file_path).exists()]
 
         if not photo_paths:
             raise ValueError(
-                "Sem fotografias disponíveis. Faz upload de fotos primeiro "
-                "e certifica-te que o processamento M1 foi concluído."
+                "No photos available. Upload photos first and make sure the "
+                "M1 processing pipeline finished successfully."
             )
 
-        # Legendas: data + local por fotografia
-        captions = []
-        for p in photos:
-            if not Path(p.file_path).exists():
+        # Caption each photo with its date and setting (whatever is available).
+        captions: list[str] = []
+        for photo in photos:
+            if not Path(photo.file_path).exists():
                 continue
-            parts = []
-            if p.date_taken:
-                parts.append(p.date_taken.strftime("%d/%m/%Y"))
-            if p.ai_setting:
-                parts.append(p.ai_setting)
+            parts: list[str] = []
+            if photo.date_taken:
+                parts.append(photo.date_taken.strftime("%d/%m/%Y"))
+            if photo.ai_setting:
+                parts.append(photo.ai_setting)
             captions.append(" · ".join(parts))
 
-        run_id    = uuid.uuid4().hex[:8]
-        audio_dir = settings.PROCESSED_DIR / "audio" / run_id
-        audio_dir.mkdir(parents=True, exist_ok=True)
+        run_id     = uuid.uuid4().hex[:8]
+        audio_dir  = settings.PROCESSED_DIR / "audio"  / run_id
         audio_path = audio_dir / "narration.mp3"
         video_path = settings.PROCESSED_DIR / "videos" / f"documentario_{story_id}_{run_id}.mp4"
+        audio_dir.mkdir(parents=True, exist_ok=True)
 
-        # TTS — corre em thread para não bloquear o event loop
+        # Both TTS and video rendering are CPU/IO-heavy and would block the
+        # event loop — offload them to the default thread pool.
         loop = asyncio.get_event_loop()
+
         log.info("m4_tts", story_id=story_id, chars=len(story.narrative))
         await loop.run_in_executor(None, self.tts.generate, story.narrative, audio_path)
 
-        # Vídeo
         log.info("m4_video", story_id=story_id, photos=len(photo_paths))
         await loop.run_in_executor(
             None,
@@ -128,15 +133,11 @@ class M4Processor:
             video_path,
             story.title,
             captions,
-            None,   # sem música de fundo por omissão
+            None,   # No background music by default.
         )
 
-        # Limpa áudio temporário
-        try:
-            import shutil
-            shutil.rmtree(audio_dir, ignore_errors=True)
-        except Exception:
-            pass
+        # Remove the intermediate narration audio — keep the videos folder tidy.
+        shutil.rmtree(audio_dir, ignore_errors=True)
 
         size_mb = round(video_path.stat().st_size / 1024 / 1024, 2)
         return {
