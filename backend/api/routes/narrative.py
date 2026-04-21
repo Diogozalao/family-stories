@@ -1,63 +1,99 @@
-import structlog
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+"""Module 3 — Narrative generation routes."""
 
+import structlog
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.core.auth import get_current_user
+from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.rate_limit import limiter
 from backend.models.narrative import Story
-from backend.schemas.narrative import GenerateRequest, StoryResponse
+from backend.models.task import TaskKind, TaskRecord, TaskState
+from backend.models.user import User
 from backend.modules.m3_narrative.generator import NarrativeGenerator
 from backend.modules.m3_narrative.templates import NARRATIVE_TEMPLATES
+from backend.schemas.narrative import GenerateRequest, StoryResponse
 
-router = APIRouter(prefix="/api/v1", tags=["narrativa"])
-log    = structlog.get_logger()
-
+router    = APIRouter(prefix="/api/v1", tags=["narrative"])
+log       = structlog.get_logger()
 generator = NarrativeGenerator()
 
 
 @router.post("/narrative/index")
-async def index_facts(db: AsyncSession = Depends(get_db)):
-    """
-    Indexa todos os factos do M1/M2 no sistema RAG.
-    Chama este endpoint antes de gerar narrativas.
+async def index_facts(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Index every M1/M2 fact into the RAG system.
+
+    Call this endpoint before generating narratives so the LLM has
+    grounding context available.
     """
     result = await generator.index_all(db)
-    return {
-        "message": "Factos indexados com sucesso",
-        **result
-    }
+    return {"message": "Facts indexed successfully", **result}
 
 
-@router.post("/narrative/generate", response_model=StoryResponse)
+@router.post("/narrative/generate")
+@limiter.limit(settings.RATE_LIMIT_GENERATE)
 async def generate_narrative(
-    request: GenerateRequest,
-    db: AsyncSession = Depends(get_db)
+    request: Request,
+    payload: GenerateRequest,
+    mode:    str          = Query("sync", regex="^(sync|background)$"),
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
 ):
+    """Generate a family narrative using LLM + RAG.
+
+    ``mode=sync`` (default) blocks until the story is ready and returns
+    the full ``StoryResponse``. ``mode=background`` enqueues the work
+    on Celery, returns a ``task_id`` immediately, and the client polls
+    ``GET /api/v1/tasks/{task_id}`` for progress.
     """
-    Gera uma narrativa familiar com LLM + RAG.
-    
-    event_type disponíveis: default, fotografia, casamento,
-    viagem, nascimento, celebração
-    """
-    if request.event_type not in NARRATIVE_TEMPLATES:
+    if payload.event_type not in NARRATIVE_TEMPLATES:
         raise HTTPException(
             status_code=400,
-            detail=f"event_type inválido. Disponíveis: {list(NARRATIVE_TEMPLATES.keys())}"
+            detail=f"Invalid event_type. Available: {list(NARRATIVE_TEMPLATES.keys())}",
         )
 
-    story = await generator.generate(
-        db          = db,
-        title       = request.title,
-        event_type  = request.event_type,
-        query       = request.query,
-        person_ids  = request.person_ids,
+    if mode == "sync":
+        story = await generator.generate(
+            db         = db,
+            title      = payload.title,
+            event_type = payload.event_type,
+            query      = payload.query,
+            person_ids = payload.person_ids,
+        )
+        return StoryResponse.model_validate(story)
+
+    # Background mode — create a tracking record first, then enqueue.
+    record = TaskRecord(
+        kind    = TaskKind.NARRATIVE,
+        state   = TaskState.PENDING,
+        payload = payload.model_dump(),
     )
-    return story
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+
+    from backend.tasks.narrative_tasks import generate_narrative_task
+    async_result = generate_narrative_task.delay(record.id, payload.model_dump())
+    record.celery_id = async_result.id
+    await db.commit()
+
+    log.info("narrative_task_enqueued", task_record_id=record.id, celery_id=async_result.id)
+    return {
+        "task_id":    record.id,
+        "celery_id":  async_result.id,
+        "state":      record.state,
+        "poll_url":   f"/api/v1/tasks/{record.id}",
+    }
 
 
 @router.get("/narrative/templates")
 async def list_templates():
-    """Lista todos os templates narrativos disponíveis."""
+    """Return the metadata for every narrative template."""
     return [
         {
             "id":        key,
@@ -71,36 +107,38 @@ async def list_templates():
 
 @router.get("/narrative/stories", response_model=list[StoryResponse])
 async def list_stories(db: AsyncSession = Depends(get_db)):
-    """Lista todas as histórias geradas."""
-    result = await db.execute(
-        select(Story).order_by(Story.created_at.desc())
-    )
+    """List every generated story, newest first."""
+    result = await db.execute(select(Story).order_by(Story.created_at.desc()))
     return result.scalars().all()
 
 
 @router.get("/narrative/stories/{story_id}", response_model=StoryResponse)
 async def get_story(story_id: int, db: AsyncSession = Depends(get_db)):
-    """Retorna uma história específica."""
+    """Return a single story by id."""
     story = await db.get(Story, story_id)
     if not story:
-        raise HTTPException(status_code=404, detail="História não encontrada")
+        raise HTTPException(status_code=404, detail="Story not found")
     return story
 
 
 @router.delete("/narrative/stories/{story_id}")
-async def delete_story(story_id: int, db: AsyncSession = Depends(get_db)):
-    """Apaga uma história."""
+async def delete_story(
+    story_id: int,
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user),
+):
+    """Delete a story by id."""
     story = await db.get(Story, story_id)
     if not story:
-        raise HTTPException(status_code=404, detail="Não encontrada")
+        raise HTTPException(status_code=404, detail="Story not found")
     await db.delete(story)
     await db.commit()
-    return {"message": "Apagada com sucesso"}
+    return {"message": "Deleted successfully"}
 
 
 @router.get("/narrative/rag/stats")
 async def rag_stats():
-    """Estatísticas do sistema RAG — útil para o relatório."""
+    """Expose RAG statistics — handy for the thesis report."""
     return {
         "total_facts_indexed": generator.rag.total_facts,
         "llm_backend":         generator.llm.backend,

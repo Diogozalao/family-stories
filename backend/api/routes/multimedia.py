@@ -11,13 +11,17 @@ Endpoints:
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.auth import get_current_user
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.rate_limit import limiter
+from backend.models.task import TaskKind, TaskRecord, TaskState
+from backend.models.user import User
 from backend.models.video import VideoOutput
 from backend.modules.m4_multimedia.processor import M4Processor
 
@@ -27,29 +31,62 @@ processor = M4Processor()
 
 
 @router.post("/generate/{story_id}")
-async def generate_video(story_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit(settings.RATE_LIMIT_GENERATE)
+async def generate_video(
+    request:  Request,
+    story_id: int,
+    mode:     str          = Query("sync", regex="^(sync|background)$"),
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user),
+):
     """Build the documentary video for the given story.
 
-    Takes between 1 and 5 minutes depending on photo count. The request
-    blocks until the MP4 is on disk; the response contains a download URL.
+    Takes between 1 and 5 minutes depending on photo count.
+    ``mode=sync`` (default) blocks until the MP4 is on disk; the
+    response contains the download URL. ``mode=background`` enqueues
+    the job on Celery and returns a ``task_id`` that the client polls.
     """
-    try:
-        record = await processor.generate_video(story_id, db)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        log.error("m4_api_error", story_id=story_id, error=str(exc))
-        raise HTTPException(status_code=500, detail=f"Video generation failed: {exc}")
+    if mode == "sync":
+        try:
+            record = await processor.generate_video(story_id, db)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            log.error("m4_api_error", story_id=story_id, error=str(exc))
+            raise HTTPException(status_code=500, detail=f"Video generation failed: {exc}")
 
+        return {
+            "message":      "Video generated successfully",
+            "video_id":     record.id,
+            "story_id":     story_id,
+            "filename":     record.filename,
+            "size_mb":      record.file_size_mb,
+            "photos_used":  record.photos_used,
+            "status":       record.status,
+            "download_url": f"/api/v1/multimedia/video/{record.filename}",
+        }
+
+    task = TaskRecord(
+        kind     = TaskKind.VIDEO,
+        state    = TaskState.PENDING,
+        story_id = story_id,
+        payload  = {"story_id": story_id},
+    )
+    db.add(task)
+    await db.commit()
+    await db.refresh(task)
+
+    from backend.tasks.video_tasks import generate_video_task
+    async_result = generate_video_task.delay(task.id, story_id)
+    task.celery_id = async_result.id
+    await db.commit()
+
+    log.info("video_task_enqueued", task_record_id=task.id, celery_id=async_result.id)
     return {
-        "message":       "Video generated successfully",
-        "video_id":      record.id,
-        "story_id":      story_id,
-        "filename":      record.filename,
-        "size_mb":       record.file_size_mb,
-        "photos_used":   record.photos_used,
-        "status":        record.status,
-        "download_url":  f"/api/v1/multimedia/video/{record.filename}",
+        "task_id":   task.id,
+        "celery_id": async_result.id,
+        "state":     task.state,
+        "poll_url":  f"/api/v1/tasks/{task.id}",
     }
 
 
@@ -112,7 +149,11 @@ async def video_status(video_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/videos/{video_id}")
-async def delete_video(video_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_video(
+    video_id: int,
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user),
+):
     """Delete a video from both disk and database."""
     video = await db.get(VideoOutput, video_id)
     if not video:

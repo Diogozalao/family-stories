@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/bin/celery -A backend.core.celery_app:celery_app worker --loglevel=warning --concurrency=1)",
+      "Bash(pkill -f \"celery.*backend.core.celery_app\")",
+      "Bash(pkill -f \"uvicorn backend.main\")",
+      "Bash(npm --version)"
+    ]
+  }
+}

@@ -1,0 +1,122 @@
+"""Deep health checks for infrastructure dependencies.
+
+The shallow ``/health`` endpoint (in ``main.py``) always returns 200 —
+it only proves the HTTP server is up. This module exposes ``/healthz``
+which probes each dependency the pipeline relies on and reports their
+individual status. Useful for monitoring tools, for the thesis demo and
+for debugging ("why is the narrative endpoint failing?").
+"""
+
+import shutil
+
+import httpx
+import structlog
+from fastapi import APIRouter
+from sqlalchemy import text
+
+from backend.core.config import settings
+from backend.core.database import engine
+
+router = APIRouter(tags=["health"])
+log    = structlog.get_logger()
+
+PROBE_TIMEOUT_SECONDS = 2.0
+
+
+async def _check_database() -> dict:
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ok"}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
+
+
+async def _check_ollama() -> dict:
+    url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/tags"
+    try:
+        async with httpx.AsyncClient(timeout=PROBE_TIMEOUT_SECONDS) as client:
+            response = await client.get(url)
+        response.raise_for_status()
+        models = [m.get("name") for m in response.json().get("models", [])]
+        has_model = any(settings.OLLAMA_MODEL in (m or "") for m in models)
+        return {
+            "status": "ok" if has_model else "degraded",
+            "models": models[:10],
+            "expected_model": settings.OLLAMA_MODEL,
+        }
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
+
+
+def _check_gemini() -> dict:
+    # Do not burn quota on a real API call — just verify the key is present.
+    if not settings.GEMINI_API_KEY:
+        return {"status": "disabled", "detail": "GEMINI_API_KEY not configured"}
+    return {"status": "ok", "configured": True}
+
+
+def _check_redis() -> dict:
+    try:
+        import redis
+        client = redis.Redis.from_url(settings.REDIS_URL,
+                                      socket_connect_timeout=PROBE_TIMEOUT_SECONDS)
+        return {"status": "ok" if client.ping() else "error"}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
+
+
+def _check_chroma() -> dict:
+    try:
+        from backend.modules.m3_narrative.rag_system import RAGSystem
+        rag = RAGSystem()
+        return {"status": "ok", "total_facts": rag.total_facts}
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
+
+
+def _check_disk() -> dict:
+    try:
+        usage = shutil.disk_usage(settings.DATA_DIR)
+        free_gb  = round(usage.free  / 1024**3, 2)
+        total_gb = round(usage.total / 1024**3, 2)
+        percent_used = round((usage.total - usage.free) / usage.total * 100, 1)
+        return {
+            "status":       "ok" if free_gb > 1.0 else "warning",
+            "free_gb":      free_gb,
+            "total_gb":     total_gb,
+            "percent_used": percent_used,
+        }
+    except Exception as exc:
+        return {"status": "error", "detail": str(exc)}
+
+
+@router.get("/healthz")
+async def deep_health() -> dict:
+    """Run every dependency probe and report an aggregate status."""
+    checks = {
+        "database": await _check_database(),
+        "ollama":   await _check_ollama(),
+        "gemini":   _check_gemini(),
+        "redis":    _check_redis(),
+        "chroma":   _check_chroma(),
+        "disk":     _check_disk(),
+    }
+
+    failures = [name for name, value in checks.items() if value.get("status") == "error"]
+    warnings = [name for name, value in checks.items()
+                if value.get("status") in ("warning", "degraded")]
+
+    if failures:
+        overall = "error"
+    elif warnings:
+        overall = "degraded"
+    else:
+        overall = "ok"
+
+    return {
+        "status":   overall,
+        "failures": failures,
+        "warnings": warnings,
+        "checks":   checks,
+    }
