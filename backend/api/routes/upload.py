@@ -13,6 +13,7 @@ from pathlib import Path
 import aiofiles
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,3 +158,34 @@ async def list_media(db: AsyncSession = Depends(get_db)):
     """Return every ingested media file, newest first."""
     result = await db.execute(select(MediaFile).order_by(MediaFile.created_at.desc()))
     return result.scalars().all()
+
+
+@router.get("/media/{file_id}/file")
+async def serve_media_bytes(file_id: int, db: AsyncSession = Depends(get_db)):
+    """Stream the raw photo bytes — used by the frontend ``<img>`` tags."""
+    record = (await db.execute(select(MediaFile).where(MediaFile.id == file_id))).scalar_one_or_none()
+    if not record or not record.file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+    disk_path = Path(record.file_path)
+    if not disk_path.exists():
+        raise HTTPException(status_code=404, detail="File missing from disk")
+    return FileResponse(str(disk_path), filename=record.filename)
+
+
+@router.delete("/media/{file_id}")
+async def delete_media(
+    file_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Remove a photo both from disk and the database."""
+    record = (await db.execute(select(MediaFile).where(MediaFile.id == file_id))).scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+    if record.file_path:
+        disk_path = Path(record.file_path)
+        if disk_path.exists():
+            disk_path.unlink()
+    await db.delete(record)
+    await db.commit()
+    return {"message": "Deleted"}

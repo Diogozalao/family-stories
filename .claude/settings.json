@@ -4,7 +4,13 @@
       "Bash(venv/bin/celery -A backend.core.celery_app:celery_app worker --loglevel=warning --concurrency=1)",
       "Bash(pkill -f \"celery.*backend.core.celery_app\")",
       "Bash(pkill -f \"uvicorn backend.main\")",
-      "Bash(npm --version)"
+      "Bash(npm --version)",
+      "Bash(npx --yes create-vite@latest . --template react-ts)",
+      "Bash(npm install *)",
+      "Bash(npx tailwindcss *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"--- exit: $?\")",
+      "Bash(echo \"=== exit: $?\")"
     ]
   }
 }
