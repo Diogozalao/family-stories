@@ -16,7 +16,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user
+from backend.core.auth import get_current_user, get_current_user_query_or_header
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
@@ -91,8 +91,14 @@ async def generate_video(
 
 
 @router.get("/video/{filename}")
-async def download_video(filename: str):
-    """Stream the generated documentary MP4 back to the client."""
+async def download_video(
+    filename: str,
+    _user:    User = Depends(get_current_user_query_or_header),
+):
+    """Stream the generated documentary MP4 back to the client.
+
+    Accepts JWT in header or ``?token=`` query so ``<video>`` tags work.
+    """
     # Block path-traversal attempts — only allow a plain filename component.
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
@@ -105,7 +111,6 @@ async def download_video(filename: str):
         path=str(video_path),
         media_type="video/mp4",
         filename=filename,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 

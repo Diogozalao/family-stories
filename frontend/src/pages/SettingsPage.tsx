@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import {
-  CheckCircle2, Database, HardDrive, Moon, Monitor, RefreshCw,
-  Sun, UserCircle2, XCircle, Zap,
+  CheckCircle2, Database, Eye, EyeOff, HardDrive, KeyRound, Loader2, Moon,
+  Monitor, RefreshCw, Sun, UserCircle2, XCircle, Zap,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useHealth } from "../lib/hooks";
+import { useChangePassword, useHealth } from "../lib/hooks";
+import { extractErrorMessage } from "../lib/api";
 import { useAuthStore } from "../store/auth";
 import { useThemeStore, type ThemeMode } from "../store/theme";
 import { setLanguage } from "../i18n";
@@ -33,6 +36,9 @@ export default function SettingsPage() {
             <Field label="ID" value={user?.id?.toString() ?? "—"} mono />
             <Field label="Owner" value={user?.is_owner ? t("common.yes") : t("common.no")} />
           </dl>
+          <div className="mt-6 border-t border-stone-100 pt-5 dark:border-stone-800">
+            <ChangePasswordForm />
+          </div>
         </section>
 
         {/* Appearance */}
@@ -96,6 +102,94 @@ export default function SettingsPage() {
         </section>
       </div>
     </>
+  );
+}
+
+function ChangePasswordForm() {
+  const change = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [show, setShow] = useState(false);
+
+  const tooShort = next.length > 0 && next.length < 8;
+  const same = current.length > 0 && current === next;
+  const canSubmit = current.length > 0 && next.length >= 8 && !same;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    change.mutate(
+      { current_password: current, new_password: next },
+      {
+        onSuccess: () => {
+          toast.success("Palavra-passe alterada");
+          setCurrent("");
+          setNext("");
+        },
+        onError: (err) => toast.error(extractErrorMessage(err)),
+      },
+    );
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <KeyRound className="h-4 w-4 text-stone-500" />
+        Alterar palavra-passe
+      </p>
+
+      <div>
+        <label className="label" htmlFor="cur-pw">Palavra-passe atual</label>
+        <input
+          id="cur-pw"
+          type={show ? "text" : "password"}
+          autoComplete="current-password"
+          className="input"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="label" htmlFor="new-pw">Nova palavra-passe</label>
+        <div className="relative">
+          <input
+            id="new-pw"
+            type={show ? "text" : "password"}
+            autoComplete="new-password"
+            minLength={8}
+            className="input pr-12"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
+            aria-label={show ? "Ocultar" : "Mostrar"}
+          >
+            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <p className={cn(
+          "mt-1.5 text-xs",
+          tooShort || same ? "text-rose-600" : "text-stone-500 dark:text-stone-500",
+        )}>
+          {same
+            ? "A nova palavra-passe tem de ser diferente da atual"
+            : "Mínimo 8 caracteres"}
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        disabled={!canSubmit || change.isPending}
+        className="btn btn-primary w-full justify-center"
+      >
+        {change.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+        <span>Alterar palavra-passe</span>
+      </button>
+    </form>
   );
 }
 

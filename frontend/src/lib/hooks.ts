@@ -23,6 +23,13 @@ export function useLogin() {
   });
 }
 
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (input: { current_password: string; new_password: string }) =>
+      (await api.post("/api/v1/auth/password", input)).data,
+  });
+}
+
 export function useRegister() {
   const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
@@ -221,7 +228,9 @@ export function useGenerateVideo() {
 }
 
 export function videoUrl(filename: string): string {
-  return `${API_BASE}/api/v1/multimedia/video/${encodeURIComponent(filename)}`;
+  const token = useAuthStore.getState().token;
+  const base  = `${API_BASE}/api/v1/multimedia/video/${encodeURIComponent(filename)}`;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 // ── Tasks ───────────────────────────────────────────────────────────────
@@ -230,6 +239,32 @@ export function useTasks() {
     queryKey: ["tasks"],
     queryFn: async () => (await api.get("/api/v1/tasks?limit=50")).data,
     refetchInterval: 3_000,
+  });
+}
+
+export function useCancelTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.post(`/api/v1/tasks/${id}/cancel`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.delete(`/api/v1/tasks/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
+  });
+}
+
+export function useClearFinishedTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.delete("/api/v1/tasks")).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }
 

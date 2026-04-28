@@ -31,3 +31,25 @@ Terminal 4 — Frontend (novo)
 
 cd ~/family-stories/frontend
 npm run dev
+
+
+
+---------------------------------------
+
+~/family-stories/start.sh
+ou só:
+
+
+cd ~/family-stories && ./start.sh
+
+
+O que faz, por ordem:
+    Ativa venv
+    Redis — verifica se responde; se não, sudo service redis-server start
+    Ollama — só verifica (avisa se não estiver, não bloqueia)
+    Liberta portas 8000 e 5173 caso fiquem presas
+    Backend (uvicorn) — espera até /healthz responder
+    Celery worker — espera até ver celery@... ready no log
+    Frontend (Vite) — espera até a porta 5173 responder
+    Abre o browser automaticamente em http://localhost:5173
+    Fica vivo. Ctrl+C mata os 3 processos + liberta portas.

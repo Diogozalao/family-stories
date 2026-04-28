@@ -9,7 +9,7 @@ dependency::
 """
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -36,6 +36,36 @@ async def get_current_user(
     db:    AsyncSession = Depends(get_db),
 ) -> User:
     """Resolve the JWT into the corresponding ``User`` row."""
+    if not token:
+        raise _CREDENTIALS_EXCEPTION
+
+    try:
+        payload = decode_access_token(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise _CREDENTIALS_EXCEPTION
+    except JWTError as exc:
+        log.info("jwt_invalid", error=str(exc))
+        raise _CREDENTIALS_EXCEPTION
+
+    user = await db.get(User, int(user_id))
+    if user is None or not user.is_active:
+        raise _CREDENTIALS_EXCEPTION
+    return user
+
+
+async def get_current_user_query_or_header(
+    header_token: str | None = Depends(oauth2_scheme),
+    query_token:  str | None = Query(default=None, alias="token"),
+    db:           AsyncSession = Depends(get_db),
+) -> User:
+    """Resolve a JWT from either the ``Authorization`` header or a
+    ``?token=`` query string.
+
+    Used for endpoints consumed by ``<img>``/``<video>`` tags which can't
+    set custom headers.
+    """
+    token = header_token or query_token
     if not token:
         raise _CREDENTIALS_EXCEPTION
 

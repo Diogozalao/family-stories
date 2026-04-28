@@ -24,7 +24,7 @@ export default function StoryReaderPage() {
     );
   }
 
-  const paragraphs = story.content.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = (story.narrative ?? "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 
   const handleGenerateVideo = () => {
     genVideo.mutate(
@@ -52,9 +52,9 @@ export default function StoryReaderPage() {
           <span className="text-xs text-stone-500 dark:text-stone-500">
             {t("stories.generatedOn", { date: new Date(story.created_at).toLocaleDateString() })}
           </span>
-          {story.word_count && (
+          {story.narrative && (
             <span className="text-xs text-stone-500 dark:text-stone-500">
-              · {t("stories.readTime", { min: Math.max(1, Math.round(story.word_count / 220)) })}
+              · {t("stories.readTime", { min: Math.max(1, Math.round(story.narrative.split(/\s+/).length / 220)) })}
             </span>
           )}
         </div>

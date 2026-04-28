@@ -1,7 +1,7 @@
 """Persistence model for generated documentary videos."""
 
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 
@@ -29,4 +29,4 @@ class VideoOutput(Base):
     photos_used   = Column(Integer, nullable=True)
     status        = Column(Enum(VideoStatus), default=VideoStatus.PROCESSING)
     error_message = Column(Text, nullable=True)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    created_at    = Column(DateTime, default=lambda: datetime.now(UTC))

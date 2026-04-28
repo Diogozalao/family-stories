@@ -7,7 +7,7 @@ can poll a single endpoint to know what is happening with their job.
 """
 
 import enum
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 
@@ -49,5 +49,5 @@ class TaskRecord(Base):
     result     = Column(JSON, nullable=True)
     error      = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, Enum
 from backend.models.media import Base
-from datetime import datetime
+from datetime import UTC, datetime
 import enum
 
 class StoryStatus(str, enum.Enum):
@@ -21,5 +21,5 @@ class Story(Base):
     prompt_used   = Column(Text, nullable=True)
     status        = Column(Enum(StoryStatus), default=StoryStatus.DRAFT)
     person_ids    = Column(JSON, default=list)
-    created_at    = Column(DateTime, default=datetime.utcnow)
-    updated_at    = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at    = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at    = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import axios from "axios";
-import { Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import { AtSign, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
 import { useRegister } from "../lib/hooks";
 import { useAuthStore } from "../store/auth";
 import { extractErrorMessage } from "../lib/api";
 import AuthShell from "../components/auth/AuthShell";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function RegisterPage() {
   const { t } = useTranslation();
@@ -15,20 +17,37 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [ownerExists, setOwnerExists] = useState(false);
 
+  useEffect(() => {
+    const reset = () => {
+      if (document.visibilityState === "visible") {
+        setEmail("");
+        setPassword("");
+      }
+    };
+    document.addEventListener("visibilitychange", reset);
+    window.addEventListener("pageshow", reset);
+    return () => {
+      document.removeEventListener("visibilitychange", reset);
+      window.removeEventListener("pageshow", reset);
+    };
+  }, []);
+
   if (token) return <Navigate to="/" replace />;
 
   const pwTooShort = password.length > 0 && password.length < 8;
+  const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
+  const canSubmit = EMAIL_RE.test(email) && password.length >= 8;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pwTooShort) return;
+    if (!canSubmit) return;
     register.mutate(
-      { username, password },
+      { username: email, password },
       {
         onSuccess: () => {
           toast.success(t("common.success"));

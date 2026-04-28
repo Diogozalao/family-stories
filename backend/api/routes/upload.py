@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user
+from backend.core.auth import get_current_user, get_current_user_query_or_header
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
@@ -161,15 +161,23 @@ async def list_media(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/media/{file_id}/file")
-async def serve_media_bytes(file_id: int, db: AsyncSession = Depends(get_db)):
-    """Stream the raw photo bytes — used by the frontend ``<img>`` tags."""
+async def serve_media_bytes(
+    file_id: int,
+    db:      AsyncSession = Depends(get_db),
+    _user:   User         = Depends(get_current_user_query_or_header),
+):
+    """Stream the raw photo bytes — used by the frontend ``<img>`` tags.
+
+    Accepts JWT either in ``Authorization`` header or in ``?token=`` query
+    so that bare ``<img>`` tags (which can't set headers) still authenticate.
+    """
     record = (await db.execute(select(MediaFile).where(MediaFile.id == file_id))).scalar_one_or_none()
     if not record or not record.file_path:
         raise HTTPException(status_code=404, detail="File not found")
     disk_path = Path(record.file_path)
     if not disk_path.exists():
         raise HTTPException(status_code=404, detail="File missing from disk")
-    return FileResponse(str(disk_path), filename=record.filename)
+    return FileResponse(str(disk_path), filename=record.original_filename)
 
 
 @router.delete("/media/{file_id}")

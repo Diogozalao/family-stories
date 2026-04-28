@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from backend.models.media import Base
-from datetime import datetime
+from datetime import UTC, datetime
 import enum
 
 class ConfidenceLevel(str, enum.Enum):
@@ -19,7 +19,7 @@ class Person(Base):
     birth_place  = Column(String(255), nullable=True)
     notes        = Column(Text, nullable=True)
     gedcom_id    = Column(String(100), nullable=True)  # ID do ficheiro GEDCOM
-    created_at   = Column(DateTime, default=datetime.utcnow)
+    created_at   = Column(DateTime, default=lambda: datetime.now(UTC))
 
 class TimelineEvent(Base):
     __tablename__ = "timeline_events"
@@ -48,4 +48,4 @@ class TimelineEvent(Base):
     # Ordem na timeline
     sort_order       = Column(Integer, default=0)
     
-    created_at       = Column(DateTime, default=datetime.utcnow)
+    created_at       = Column(DateTime, default=lambda: datetime.now(UTC))

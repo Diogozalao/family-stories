@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Enum, Text, Boolean
 from sqlalchemy.orm import DeclarativeBase
-from datetime import datetime
+from datetime import UTC, datetime
 import enum
 
 class Base(DeclarativeBase):
@@ -62,5 +62,5 @@ class MediaFile(Base):
     error_message     = Column(Text, nullable=True)
     
     # Timestamps
-    created_at        = Column(DateTime, default=datetime.utcnow)
-    updated_at        = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at        = Column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at        = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

@@ -67,11 +67,11 @@ export default function StoriesPage() {
                 {s.title}
               </h3>
               <p className="mt-2 flex-1 text-sm text-stone-600 line-clamp-4 dark:text-stone-400">
-                {s.content.slice(0, 220)}…
+                {(s.narrative ?? "").slice(0, 220)}…
               </p>
               <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 dark:border-stone-800">
                 <span className="text-xs text-stone-500 dark:text-stone-500">
-                  {s.word_count ? `${s.word_count} palavras` : ""}
+                  {s.facts_used ? `${s.facts_used} factos usados` : ""}
                 </span>
                 <Link to={`/stories/${s.id}`} className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
                   {t("common.open")} →

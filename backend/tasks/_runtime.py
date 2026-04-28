@@ -7,7 +7,7 @@ each task needs — an ``AsyncSession`` and a way to update the matching
 """
 
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Awaitable, Callable, TypeVar
 
 import structlog
@@ -47,7 +47,7 @@ async def mark_task_state(
             log.warning("task_record_missing", id=task_record_id)
             return
         record.state      = state
-        record.updated_at = datetime.utcnow()
+        record.updated_at = datetime.now(UTC)
         if celery_id is not None:
             record.celery_id = celery_id
         if result is not None:

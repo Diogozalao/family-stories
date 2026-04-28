@@ -91,7 +91,7 @@ export default function DashboardPage() {
               >
                 <img
                   src={photoUrl(m.id)}
-                  alt={m.filename}
+                  alt={m.original_filename}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                 />
@@ -125,7 +125,7 @@ export default function DashboardPage() {
                   {s.title}
                 </h3>
                 <p className="mt-2 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
-                  {s.content.slice(0, 180)}…
+                  {(s.narrative ?? "").slice(0, 180)}…
                 </p>
               </Link>
             ))}

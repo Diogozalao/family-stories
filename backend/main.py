@@ -9,12 +9,15 @@ Wires together:
 """
 
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import select
 
 from backend.api.routes.auth       import router as auth_router
 from backend.api.routes.genealogy  import router as genealogy_router
@@ -25,9 +28,36 @@ from backend.api.routes.tasks      import router as tasks_router
 from backend.api.routes.timeline   import router as timeline_router
 from backend.api.routes.upload     import router as upload_router
 from backend.core.config           import settings
-from backend.core.database         import init_db
+from backend.core.database         import AsyncSessionLocal, init_db
 from backend.core.logging          import configure_logging
 from backend.core.rate_limit       import limiter
+from backend.models.task           import TaskRecord, TaskState
+
+log = structlog.get_logger()
+
+
+async def _sweep_orphans() -> None:
+    """Mark tasks left ``pending``/``running`` from a previous boot as failed.
+
+    A task can only be genuinely active if a Celery worker is currently
+    processing it — and workers don't survive a backend restart. So any
+    task still flagged as alive here is, by definition, an orphan.
+    """
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(TaskRecord).where(
+                TaskRecord.state.in_([TaskState.PENDING, TaskState.RUNNING])
+            )
+        )
+        orphans = result.scalars().all()
+        if not orphans:
+            return
+        for r in orphans:
+            r.state      = TaskState.FAILED
+            r.error      = "Tarefa abandonada (worker reiniciado antes de terminar)"
+            r.updated_at = datetime.now(UTC)
+        await db.commit()
+        log.info("orphan_tasks_swept", count=len(orphans), ids=[r.id for r in orphans])
 
 
 @asynccontextmanager
@@ -35,6 +65,7 @@ async def lifespan(app: FastAPI):
     """Application startup + shutdown hooks."""
     configure_logging()
     await init_db()
+    await _sweep_orphans()
     yield
 
 

@@ -1,12 +1,21 @@
 export interface MediaFile {
   id: number;
-  filename: string;
-  file_path?: string;
+  original_filename: string;
   media_type: string;
-  size?: number;
-  taken_at?: string | null;
+  file_size?: number;
+  status?: string;
+  date_taken?: string | null;
   created_at?: string;
-  description?: string | null;
+  ai_description?: string | null;
+  ai_setting?: string | null;
+  ai_emotion?: string | null;
+  ai_people_count?: number | null;
+  ai_tags?: string[] | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_name?: string | null;
+  camera_make?: string | null;
+  camera_model?: string | null;
 }
 
 export interface Person {
@@ -29,10 +38,15 @@ export interface Story {
   id: number;
   title: string;
   event_type: string;
-  content: string;
+  narrative: string;
+  template_used?: string | null;
+  llm_backend?: string | null;
+  facts_used?: number;
+  status?: "draft" | "completed" | "failed";
   created_at: string;
-  word_count?: number;
 }
+
+export type VideoStatus = "processing" | "completed" | "failed";
 
 export interface Video {
   id: number;
@@ -40,7 +54,7 @@ export interface Video {
   filename: string | null;
   size_mb: number | null;
   photos_used: number | null;
-  status: string;
+  status: VideoStatus;
   error_message?: string | null;
   created_at: string;
   download_url?: string | null;

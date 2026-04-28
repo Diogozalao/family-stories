@@ -13,7 +13,7 @@ class DateResolver:
 
         # Remove timezone info para comparação simples
         date_naive = date.replace(tzinfo=None) if date.tzinfo else date
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
 
         # Data anterior a 1800
         if date_naive < self.MIN_VALID_DATE:

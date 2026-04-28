@@ -30,7 +30,7 @@ export default function LibraryPage() {
       try {
         await upload.mutateAsync(files[i]);
       } catch (err) {
-        toast.error(extractErrorMessage(err, files[i].name));
+        toast.error(`${files[i].name}: ${extractErrorMessage(err)}`);
       }
     }
     setUploadingIdx(null);
@@ -118,16 +118,22 @@ export default function LibraryPage() {
               <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900">
                 <img
                   src={photoUrl(m.id)}
-                  alt={m.filename}
+                  alt={m.original_filename}
                   loading="lazy"
                   onClick={() => setViewerIndex(idx)}
                   className="h-full w-full cursor-zoom-in object-cover transition duration-500 group-hover:scale-105"
                 />
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
-                  <p className="truncate text-xs text-white/90">{m.filename}</p>
-                  {m.size !== undefined && (
-                    <p className="text-[10px] text-white/60">{formatBytes(m.size)}</p>
-                  )}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent p-3">
+                  <p className="truncate text-xs font-medium text-white/95">{m.original_filename}</p>
+                  <div className="flex items-center gap-2 text-[10px] text-white/60">
+                    {m.file_size !== undefined && <span>{formatBytes(m.file_size)}</span>}
+                    {m.date_taken && (
+                      <>
+                        <span>·</span>
+                        <span>{new Date(m.date_taken).toLocaleDateString()}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => handleDelete(m)}
@@ -209,15 +215,26 @@ function Viewer({
         </>
       )}
 
-      <div className="max-h-[90vh] max-w-[92vw]">
+      <div className="flex max-h-[92vh] max-w-[95vw] flex-col">
         <img
           src={photoUrl(cur.id)}
-          alt={cur.filename}
-          className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain animate-scale-in"
+          alt={cur.original_filename}
+          className="max-h-[78vh] max-w-[95vw] rounded-xl object-contain animate-scale-in"
         />
-        <div className="mt-3 flex items-center justify-between text-xs text-white/70">
-          <span className="truncate">{cur.filename}</span>
-          <span>{index + 1} / {items.length}</span>
+        <div className="mt-3 flex items-center justify-between gap-4 text-xs text-white/80">
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-medium text-white/95">{cur.original_filename}</p>
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-white/60">
+              {cur.date_taken && <span>{new Date(cur.date_taken).toLocaleString()}</span>}
+              {cur.ai_setting && <span>· {cur.ai_setting}</span>}
+            </div>
+            {cur.ai_description && (
+              <p className="mt-2 line-clamp-2 max-w-3xl text-[11px] italic text-white/70">
+                {cur.ai_description}
+              </p>
+            )}
+          </div>
+          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1">{index + 1} / {items.length}</span>
         </div>
       </div>
     </div>

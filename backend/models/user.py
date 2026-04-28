@@ -7,7 +7,7 @@ the frontend can later support invited collaborators without a
 migration.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
@@ -22,4 +22,4 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     is_owner        = Column(Boolean, default=False)
     is_active       = Column(Boolean, default=True)
-    created_at      = Column(DateTime, default=datetime.utcnow)
+    created_at      = Column(DateTime, default=lambda: datetime.now(UTC))

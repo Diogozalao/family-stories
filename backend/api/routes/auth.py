@@ -20,6 +20,11 @@ from backend.core.rate_limit import limiter
 from backend.core.security import create_access_token, hash_password, verify_password
 from backend.models.user import User
 
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    new_password:     str = Field(min_length=8, max_length=256)
+
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 log    = structlog.get_logger()
 
@@ -97,6 +102,39 @@ async def login(
         access_token = token,
         user         = {"id": user.id, "username": user.username, "is_owner": user.is_owner},
     )
+
+
+@router.post("/password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+async def change_password(
+    request: Request,
+    payload: ChangePasswordRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Change the authenticated user's password.
+
+    Requires the *current* password as proof of identity, even though we
+    already validated the bearer token — this is the standard pattern
+    that prevents a stolen-but-still-valid token from silently locking
+    the rightful owner out.
+    """
+    if not verify_password(payload.current_password, user.hashed_password):
+        log.info("password_change_wrong_current", user_id=user.id)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Palavra-passe atual incorreta",
+        )
+
+    if payload.current_password == payload.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A nova palavra-passe tem de ser diferente da atual",
+        )
+
+    user.hashed_password = hash_password(payload.new_password)
+    await db.commit()
+    log.info("password_changed", user_id=user.id)
 
 
 @router.get("/me")

@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import { useTaskNotifications } from "../../lib/useTaskNotifications";
 
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  useTaskNotifications();
 
   return (
     <div className="flex h-full bg-stone-50 dark:bg-stone-950">
