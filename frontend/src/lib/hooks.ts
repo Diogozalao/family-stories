@@ -30,6 +30,20 @@ export function useChangePassword() {
   });
 }
 
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (input: { email: string }) =>
+      (await api.post("/api/v1/auth/forgot-password", input)).data,
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (input: { token: string; new_password: string }) =>
+      (await api.post("/api/v1/auth/reset-password", input)).data,
+  });
+}
+
 export function useRegister() {
   const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({

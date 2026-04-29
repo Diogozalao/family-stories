@@ -26,6 +26,8 @@ async def init_db() -> None:
     # Side-effect imports — do NOT remove even though the names look unused.
     from backend.models.media import MediaFile                    # noqa: F401
     from backend.models.narrative import Story                    # noqa: F401
+    from backend.models.password_reset import PasswordResetToken  # noqa: F401
+    from backend.models.task import TaskRecord                    # noqa: F401
     from backend.models.timeline import Person, TimelineEvent     # noqa: F401
     from backend.models.user import User                          # noqa: F401
     from backend.models.video import VideoOutput                  # noqa: F401

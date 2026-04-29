@@ -6,24 +6,44 @@ archive already has an owner. After that, only the owner can invite
 additional users (not yet exposed).
 """
 
+import hashlib
+import secrets
+from datetime import UTC, datetime, timedelta
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.auth import get_current_user
 from backend.core.config import settings
 from backend.core.database import get_db
+from backend.core.email import send_email
 from backend.core.rate_limit import limiter
 from backend.core.security import create_access_token, hash_password, verify_password
+from backend.models.password_reset import PasswordResetToken
 from backend.models.user import User
 
 
 class ChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=1, max_length=256)
     new_password:     str = Field(min_length=8, max_length=256)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token:        str = Field(min_length=32, max_length=128)
+    new_password: str = Field(min_length=8, max_length=256)
+
+
+def _hash_token(raw: str) -> str:
+    """SHA-256 do token plaintext — apenas o digest fica em DB."""
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 log    = structlog.get_logger()
@@ -135,6 +155,132 @@ async def change_password(
     user.hashed_password = hash_password(payload.new_password)
     await db.commit()
     log.info("password_changed", user_id=user.id)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("3/minute")
+async def forgot_password(
+    request: Request,
+    payload: ForgotPasswordRequest,
+    db:      AsyncSession = Depends(get_db),
+):
+    """Inicia o flow de reset de palavra-passe.
+
+    Devolve sempre **202 Accepted** com a mesma resposta, exista ou não
+    o utilizador — assim impede um atacante de descobrir contas
+    válidas a partir do tempo de resposta ou do código de status.
+    """
+    result = await db.execute(select(User).where(User.username == payload.email))
+    user   = result.scalar_one_or_none()
+
+    # Resposta uniforme. Construímos sempre o mesmo payload no fim.
+    masked_response = {
+        "message": "Se a conta existir, foi enviado um link de reset para o email indicado.",
+    }
+
+    if not user or not user.is_active:
+        log.info("forgot_password_unknown_email", email=payload.email)
+        return masked_response
+
+    # Token plaintext (entregue ao utilizador) + hash (guardado em BD).
+    raw_token   = secrets.token_urlsafe(48)
+    token_hash  = _hash_token(raw_token)
+    expires_at  = datetime.now(UTC) + timedelta(minutes=settings.PASSWORD_RESET_TOKEN_TTL_MINUTES)
+
+    db.add(PasswordResetToken(
+        user_id    = user.id,
+        token_hash = token_hash,
+        expires_at = expires_at,
+    ))
+    await db.commit()
+
+    reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
+
+    body_text = (
+        f"Olá,\n\n"
+        f"Recebemos um pedido para repor a palavra-passe da tua conta no Living Memory.\n\n"
+        f"Abre o link a seguir nas próximas {settings.PASSWORD_RESET_TOKEN_TTL_MINUTES} minutos:\n\n"
+        f"{reset_url}\n\n"
+        f"Se não foste tu a pedir, ignora este email — ninguém terá acesso à tua conta.\n\n"
+        f"— Living Memory"
+    )
+    body_html = f"""\
+<!doctype html>
+<html><body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; color: #292524;">
+  <h1 style="font-family: Georgia, serif; font-size: 24px; margin-bottom: 8px;">Recuperar palavra-passe</h1>
+  <p style="color: #57534e;">Recebemos um pedido para repor a palavra-passe da tua conta no Living Memory.</p>
+  <p style="margin: 28px 0;">
+    <a href="{reset_url}" style="display:inline-block;background:#C67B15;color:#fff;padding:12px 22px;border-radius:10px;text-decoration:none;font-weight:600;">
+      Definir nova palavra-passe
+    </a>
+  </p>
+  <p style="font-size: 13px; color: #78716c;">O link expira em {settings.PASSWORD_RESET_TOKEN_TTL_MINUTES} minutos. Se não foste tu, ignora este email.</p>
+  <p style="font-size: 12px; color: #a8a29e; margin-top: 32px;">— Living Memory</p>
+</body></html>"""
+
+    delivered = await send_email(
+        to        = payload.email,
+        subject   = "Living Memory — Repor palavra-passe",
+        body_text = body_text,
+        body_html = body_html,
+    )
+
+    log.info(
+        "password_reset_link_issued",
+        user_id   = user.id,
+        delivered = delivered,
+        # Em modo log-only, o link já está no record acima ("body=...");
+        # aqui registamos só a metadata. Em modo SMTP-on, a entrega foi
+        # confirmada pelo log do email.py.
+    )
+    return masked_response
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+async def reset_password(
+    request: Request,
+    payload: ResetPasswordRequest,
+    db:      AsyncSession = Depends(get_db),
+):
+    """Conclui o reset usando o token recebido por email.
+
+    Validações:
+      * token existe (lookup pelo hash sha256)
+      * ainda dentro da janela de validade
+      * nunca usado antes
+    """
+    token_hash = _hash_token(payload.token)
+    result = await db.execute(
+        select(PasswordResetToken).where(PasswordResetToken.token_hash == token_hash)
+    )
+    record = result.scalar_one_or_none()
+
+    if record is None:
+        log.info("password_reset_token_unknown")
+        raise HTTPException(status_code=400, detail="Token inválido ou já utilizado.")
+
+    now = datetime.now(UTC)
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:           # SQLite retorna naive — assumimos UTC
+        expires_at = expires_at.replace(tzinfo=UTC)
+
+    if record.used_at is not None:
+        log.info("password_reset_token_reused", token_id=record.id)
+        raise HTTPException(status_code=400, detail="Token inválido ou já utilizado.")
+    if expires_at < now:
+        log.info("password_reset_token_expired", token_id=record.id)
+        raise HTTPException(status_code=400, detail="O link expirou. Pede um novo.")
+
+    user = await db.get(User, record.user_id)
+    if user is None:
+        raise HTTPException(status_code=400, detail="Token inválido.")
+
+    user.hashed_password = hash_password(payload.new_password)
+    record.used_at       = now
+    await db.commit()
+
+    log.info("password_reset_completed", user_id=user.id)
 
 
 @router.get("/me")

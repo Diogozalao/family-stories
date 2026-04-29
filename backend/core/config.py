@@ -45,6 +45,27 @@ class Settings(BaseSettings):
     RATE_LIMIT_UPLOAD:   str = "20/minute"
     RATE_LIMIT_GENERATE: str = "5/minute"
 
+    # Public URL the frontend is served from. Used to build absolute
+    # links inside outgoing emails (password reset, etc.).
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # ── SMTP (opcional) ──────────────────────────────────────────────
+    # Quando ``SMTP_ENABLED=False`` (default), o sistema mantém-se
+    # totalmente local: pedidos de reset de palavra-passe geram um
+    # token e o link é escrito no log do backend (útil para demo /
+    # tese sem servidor de email). Quando ligado, o link é enviado
+    # por email para o utilizador.
+    SMTP_ENABLED:  bool = False
+    SMTP_HOST:     str  = "smtp.gmail.com"
+    SMTP_PORT:     int  = 587
+    SMTP_USERNAME: str  = ""
+    SMTP_PASSWORD: str  = ""
+    SMTP_FROM:     str  = "Living Memory <noreply@livingmemory.local>"
+    SMTP_USE_TLS:  bool = True
+
+    # Token de reset de password — vida útil em minutos.
+    PASSWORD_RESET_TOKEN_TTL_MINUTES: int = 60
+
     class Config:
         env_file          = ".env"
         env_file_encoding = "utf-8"

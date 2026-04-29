@@ -87,26 +87,44 @@ export default function RegisterPage() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-5"
+        autoComplete="off"
+        spellCheck={false}
+      >
+        <input type="text"     name="x_user_dummy" autoComplete="username"          className="hidden" tabIndex={-1} />
+        <input type="password" name="x_pass_dummy" autoComplete="new-password"     className="hidden" tabIndex={-1} />
+
         <div>
-          <label className="label" htmlFor="username">{t("auth.username")}</label>
-          <input
-            id="username"
-            autoFocus
-            required
-            minLength={3}
-            className="input py-3 text-[15px]"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-          />
+          <label className="label" htmlFor="reg-email">Email</label>
+          <div className="relative">
+            <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <input
+              id="reg-email"
+              name="reg-email-9af2"
+              autoFocus
+              required
+              type="email"
+              inputMode="email"
+              placeholder="email@exemplo.com"
+              className="input py-3 pl-10 text-[15px]"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          {emailInvalid && (
+            <p className="mt-1.5 text-xs text-rose-600">Indica um email válido.</p>
+          )}
         </div>
 
         <div>
-          <label className="label" htmlFor="password">{t("auth.password")}</label>
+          <label className="label" htmlFor="reg-pw">{t("auth.password")}</label>
           <div className="relative">
             <input
-              id="password"
+              id="reg-pw"
+              name="reg-pw-9af2"
               required
               minLength={8}
               type={showPw ? "text" : "password"}
@@ -135,7 +153,7 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          disabled={register.isPending || pwTooShort}
+          disabled={!canSubmit || register.isPending}
           className="btn btn-primary w-full justify-center py-3 text-[15px]"
         >
           {register.isPending ? (

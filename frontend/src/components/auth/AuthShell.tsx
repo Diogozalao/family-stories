@@ -11,7 +11,7 @@ export default function AuthShell({
   children: ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-full items-center justify-center overflow-hidden bg-gradient-to-br from-stone-100 via-amber-50 to-brand-100 px-4 py-10 dark:from-stone-950 dark:via-stone-950 dark:to-brand-950/80">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-stone-100 via-amber-50 to-brand-100 px-4 py-10 pt-28 dark:from-stone-950 dark:via-stone-950 dark:to-brand-950/80">
       <Backdrop />
 
       <div className="relative z-10 w-full max-w-md animate-fade-in">
@@ -31,11 +31,15 @@ export default function AuthShell({
 }
 
 function Backdrop() {
+  // Three orbs in a deliberately chosen palette:
+  //   • brand amber  → warmth, family hearth
+  //   • sage  green  → peace, continuity
+  //   • dusty rose   → trust, intimacy
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
       <div className="absolute left-1/2 top-0 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-brand-300/40 blur-3xl dark:bg-brand-700/30" />
-      <div className="absolute bottom-0 right-0 h-[28rem] w-[28rem] translate-x-1/3 translate-y-1/3 rounded-full bg-amber-300/30 blur-3xl dark:bg-amber-900/20" />
-      <div className="absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-rose-200/30 blur-3xl dark:bg-stone-800/40" />
+      <div className="absolute bottom-0 right-0 h-[30rem] w-[30rem] translate-x-1/3 translate-y-1/3 rounded-full bg-emerald-200/35 blur-3xl dark:bg-emerald-900/20" />
+      <div className="absolute -left-24 bottom-20 h-80 w-80 rounded-full bg-rose-200/35 blur-3xl dark:bg-rose-900/20" />
       <div
         className="absolute inset-0 opacity-[0.035] dark:opacity-[0.06]"
         style={{

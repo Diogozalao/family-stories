@@ -122,7 +122,7 @@ export function HowItWorksSection() {
   }, [paused, steps.length]);
 
   return (
-    <section className="relative bg-gradient-to-b from-transparent via-stone-100/60 to-transparent px-4 py-24 dark:via-stone-900/40 sm:py-28">
+    <section id="how" className="relative bg-gradient-to-b from-transparent via-stone-100/60 to-transparent px-4 py-24 dark:via-stone-900/40 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <header className="mx-auto max-w-3xl text-center">
           <span className="chip chip-accent">Como funciona</span>
@@ -242,7 +242,7 @@ export function PrivacySection() {
     { icon: Clock,    title: "Funciona offline",         body: "Depois do modelo descarregado uma vez, podes desligar a internet e continuar a gerar histórias." },
   ];
   return (
-    <section className="relative px-4 py-24 sm:py-28">
+    <section id="privacy" className="relative px-4 py-24 sm:py-28">
       <div className="mx-auto max-w-5xl">
         <header className="mx-auto max-w-3xl text-center">
           <span className="chip chip-accent">Privacidade</span>
