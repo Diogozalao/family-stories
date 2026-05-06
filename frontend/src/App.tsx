@@ -7,6 +7,8 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import LibraryPage from "./pages/LibraryPage";
+import ProjectsPage from "./pages/ProjectsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import FamilyPage from "./pages/FamilyPage";
 import TimelinePage from "./pages/TimelinePage";
 import StoriesPage from "./pages/StoriesPage";
@@ -28,6 +30,8 @@ export default function App() {
       <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route path="/"            element={<DashboardPage />} />
         <Route path="/library"     element={<LibraryPage />} />
+        <Route path="/projects"    element={<ProjectsPage />} />
+        <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/family"      element={<FamilyPage />} />
         <Route path="/timeline"    element={<TimelinePage />} />
         <Route path="/stories"     element={<StoriesPage />} />

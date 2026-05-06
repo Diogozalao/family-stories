@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, FolderKanban, Loader2, Sparkles } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useGenerateNarrative, useIndexFacts, usePersons, useTemplates } from "../lib/hooks";
+import {
+  useGenerateNarrative, useIndexFacts, usePersons, useProject,
+  useTemplates,
+} from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
 import { cn, initials } from "../lib/utils";
 
@@ -13,6 +16,10 @@ type Step = 1 | 2 | 3 | 4;
 export default function GeneratePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const projectId = params.get("project") ? Number(params.get("project")) : null;
+  const { data: project } = useProject(projectId);
+
   const { data: templates } = useTemplates();
   const { data: persons } = usePersons();
   const gen = useGenerateNarrative();
@@ -44,15 +51,16 @@ export default function GeneratePage() {
         event_type: eventType,
         query: query.trim(),
         person_ids: selectedIds,
+        project_id: projectId ?? undefined,
         mode,
       },
       {
         onSuccess: (data: any) => {
           if (mode === "sync" && data?.id) {
-            navigate(`/stories/${data.id}`);
+            navigate(projectId ? `/projects/${projectId}` : `/stories/${data.id}`);
           } else {
             toast.success(t("videos.processing"));
-            navigate("/tasks");
+            navigate(projectId ? `/projects/${projectId}` : "/tasks");
           }
         },
         onError: (err) => toast.error(extractErrorMessage(err)),
@@ -64,8 +72,19 @@ export default function GeneratePage() {
     <>
       <PageHeader
         title={t("generate.title")}
-        subtitle={t("generate.subtitle")}
+        subtitle={
+          project
+            ? `Esta história será criada dentro do projeto "${project.name}" e usará apenas as fotografias adicionadas a ele.`
+            : t("generate.subtitle")
+        }
         actions={
+          <>
+            {project && (
+              <span className="chip chip-accent">
+                <FolderKanban className="h-3.5 w-3.5" />
+                {project.name}
+              </span>
+            )}
           <button
             onClick={() => index.mutate(undefined, {
               onSuccess: () => toast.success(t("common.success")),
@@ -78,6 +97,7 @@ export default function GeneratePage() {
             {index.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             <span>Reindex</span>
           </button>
+          </>
         }
       />
 

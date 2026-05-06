@@ -11,6 +11,10 @@ class LLMClient:
             self._setup_gemini()
         log.info("llm_ready", backend=self.backend)
 
+    @property
+    def backend(self) -> str:
+        return "ollama" if self._ollama_ok else "gemini-fallback"
+
     def _check_ollama(self) -> bool:
         try:
             models = ollama_client.list()
@@ -51,12 +55,10 @@ class LLMClient:
             return text
         except Exception as e:
             log.error("ollama_error", error=str(e))
-            if not self._ollama_ok:
-                return "Erro ao gerar narrativa."
             self._setup_gemini()
-            return self._gemini_generate(prompt, max_tokens)
+            return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
 
-    def _gemini_generate(self, prompt: str, max_tokens: int) -> str:
+    def _gemini_generate(self, prompt: str, max_tokens: int, _ollama_error: str | None = None) -> str:
         try:
             import google.generativeai as genai
             log.info("llm_generating", backend="gemini_fallback")
@@ -72,8 +74,13 @@ class LLMClient:
             return text
         except Exception as e:
             log.error("gemini_error", error=str(e))
-            return "Não foi possível gerar a narrativa. Tenta novamente mais tarde."
+            # Both backends failed — propagate so the caller can mark the
+            # task/story as ``failed`` instead of saving a fake narrative.
+            details = str(e)
+            if _ollama_error:
+                details = f"Ollama: {_ollama_error}\nGemini: {details}"
+            raise LLMUnavailableError(details) from e
 
-    @property
-    def backend(self) -> str:
-        return "ollama" if self._ollama_ok else "gemini-fallback"
+
+class LLMUnavailableError(RuntimeError):
+    """Raised when both the local LLM and the Gemini fallback fail."""

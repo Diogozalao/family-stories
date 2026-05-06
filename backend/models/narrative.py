@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, Enum
+from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, Enum, ForeignKey
 from backend.models.media import Base
 from datetime import UTC, datetime
 import enum
@@ -21,5 +21,6 @@ class Story(Base):
     prompt_used   = Column(Text, nullable=True)
     status        = Column(Enum(StoryStatus), default=StoryStatus.DRAFT)
     person_ids    = Column(JSON, default=list)
+    project_id    = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at    = Column(DateTime, default=lambda: datetime.now(UTC))
     updated_at    = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))

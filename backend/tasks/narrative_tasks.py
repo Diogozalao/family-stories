@@ -32,6 +32,7 @@ def generate_narrative_task(
                 event_type = payload.get("event_type", "default"),
                 query      = payload.get("query"),
                 person_ids = payload.get("person_ids") or [],
+                project_id = payload.get("project_id"),
             )
             return {
                 "story_id":      story.id,

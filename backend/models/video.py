@@ -23,6 +23,7 @@ class VideoOutput(Base):
 
     id            = Column(Integer, primary_key=True, index=True)
     story_id      = Column(Integer, ForeignKey("stories.id"), nullable=False)
+    project_id    = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
     filename      = Column(String(255), nullable=True)
     file_path     = Column(String(500), nullable=True)
     file_size_mb  = Column(Float, nullable=True)

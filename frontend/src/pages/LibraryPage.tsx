@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Loader2, Trash2, UploadCloud, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useDeletePhoto, useMedia, useUploadPhoto } from "../lib/hooks";
+import { useBuildTimeline, useDeletePhoto, useMedia, useUploadPhoto } from "../lib/hooks";
 import { photoUrl } from "../lib/photo";
 import { extractErrorMessage } from "../lib/api";
 import { formatBytes } from "../lib/utils";
@@ -16,6 +16,7 @@ export default function LibraryPage() {
   const { t } = useTranslation();
   const { data: media, isLoading } = useMedia();
   const upload = useUploadPhoto();
+  const buildTimeline = useBuildTimeline();
   const del = useDeletePhoto();
 
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
@@ -25,18 +26,27 @@ export default function LibraryPage() {
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
     setUploadingTotal(files.length);
+    let okCount = 0;
     for (let i = 0; i < files.length; i++) {
       setUploadingIdx(i + 1);
       try {
         await upload.mutateAsync(files[i]);
+        okCount++;
       } catch (err) {
         toast.error(`${files[i].name}: ${extractErrorMessage(err)}`);
       }
     }
     setUploadingIdx(null);
     setUploadingTotal(0);
-    toast.success(t("common.success"));
-  }, [upload, t]);
+    if (okCount > 0) {
+      toast.success(t("common.success"));
+      try {
+        await buildTimeline.mutateAsync();
+      } catch {
+        // The build is best-effort — silent failure here keeps the upload UX clean.
+      }
+    }
+  }, [upload, buildTimeline, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,

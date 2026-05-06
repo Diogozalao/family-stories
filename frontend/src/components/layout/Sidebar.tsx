@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Clapperboard, Film, Home, Images, Network, ScrollText, Settings,
-  Sparkles, Timer, X,
+  Clapperboard, FolderKanban, Home, Images,
+  Settings, Sparkles, X,
 } from "lucide-react";
 import Logo from "../brand/Logo";
 import { cn } from "../../lib/utils";
@@ -27,10 +27,7 @@ export default function Sidebar({
   const items: Item[] = [
     { to: "/",         icon: <Home        className="h-[18px] w-[18px]" />, label: t("nav.dashboard") },
     { to: "/library",  icon: <Images      className="h-[18px] w-[18px]" />, label: t("nav.library") },
-    { to: "/family",   icon: <Network     className="h-[18px] w-[18px]" />, label: t("nav.family") },
-    { to: "/timeline", icon: <Timer       className="h-[18px] w-[18px]" />, label: t("nav.timeline") },
-    { to: "/stories",  icon: <ScrollText  className="h-[18px] w-[18px]" />, label: t("nav.stories") },
-    { to: "/videos",   icon: <Film        className="h-[18px] w-[18px]" />, label: t("nav.videos") },
+    { to: "/projects", icon: <FolderKanban className="h-[18px] w-[18px]" />, label: t("nav.projects") },
     { to: "/generate", icon: <Sparkles    className="h-[18px] w-[18px]" />, label: t("nav.generate"), accent: true },
     { to: "/tasks",    icon: <Clapperboard className="h-[18px] w-[18px]" />, label: t("nav.tasks") },
     { to: "/settings", icon: <Settings    className="h-[18px] w-[18px]" />, label: t("nav.settings") },

@@ -51,7 +51,14 @@ class M4Processor:
             log.info("m4_reuse", story_id=story_id, file=cached.filename)
             return cached
 
-        record = VideoOutput(story_id=story_id, status=VideoStatus.PROCESSING)
+        # Carry the project linkage from the source story so the video
+        # appears under the same project workspace in the UI.
+        story = await db.get(Story, story_id)
+        record = VideoOutput(
+            story_id   = story_id,
+            project_id = story.project_id if story else None,
+            status     = VideoStatus.PROCESSING,
+        )
         db.add(record)
         await db.commit()
         await db.refresh(record)

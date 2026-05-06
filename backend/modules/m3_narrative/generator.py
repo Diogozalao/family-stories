@@ -53,9 +53,10 @@ class NarrativeGenerator:
         event_type: str  = "default",
         query:      str  = None,
         person_ids: list = None,
+        project_id: int  = None,
     ) -> Story:
 
-        log.info("generating_narrative", title=title, type=event_type)
+        log.info("generating_narrative", title=title, type=event_type, project_id=project_id)
 
         # Reload the graph so GEDCOM files imported after server start are
         # picked up — otherwise narratives would miss freshly added people.
@@ -65,10 +66,23 @@ class NarrativeGenerator:
 
         template = get_template(event_type)
 
-        # Pull the real media rows directly from the DB.
-        media_result = await db.execute(
-            select(MediaFile).where(MediaFile.status == ProcessingStatus.COMPLETED)
-        )
+        # When the request is scoped to a project, only consider photos
+        # added to that project — so the LLM doesn't pollute the narrative
+        # with media from unrelated parts of the archive.
+        if project_id is not None:
+            from backend.models.project import ProjectMedia
+            media_result = await db.execute(
+                select(MediaFile)
+                .join(ProjectMedia, ProjectMedia.media_id == MediaFile.id)
+                .where(
+                    ProjectMedia.project_id == project_id,
+                    MediaFile.status == ProcessingStatus.COMPLETED,
+                )
+            )
+        else:
+            media_result = await db.execute(
+                select(MediaFile).where(MediaFile.status == ProcessingStatus.COMPLETED)
+            )
         all_media = media_result.scalars().all()
 
         # Build the context straight from the DB facts — anchors the LLM on
@@ -95,6 +109,7 @@ class NarrativeGenerator:
             prompt_used   = prompt,
             status        = StoryStatus.COMPLETED,
             person_ids    = person_ids or [],
+            project_id    = project_id,
         )
         db.add(story)
         await db.commit()

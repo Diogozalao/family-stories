@@ -24,6 +24,7 @@ from backend.api.routes.genealogy  import router as genealogy_router
 from backend.api.routes.health     import router as health_router
 from backend.api.routes.multimedia import router as multimedia_router
 from backend.api.routes.narrative  import router as narrative_router
+from backend.api.routes.projects   import router as projects_router
 from backend.api.routes.tasks      import router as tasks_router
 from backend.api.routes.timeline   import router as timeline_router
 from backend.api.routes.upload     import router as upload_router
@@ -94,6 +95,7 @@ app.include_router(auth_router)
 app.include_router(upload_router)
 app.include_router(timeline_router)
 app.include_router(narrative_router)
+app.include_router(projects_router)
 app.include_router(genealogy_router)
 app.include_router(multimedia_router)
 app.include_router(tasks_router)

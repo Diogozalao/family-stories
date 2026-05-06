@@ -32,6 +32,11 @@ class ChangePasswordRequest(BaseModel):
     new_password:     str = Field(min_length=8, max_length=256)
 
 
+class DeleteAccountRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=256)
+    confirm:          str = Field(description="Tem de ser exatamente 'APAGAR'")
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -281,6 +286,97 @@ async def reset_password(
     await db.commit()
 
     log.info("password_reset_completed", user_id=user.id)
+
+
+@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/minute")
+async def delete_account(
+    request: Request,
+    payload: DeleteAccountRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Elimina a conta e **todos os dados** associados — fotos, histórias,
+    vídeos, projetos, tarefas e ficheiros em disco.
+
+    Requer:
+      * a palavra-passe atual (defesa em profundidade contra token roubado)
+      * a string literal ``APAGAR`` no campo ``confirm`` (evita cliques acidentais)
+
+    Esta operação é **irreversível** e não tem fluxo de undo.
+    """
+    if not verify_password(payload.current_password, user.hashed_password):
+        log.info("delete_account_wrong_password", user_id=user.id)
+        raise HTTPException(status_code=400, detail="Palavra-passe atual incorreta.")
+
+    if payload.confirm.strip() != "APAGAR":
+        raise HTTPException(
+            status_code=400,
+            detail="Confirma escrevendo APAGAR em maiúsculas.",
+        )
+
+    from pathlib import Path
+
+    from backend.core.config import settings as _s
+    from backend.models.media import MediaFile
+    from backend.models.narrative import Story
+    from backend.models.password_reset import PasswordResetToken
+    from backend.models.project import Project, ProjectMedia
+    from backend.models.task import TaskRecord
+    from backend.models.timeline import Person, TimelineEvent
+    from backend.models.video import VideoOutput
+
+    log.info("delete_account_start", user_id=user.id, username=user.username)
+
+    # 1. Apagar ficheiros em disco — fotos + vídeos.
+    media_rows = (await db.execute(select(MediaFile))).scalars().all()
+    for m in media_rows:
+        if m.file_path:
+            try:
+                Path(m.file_path).unlink(missing_ok=True)
+            except OSError as exc:
+                log.warning("delete_account_file_unlink_failed", path=m.file_path, error=str(exc))
+
+    video_rows = (await db.execute(select(VideoOutput))).scalars().all()
+    for v in video_rows:
+        if v.file_path:
+            try:
+                Path(v.file_path).unlink(missing_ok=True)
+            except OSError as exc:
+                log.warning("delete_account_file_unlink_failed", path=v.file_path, error=str(exc))
+
+    # 2. Limpar pastas auxiliares (áudio TTS, GEDCOM, grafo) — best-effort.
+    aux = [
+        _s.PROCESSED_DIR / "audio",
+        _s.PROCESSED_DIR / "videos",
+        _s.PROCESSED_DIR / "family_graph.json",
+        _s.RAW_DIR / "gedcom",
+        _s.RAW_DIR / "photos",
+    ]
+    for path in aux:
+        try:
+            if path.is_dir():
+                for child in path.iterdir():
+                    if child.is_file():
+                        child.unlink(missing_ok=True)
+            elif path.is_file():
+                path.unlink(missing_ok=True)
+        except OSError as exc:
+            log.warning("delete_account_aux_cleanup_failed", path=str(path), error=str(exc))
+
+    # 3. Apagar registos da BD numa ordem segura quanto a FKs.
+    from sqlalchemy import delete as sqla_delete
+    for model in (
+        VideoOutput, Story, ProjectMedia, Project,
+        TimelineEvent, Person, MediaFile, TaskRecord, PasswordResetToken,
+    ):
+        await db.execute(sqla_delete(model))
+
+    # 4. Por fim, o utilizador.
+    await db.delete(user)
+    await db.commit()
+
+    log.info("delete_account_complete", user_id=user.id)
 
 
 @router.get("/me")

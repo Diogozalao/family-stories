@@ -14,7 +14,12 @@
       "Bash(curl -s -o /tmp/p.jpg -w \"HTTP: %{http_code}\\\\nbytes: %{size_download}\\\\nMIME: %{content_type}\\\\n\" http://127.0.0.1:8000/api/v1/media/10/file)",
       "Bash(curl -s http://127.0.0.1:8000/api/v1/tasks/1)",
       "Bash(grep -vE \"^$\")",
-      "Bash(curl -s http://127.0.0.1:5173/)"
+      "Bash(curl -s http://127.0.0.1:5173/)",
+      "Bash(curl -fs http://127.0.0.1:11434/api/tags)",
+      "Bash(rm -f docs/architecture/tree.txt docs/architecture/tree-anotada.md docs/architecture/tree-modulos.md && echo \"removidos\")"
+    ],
+    "additionalDirectories": [
+      "/home/diogo05/family-stories/docs/architecture"
     ]
   }
 }

@@ -8,6 +8,7 @@ class GenerateRequest(BaseModel):
     event_type: str  = "default"
     query:      Optional[str] = None
     person_ids: List[int] = []
+    project_id: Optional[int] = None
 
     class Config:
         json_schema_extra = {
@@ -28,6 +29,7 @@ class StoryResponse(BaseModel):
     llm_backend:   Optional[str]
     facts_used:    int
     status:        StoryStatus
+    project_id:    Optional[int] = None
     created_at:    datetime
 
     class Config:

@@ -46,6 +46,7 @@ export default {
   nav: {
     dashboard: "Início",
     library: "Biblioteca",
+    projects: "Projetos",
     family: "Família",
     timeline: "Linha Temporal",
     stories: "Histórias",

@@ -43,7 +43,20 @@ export interface Story {
   llm_backend?: string | null;
   facts_used?: number;
   status?: "draft" | "completed" | "failed";
+  project_id?: number | null;
   created_at: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  cover_media_id: number | null;
+  created_at: string;
+  updated_at: string;
+  photos_count: number;
+  stories_count: number;
+  videos_count: number;
 }
 
 export type VideoStatus = "processing" | "completed" | "failed";

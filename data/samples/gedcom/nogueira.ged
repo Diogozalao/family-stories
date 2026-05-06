@@ -1,0 +1,240 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 6 MAY 2026
+1 NOTE Família Nogueira — linhagem da região de Viseu (5 gerações).
+0 @I1@ INDI
+1 NAME Bento /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 9 JAN 1850
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 30 SEP 1925
+2 PLAC Viseu, Portugal
+1 OCCU Vinhateiro
+1 RESI
+2 PLAC Quinta da Granja, Mangualde
+1 NOTE Patriarca da família. Plantou as primeiras vinhas da Quinta da Granja em 1875.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Eulália /Pais/
+1 SEX F
+1 BIRT
+2 DATE 14 OCT 1853
+2 PLAC Nelas, Viseu, Portugal
+1 DEAT
+2 DATE 7 MAY 1932
+2 PLAC Mangualde, Viseu, Portugal
+1 OCCU Dona da casa agrícola
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 15 OCT 1873
+2 PLAC Mangualde, Viseu, Portugal
+1 CHIL @I3@
+1 CHIL @I4@
+1 CHIL @I5@
+1 CHIL @I6@
+0 @I3@ INDI
+1 NAME Augusto /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 5 MAR 1885
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 21 NOV 1955
+2 PLAC Viseu, Portugal
+1 OCCU Engenheiro agrónomo
+1 EDUC Instituto Superior de Agronomia, 1909
+1 NOTE Modernizou a quinta familiar com técnicas aprendidas em França.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Alfredo /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 11 SEP 1881
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 4 JUL 1916
+2 PLAC França
+1 OCCU Soldado
+1 NOTE Morreu na Primeira Guerra Mundial, no Corpo Expedicionário Português, na batalha do La Lys.
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Constança /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 19 MAY 1888
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 8 FEB 1969
+2 PLAC Viseu, Portugal
+1 OCCU Professora primária
+1 FAMC @F1@
+0 @I6@ INDI
+1 NAME Joaquina /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 28 DEC 1892
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 15 OCT 1981
+2 PLAC Viseu, Portugal
+1 FAMC @F1@
+0 @I7@ INDI
+1 NAME Conceição /Veloso/
+1 SEX F
+1 BIRT
+2 DATE 17 APR 1890
+2 PLAC Mangualde, Viseu, Portugal
+1 DEAT
+2 DATE 9 MAR 1971
+2 PLAC Viseu, Portugal
+1 OCCU Farmacêutica
+1 FAMS @F2@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I7@
+1 MARR
+2 DATE 24 APR 1912
+2 PLAC Viseu, Portugal
+1 CHIL @I8@
+1 CHIL @I9@
+1 CHIL @I10@
+0 @I8@ INDI
+1 NAME Manuel /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 11 AUG 1920
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 17 FEB 2001
+2 PLAC Viseu, Portugal
+1 OCCU Notário
+1 EDUC Faculdade de Direito de Coimbra, 1944
+1 NOTE Notário em Viseu durante 40 anos.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I9@ INDI
+1 NAME Rosa /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 3 SEP 1916
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 22 MAY 1998
+2 PLAC Lisboa, Portugal
+1 OCCU Pianista
+1 NOTE Concertista. Tocou na Sala Tivoli em 1948.
+1 FAMC @F2@
+0 @I10@ INDI
+1 NAME Júlio /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 29 JUL 1924
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 13 NOV 1990
+2 PLAC Brasil
+1 OCCU Engenheiro
+1 NOTE Emigrou para o Brasil em 1955.
+1 FAMC @F2@
+0 @I11@ INDI
+1 NAME Olga /Castro/
+1 SEX F
+1 BIRT
+2 DATE 8 NOV 1925
+2 PLAC Aveiro, Portugal
+1 DEAT
+2 DATE 6 OCT 2010
+2 PLAC Viseu, Portugal
+1 OCCU Médica
+1 EDUC Faculdade de Medicina do Porto, 1951
+1 NOTE Uma das primeiras mulheres médicas em Viseu.
+1 FAMS @F3@
+0 @F3@ FAM
+1 HUSB @I8@
+1 WIFE @I11@
+1 MARR
+2 DATE 9 SEP 1953
+2 PLAC Viseu, Portugal
+1 CHIL @I12@
+1 CHIL @I13@
+1 CHIL @I14@
+0 @I12@ INDI
+1 NAME Pedro /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 18 FEB 1958
+2 PLAC Viseu, Portugal
+1 OCCU Arquiteto
+1 EDUC Faculdade de Arquitetura do Porto, 1983
+1 NOTE Vive em Viseu, é responsável pela restauração do Solar dos Cunhas.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I13@ INDI
+1 NAME Sofia /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 14 MAY 1969
+2 PLAC Viseu, Portugal
+1 OCCU Enfermeira
+1 NOTE Casou com Carlos Dinis (ver dinis.ged) em 1996; ligação da família à Família Dinis.
+1 FAMC @F3@
+0 @I14@ INDI
+1 NAME Tiago /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 25 OCT 1962
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 7 AUG 2018
+2 PLAC Viseu, Portugal
+1 OCCU Jornalista
+1 NOTE Trabalhou no Diário de Viseu durante 30 anos.
+1 FAMC @F3@
+0 @I15@ INDI
+1 NAME Isabel /Vieira/
+1 SEX F
+1 BIRT
+2 DATE 11 JAN 1962
+2 PLAC Coimbra, Portugal
+1 OCCU Historiadora
+1 EDUC Faculdade de Letras de Coimbra, 1985
+1 FAMS @F4@
+0 @F4@ FAM
+1 HUSB @I12@
+1 WIFE @I15@
+1 MARR
+2 DATE 6 SEP 1986
+2 PLAC Coimbra, Portugal
+1 CHIL @I16@
+1 CHIL @I17@
+0 @I16@ INDI
+1 NAME Tomé /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 14 JUN 1990
+2 PLAC Viseu, Portugal
+1 OCCU Designer industrial
+1 FAMC @F4@
+0 @I17@ INDI
+1 NAME Sofia /Nogueira Vieira/
+1 SEX F
+1 BIRT
+2 DATE 27 NOV 1993
+2 PLAC Viseu, Portugal
+1 OCCU Médica
+1 EDUC Faculdade de Medicina de Coimbra, 2018
+1 FAMC @F4@
+0 TRLR

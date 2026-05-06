@@ -1,0 +1,237 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 6 MAY 2026
+1 NOTE Família Sousa — linhagem da região de Évora (5 gerações).
+0 @I1@ INDI
+1 NAME Mateus /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 11 AUG 1855
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 14 FEB 1932
+2 PLAC Évora, Portugal
+1 OCCU Lavrador alentejano
+1 RESI
+2 PLAC Herdade dos Olivais, Évora
+1 NOTE Possuía 80 hectares de olival e azinhal nos arredores de Évora.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Luísa /Henriques/
+1 SEX F
+1 BIRT
+2 DATE 26 NOV 1858
+2 PLAC Estremoz, Évora, Portugal
+1 DEAT
+2 DATE 4 SEP 1941
+2 PLAC Évora, Portugal
+1 OCCU Bordadeira de Nisa
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 18 MAY 1878
+2 PLAC Évora, Portugal
+1 CHIL @I3@
+1 CHIL @I4@
+1 CHIL @I5@
+0 @I3@ INDI
+1 NAME Domingos /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 7 OCT 1882
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 19 JAN 1960
+2 PLAC Évora, Portugal
+1 OCCU Lavrador
+1 NOTE Continuou a herdade familiar e introduziu a colheita mecânica em 1928.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Maria do Carmo /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 13 APR 1885
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 22 OCT 1972
+2 PLAC Évora, Portugal
+1 OCCU Religiosa
+1 NOTE Madre superiora do Convento das Maltesas em Estremoz entre 1936 e 1968.
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Tomás /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 30 JAN 1889
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 14 NOV 1953
+2 PLAC Lisboa, Portugal
+1 OCCU Médico
+1 EDUC Escola Médico-Cirúrgica de Lisboa, 1913
+1 NOTE Combateu na Primeira Guerra Mundial como médico militar.
+1 FAMC @F1@
+0 @I6@ INDI
+1 NAME Beatriz /Carmo/
+1 SEX F
+1 BIRT
+2 DATE 21 JUL 1888
+2 PLAC Vila Viçosa, Évora, Portugal
+1 DEAT
+2 DATE 17 MAR 1969
+2 PLAC Évora, Portugal
+1 OCCU Pintora amadora
+1 FAMS @F2@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I6@
+1 MARR
+2 DATE 14 JUN 1910
+2 PLAC Évora, Portugal
+1 CHIL @I7@
+1 CHIL @I8@
+1 CHIL @I9@
+1 CHIL @I10@
+0 @I7@ INDI
+1 NAME Filipe /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 12 SEP 1918
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 4 MAR 2002
+2 PLAC Évora, Portugal
+1 OCCU Veterinário
+1 EDUC Escola Superior de Medicina Veterinária, 1942
+1 NOTE Veterinário oficial da feira de São João de Évora durante 30 anos.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Joana /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 4 MAY 1912
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 19 OCT 1998
+2 PLAC Lisboa, Portugal
+1 OCCU Atriz
+1 NOTE Atuou em revistas no Parque Mayer entre 1935 e 1962.
+1 FAMC @F2@
+0 @I9@ INDI
+1 NAME Henrique /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 8 NOV 1915
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 1 SEP 1973
+2 PLAC Angola
+1 OCCU Engenheiro de minas
+1 NOTE Trabalhou nas minas de diamantes da Diamang, em Angola.
+1 FAMC @F2@
+0 @I10@ INDI
+1 NAME Inês /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 16 FEB 1924
+2 PLAC Évora, Portugal
+1 DEAT
+2 DATE 28 NOV 2009
+2 PLAC Évora, Portugal
+1 OCCU Professora de Filosofia
+1 FAMC @F2@
+0 @I11@ INDI
+1 NAME Elvira /Pinheiro/
+1 SEX F
+1 BIRT
+2 DATE 27 OCT 1923
+2 PLAC Beja, Portugal
+1 DEAT
+2 DATE 14 MAY 2011
+2 PLAC Évora, Portugal
+1 OCCU Boticária
+1 FAMS @F3@
+0 @F3@ FAM
+1 HUSB @I7@
+1 WIFE @I11@
+1 MARR
+2 DATE 4 OCT 1948
+2 PLAC Évora, Portugal
+1 CHIL @I12@
+1 CHIL @I13@
+1 CHIL @I14@
+0 @I12@ INDI
+1 NAME Nuno /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 20 MAR 1960
+2 PLAC Évora, Portugal
+1 OCCU Arquiteto paisagista
+1 EDUC Universidade de Évora, 1985
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I13@ INDI
+1 NAME Catarina /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 4 MAR 1972
+2 PLAC Évora, Portugal
+1 OCCU Notária
+1 EDUC Faculdade de Direito de Lisboa, 1995
+1 NOTE Casou com Pedro Lopes (ver lopes.ged) em 2000; ligação à Família Lopes.
+1 FAMC @F3@
+0 @I14@ INDI
+1 NAME Manuel /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 14 JUL 1965
+2 PLAC Évora, Portugal
+1 OCCU Empresário vinhateiro
+1 NOTE Recuperou a herdade familiar e fundou a marca de vinho "Olivais de Sousa" em 1997.
+1 FAMC @F3@
+0 @I15@ INDI
+1 NAME Sara /Brito/
+1 SEX F
+1 BIRT
+2 DATE 9 NOV 1964
+2 PLAC Lisboa, Portugal
+1 OCCU Designer de interiores
+1 FAMS @F4@
+0 @F4@ FAM
+1 HUSB @I12@
+1 WIFE @I15@
+1 MARR
+2 DATE 16 JUN 1990
+2 PLAC Évora, Portugal
+1 CHIL @I16@
+1 CHIL @I17@
+0 @I16@ INDI
+1 NAME Daniel /Sousa Brito/
+1 SEX M
+1 BIRT
+2 DATE 8 SEP 1994
+2 PLAC Évora, Portugal
+1 OCCU Realizador de cinema
+1 EDUC Escola Superior de Teatro e Cinema, 2017
+1 FAMC @F4@
+0 @I17@ INDI
+1 NAME Beatriz /Sousa Brito/
+1 SEX F
+1 BIRT
+2 DATE 25 MAY 1997
+2 PLAC Évora, Portugal
+1 OCCU Bióloga marinha
+1 EDUC Faculdade de Ciências de Lisboa, 2020
+1 FAMC @F4@
+0 TRLR

@@ -1,0 +1,273 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 SUBM @SUB1@
+1 DATE 6 MAY 2026
+1 NOTE Família Lopes — linhagem matrilinear até Diogo Lopes Dinis (5 gerações).
+0 @SUB1@ SUBM
+1 NAME Diogo Lopes Dinis
+1 ADDR Universidade da Beira Interior, Covilhã
+0 @I1@ INDI
+1 NAME Francisco /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 4 FEB 1855
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 DEAT
+2 DATE 19 MAR 1928
+2 PLAC Castelo Branco, Portugal
+1 OCCU Carpinteiro
+1 NOTE Trisavô materno de Diogo. Combateu na Revolução de 1910 como apoiante republicano.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Carolina /Santos/
+1 SEX F
+1 BIRT
+2 DATE 22 SEP 1860
+2 PLAC Penamacor, Castelo Branco, Portugal
+1 DEAT
+2 DATE 14 JAN 1939
+2 PLAC Castelo Branco, Portugal
+1 OCCU Lavadeira
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 6 JUN 1882
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 CHIL @I3@
+1 CHIL @I4@
+1 CHIL @I5@
+1 CHIL @I6@
+0 @I3@ INDI
+1 NAME José /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 11 MAY 1888
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 DEAT
+2 DATE 4 OCT 1962
+2 PLAC Castelo Branco, Portugal
+1 OCCU Ferroviário
+1 RESI
+2 PLAC Castelo Branco, Portugal
+1 NOTE Bisavô materno de Diogo. Trabalhou na linha da Beira Baixa entre 1910 e 1955.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Antónia /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 14 AUG 1885
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 DEAT
+2 DATE 30 NOV 1959
+2 PLAC Castelo Branco, Portugal
+1 FAMC @F1@
+0 @I5@ INDI
+1 NAME Augusto /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 7 JUL 1891
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 DEAT
+2 DATE 23 MAR 1945
+2 PLAC Lourenço Marques, Moçambique
+1 OCCU Comerciante
+1 NOTE Emigrou para Moçambique em 1922.
+1 FAMC @F1@
+0 @I6@ INDI
+1 NAME Adelaide /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 16 DEC 1894
+2 PLAC Idanha-a-Nova, Castelo Branco, Portugal
+1 DEAT
+2 DATE 5 FEB 1971
+2 PLAC Castelo Branco, Portugal
+1 FAMC @F1@
+0 @I7@ INDI
+1 NAME Helena /Marques/
+1 SEX F
+1 BIRT
+2 DATE 25 OCT 1890
+2 PLAC Castelo Branco, Portugal
+1 DEAT
+2 DATE 8 AUG 1965
+2 PLAC Castelo Branco, Portugal
+1 OCCU Modista
+1 FAMS @F2@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I7@
+1 MARR
+2 DATE 14 JUN 1915
+2 PLAC Castelo Branco, Portugal
+1 CHIL @I8@
+1 CHIL @I9@
+1 CHIL @I10@
+0 @I8@ INDI
+1 NAME Manuel /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 3 MAR 1925
+2 PLAC Castelo Branco, Portugal
+1 DEAT
+2 DATE 17 NOV 2005
+2 PLAC Castelo Branco, Portugal
+1 OCCU Professor de Português
+1 EDUC Faculdade de Letras de Lisboa, 1951
+1 NOTE Avô materno de Diogo. Resistente antifascista durante o Estado Novo.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I9@ INDI
+1 NAME Margarida /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 19 SEP 1920
+2 PLAC Castelo Branco, Portugal
+1 DEAT
+2 DATE 11 JUN 2002
+2 PLAC Coimbra, Portugal
+1 OCCU Boticária
+1 NOTE Tia-avó de Diogo. Boticária na Sé Velha de Coimbra.
+1 FAMC @F2@
+0 @I10@ INDI
+1 NAME Vítor /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 12 FEB 1928
+2 PLAC Castelo Branco, Portugal
+1 DEAT
+2 DATE 4 APR 1995
+2 PLAC Lisboa, Portugal
+1 OCCU Funcionário público
+1 FAMC @F2@
+0 @I11@ INDI
+1 NAME Lurdes /Coelho/
+1 SEX F
+1 BIRT
+2 DATE 28 JAN 1930
+2 PLAC Vila Velha de Ródão, Castelo Branco, Portugal
+1 DEAT
+2 DATE 2 SEP 2012
+2 PLAC Castelo Branco, Portugal
+1 OCCU Costureira
+1 NOTE Avó materna de Diogo. Tinha um atelier de costura em Castelo Branco.
+1 FAMS @F3@
+0 @F3@ FAM
+1 HUSB @I8@
+1 WIFE @I11@
+1 MARR
+2 DATE 22 MAY 1955
+2 PLAC Castelo Branco, Portugal
+1 CHIL @I12@
+1 CHIL @I13@
+1 CHIL @I14@
+0 @I12@ INDI
+1 NAME Maria /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 27 SEP 1968
+2 PLAC Castelo Branco, Portugal
+1 OCCU Bibliotecária
+1 EDUC Faculdade de Letras da Universidade de Coimbra, 1991
+1 NOTE Mãe de Diogo. Casou com João Dinis em 1998.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I13@ INDI
+1 NAME Pedro /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 5 MAY 1971
+2 PLAC Castelo Branco, Portugal
+1 OCCU Advogado
+1 NOTE Tio materno de Diogo. Vive em Lisboa.
+1 FAMC @F3@
+1 FAMS @F5@
+0 @I14@ INDI
+1 NAME Ana /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 18 OCT 1973
+2 PLAC Castelo Branco, Portugal
+1 OCCU Designer gráfica
+1 NOTE Tia materna de Diogo. Vive no Porto.
+1 FAMC @F3@
+0 @I15@ INDI
+1 NAME João /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 APR 1965
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Engenheiro civil
+1 NOTE Pai de Diogo. Originário da Família Dinis (ver dinis.ged).
+1 FAMS @F4@
+0 @F4@ FAM
+1 HUSB @I15@
+1 WIFE @I12@
+1 MARR
+2 DATE 18 JUL 1998
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 CHIL @I16@
+1 CHIL @I17@
+0 @I16@ INDI
+1 NAME Diogo /Lopes Dinis/
+1 SEX M
+1 BIRT
+2 DATE 14 MAR 2002
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Estudante
+1 EDUC Universidade da Beira Interior — Engenharia Informática
+1 NOTE Sujeito do arquivo.
+1 FAMC @F4@
+0 @I17@ INDI
+1 NAME Mariana /Lopes Dinis/
+1 SEX F
+1 BIRT
+2 DATE 8 NOV 2005
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Estudante
+1 FAMC @F4@
+0 @I18@ INDI
+1 NAME Catarina /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 4 MAR 1972
+2 PLAC Évora, Portugal
+1 OCCU Notária
+1 NOTE Esposa de Pedro Lopes. Originária da Família Sousa (ver sousa.ged).
+1 FAMS @F5@
+0 @F5@ FAM
+1 HUSB @I13@
+1 WIFE @I18@
+1 MARR
+2 DATE 17 JUN 2000
+2 PLAC Lisboa, Portugal
+1 CHIL @I19@
+1 CHIL @I20@
+0 @I19@ INDI
+1 NAME Tomás /Lopes Sousa/
+1 SEX M
+1 BIRT
+2 DATE 23 APR 2002
+2 PLAC Lisboa, Portugal
+1 OCCU Estudante de Direito
+1 NOTE Primo materno de Diogo, da mesma idade.
+1 FAMC @F5@
+0 @I20@ INDI
+1 NAME Madalena /Lopes Sousa/
+1 SEX F
+1 BIRT
+2 DATE 10 SEP 2004
+2 PLAC Lisboa, Portugal
+1 OCCU Estudante
+1 FAMC @F5@
+0 TRLR

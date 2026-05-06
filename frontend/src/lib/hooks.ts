@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE } from "./api";
 import type {
-  HealthCheck, MediaFile, NarrativeTemplate, Person, Story, TaskRecord,
-  TimelineEvent, Video,
+  HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
+  TaskRecord, TimelineEvent, Video,
 } from "./types";
 import { useAuthStore, type User } from "../store/auth";
 
@@ -41,6 +41,13 @@ export function useResetPassword() {
   return useMutation({
     mutationFn: async (input: { token: string; new_password: string }) =>
       (await api.post("/api/v1/auth/reset-password", input)).data,
+  });
+}
+
+export function useDeleteAccount() {
+  return useMutation({
+    mutationFn: async (input: { current_password: string; confirm: string }) =>
+      (await api.post("/api/v1/auth/delete-account", input)).data,
   });
 }
 
@@ -92,6 +99,103 @@ export function useUploadPhoto() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+  });
+}
+
+// ── Projects ────────────────────────────────────────────────────────────
+export function useProjects() {
+  return useQuery<Project[]>({
+    queryKey: ["projects"],
+    queryFn: async () => (await api.get("/api/v1/projects")).data,
+  });
+}
+
+export function useProject(id: number | null) {
+  return useQuery<Project>({
+    queryKey: ["projects", id],
+    queryFn: async () => (await api.get(`/api/v1/projects/${id}`)).data,
+    enabled: id !== null,
+  });
+}
+
+export function useProjectMedia(id: number | null) {
+  return useQuery<MediaFile[]>({
+    queryKey: ["projects", id, "media"],
+    queryFn: async () => (await api.get(`/api/v1/projects/${id}/media`)).data,
+    enabled: id !== null,
+  });
+}
+
+export function useProjectStories(id: number | null) {
+  return useQuery<Story[]>({
+    queryKey: ["projects", id, "stories"],
+    queryFn: async () => (await api.get(`/api/v1/projects/${id}/stories`)).data,
+    enabled: id !== null,
+  });
+}
+
+export function useProjectVideos(id: number | null) {
+  return useQuery<Video[]>({
+    queryKey: ["projects", id, "videos"],
+    queryFn: async () => (await api.get(`/api/v1/projects/${id}/videos`)).data,
+    enabled: id !== null,
+  });
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { name: string; description?: string }) =>
+      (await api.post("/api/v1/projects", input)).data as Project,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+}
+
+export function useUpdateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; name?: string; description?: string; cover_media_id?: number }) => {
+      const { id, ...body } = input;
+      return (await api.patch(`/api/v1/projects/${id}`, body)).data as Project;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["projects", vars.id] });
+    },
+  });
+}
+
+export function useDeleteProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.delete(`/api/v1/projects/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["projects"] }),
+  });
+}
+
+export function useAddMediaToProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { projectId: number; mediaIds: number[] }) =>
+      (await api.post(`/api/v1/projects/${input.projectId}/media`, { media_ids: input.mediaIds })).data,
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["projects", vars.projectId] });
+      qc.invalidateQueries({ queryKey: ["projects", vars.projectId, "media"] });
+    },
+  });
+}
+
+export function useRemoveMediaFromProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { projectId: number; mediaId: number }) =>
+      (await api.delete(`/api/v1/projects/${input.projectId}/media/${input.mediaId}`)).data,
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["projects"] });
+      qc.invalidateQueries({ queryKey: ["projects", vars.projectId] });
+      qc.invalidateQueries({ queryKey: ["projects", vars.projectId, "media"] });
+    },
   });
 }
 
@@ -154,6 +258,14 @@ export function useTimeline() {
   });
 }
 
+export function useBuildTimeline() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => (await api.post("/api/v1/timeline/build")).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["timeline"] }),
+  });
+}
+
 // ── Narrative ───────────────────────────────────────────────────────────
 export function useStories() {
   return useQuery<Story[]>({
@@ -189,6 +301,7 @@ export interface GenerateInput {
   event_type: string;
   query: string;
   person_ids: number[];
+  project_id?: number | null;
 }
 
 export function useGenerateNarrative() {
