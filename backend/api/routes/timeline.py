@@ -1,31 +1,45 @@
-import structlog
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+"""Module 2 — Timeline + family graph routes (per-user).
 
+Each endpoint filters by ``user.id`` and operates on the per-user
+family graph snapshot in ``data/processed/graphs/{user_id}.json``.
+"""
+
+import structlog
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from backend.core.auth import User, get_current_user
 from backend.core.database import get_db
-from backend.models.timeline import TimelineEvent, Person
+from backend.models.timeline import TimelineEvent
 from backend.modules.m2_temporal.processor import M2Processor
 
 router = APIRouter(prefix="/api/v1", tags=["timeline"])
-log = structlog.get_logger()
+log    = structlog.get_logger()
 
 processor = M2Processor()
 
+
 @router.post("/timeline/build")
-async def build_timeline(db: AsyncSession = Depends(get_db)):
-    """
-    Processa todos os media do M1 e constrói a timeline cronológica.
-    Chama este endpoint depois de fazer uploads.
-    """
-    result = await processor.process(db)
+async def build_timeline(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Process the caller's M1 media and build/refresh their timeline."""
+    result = await processor.process(db, user_id=user.id)
     return result
 
+
 @router.get("/timeline")
-async def get_timeline(db: AsyncSession = Depends(get_db)):
-    """Retorna a timeline completa ordenada cronologicamente."""
+async def get_timeline(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Return the caller's timeline, chronologically ordered."""
     result = await db.execute(
-        select(TimelineEvent).order_by(TimelineEvent.sort_order)
+        select(TimelineEvent)
+        .where(TimelineEvent.user_id == user.id)
+        .order_by(TimelineEvent.sort_order)
     )
     events = result.scalars().all()
 
@@ -45,44 +59,45 @@ async def get_timeline(db: AsyncSession = Depends(get_db)):
         for e in events
     ]
 
+
 @router.get("/timeline/stats")
-async def timeline_stats(db: AsyncSession = Depends(get_db)):
-    """Estatísticas da timeline — útil para o relatório académico."""
-    events_result = await db.execute(select(TimelineEvent))
+async def timeline_stats(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Stats on the caller's timeline — useful for the thesis report."""
+    events_result = await db.execute(
+        select(TimelineEvent).where(TimelineEvent.user_id == user.id)
+    )
     events = events_result.scalars().all()
 
-    by_type  = {}
-    by_year  = {}
-    by_conf  = {}
-
+    by_type, by_year, by_conf = {}, {}, {}
     for e in events:
-        # Por tipo
         t = e.event_type or "desconhecido"
         by_type[t] = by_type.get(t, 0) + 1
-
-        # Por ano
         if e.event_date:
             y = str(e.event_date.year)
             by_year[y] = by_year.get(y, 0) + 1
-
-        # Por confiança
         c = str(e.date_confidence)
         by_conf[c] = by_conf.get(c, 0) + 1
 
+    graph = processor._load_graph(user.id)
     return {
-        "total_events":       len(events),
-        "events_with_date":   sum(1 for e in events if e.event_date),
-        "events_by_type":     by_type,
-        "events_by_year":     by_year,
+        "total_events":         len(events),
+        "events_with_date":     sum(1 for e in events if e.event_date),
+        "events_by_type":       by_type,
+        "events_by_year":       by_year,
         "events_by_confidence": by_conf,
-        "graph_stats":        processor.graph.stats,
+        "graph_stats":          graph.stats,
     }
 
+
 @router.get("/family-graph")
-async def get_family_graph():
-    """Retorna o grafo familiar em formato JSON."""
-    import networkx as nx
-    graph = processor.graph
+async def get_family_graph(
+    user: User = Depends(get_current_user),
+):
+    """Return the caller's family graph snapshot."""
+    graph = processor._load_graph(user.id)
     return {
         "nodes": [
             {"id": n, **graph.graph.nodes[n]}

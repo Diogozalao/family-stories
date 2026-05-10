@@ -1,4 +1,4 @@
-"""Genealogy routes — GEDCOM upload + family graph access."""
+"""Genealogy routes — GEDCOM upload + per-user family graph access."""
 
 import uuid
 from pathlib import Path
@@ -9,17 +9,20 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user
+from backend.core.auth import User, get_current_user
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
 from backend.core.upload_validator import validate_gedcom
 from backend.models.timeline import Person
-from backend.models.user import User
 from backend.modules.m1_ingestion.gedcom_parser import gedcom_to_database
 
 router = APIRouter(prefix="/api/v1", tags=["genealogy"])
 log    = structlog.get_logger()
+
+
+def _user_graph_path(user_id) -> Path:
+    return settings.PROCESSED_DIR / "graphs" / f"{user_id}.json"
 
 
 @router.post("/genealogy/upload")
@@ -30,7 +33,7 @@ async def upload_gedcom(
     db:      AsyncSession = Depends(get_db),
     user:    User         = Depends(get_current_user),
 ):
-    """Import a GEDCOM file (exported from Ancestry, MyHeritage, etc.)."""
+    """Import a GEDCOM file (from Ancestry, MyHeritage, etc.) for the caller."""
     ext = Path(file.filename or "").suffix.lower()
     if ext and ext not in {".ged", ".gedcom"}:
         raise HTTPException(
@@ -40,16 +43,18 @@ async def upload_gedcom(
 
     validated = await validate_gedcom(file)
 
+    # Per-user folder on disk so two users can never overwrite each other's
+    # imported file.
     unique_name = f"{uuid.uuid4().hex}{validated.suffix}"
-    dest_path   = settings.RAW_DIR / "gedcom" / unique_name
+    dest_path   = settings.RAW_DIR / "gedcom" / str(user.id) / unique_name
     dest_path.parent.mkdir(parents=True, exist_ok=True)
 
     async with aiofiles.open(dest_path, "wb") as fh:
         await fh.write(validated.content)
 
-    log.info("gedcom_uploaded", filename=file.filename, size=validated.size)
+    log.info("gedcom_uploaded", filename=file.filename, size=validated.size, user_id=str(user.id))
 
-    result = await gedcom_to_database(dest_path, db)
+    result = await gedcom_to_database(dest_path, db, user_id=user.id)
 
     return {
         "message":  "Family tree imported successfully",
@@ -59,9 +64,14 @@ async def upload_gedcom(
 
 
 @router.get("/genealogy/persons")
-async def list_persons(db: AsyncSession = Depends(get_db)):
-    """Return every person imported from GEDCOM files."""
-    result = await db.execute(select(Person).order_by(Person.name))
+async def list_persons(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Return every person imported from the caller's GEDCOM files."""
+    result = await db.execute(
+        select(Person).where(Person.user_id == user.id).order_by(Person.name)
+    )
     persons = result.scalars().all()
     return [
         {
@@ -78,16 +88,21 @@ async def list_persons(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/genealogy/persons/{person_id}")
-async def get_person(person_id: int, db: AsyncSession = Depends(get_db)):
-    """Return one person and their immediate relatives."""
-    person = await db.get(Person, person_id)
+async def get_person(
+    person_id: int,
+    db:        AsyncSession = Depends(get_db),
+    user:      User         = Depends(get_current_user),
+):
+    """Return one person and their immediate relatives — owner only."""
+    person = (await db.execute(
+        select(Person).where(Person.id == person_id, Person.user_id == user.id)
+    )).scalar_one_or_none()
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
 
     from backend.modules.m2_temporal.family_graph import FamilyGraph
-    graph      = FamilyGraph()
-    graph_path = settings.PROCESSED_DIR / "family_graph.json"
-    graph.load(graph_path)
+    graph = FamilyGraph()
+    graph.load(_user_graph_path(user.id))
     context = graph.get_family_context(person_id)
 
     return {
@@ -103,12 +118,13 @@ async def get_person(person_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/genealogy/graph")
-async def get_graph():
-    """Return the complete family graph — convenient for visualisation."""
+async def get_graph(
+    user: User = Depends(get_current_user),
+):
+    """Return the caller's complete family graph (for visualisation)."""
     from backend.modules.m2_temporal.family_graph import FamilyGraph
-    graph      = FamilyGraph()
-    graph_path = settings.PROCESSED_DIR / "family_graph.json"
-    graph.load(graph_path)
+    graph = FamilyGraph()
+    graph.load(_user_graph_path(user.id))
 
     return {
         "nodes":   [{"id": n, **graph.graph.nodes[n]} for n in graph.graph.nodes],
@@ -123,11 +139,11 @@ async def clear_persons(
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """Remove every imported person so a fresh GEDCOM can be loaded."""
-    await db.execute(delete(Person))
+    """Remove every imported person for the caller so a fresh GEDCOM can be loaded."""
+    await db.execute(delete(Person).where(Person.user_id == user.id))
     await db.commit()
 
-    graph_path = settings.PROCESSED_DIR / "family_graph.json"
+    graph_path = _user_graph_path(user.id)
     if graph_path.exists():
         graph_path.unlink()
 

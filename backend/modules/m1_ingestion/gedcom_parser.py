@@ -216,42 +216,51 @@ class GEDCOMParser:
 
 async def gedcom_to_database(
     file_path: Path,
-    db: AsyncSession
+    db: AsyncSession,
+    user_id,
 ) -> dict:
     """
-    Lê ficheiro GEDCOM e guarda pessoas na BD.
-    Retorna estatísticas do que foi importado.
+    Lê ficheiro GEDCOM e guarda pessoas na BD para o ``user_id`` indicado.
+
+    O grafo é serializado para ``data/processed/graphs/{user_id}.json`` —
+    assim os parentes importados por um utilizador nunca aparecem para
+    outro. As pessoas dedupedam-se por ``(user_id, gedcom_id)``, que é o
+    índice único definido em SQL.
     """
-    from backend.modules.m2_temporal.family_graph import FamilyGraph
     from backend.core.config import settings
+    from backend.modules.m2_temporal.family_graph import FamilyGraph
 
     parser = GEDCOMParser()
     data   = parser.parse(file_path)
 
-    graph  = FamilyGraph()
-    graph_path = settings.PROCESSED_DIR / "family_graph.json"
+    graph_folder = settings.PROCESSED_DIR / "graphs"
+    graph_folder.mkdir(parents=True, exist_ok=True)
+    graph_path = graph_folder / f"{user_id}.json"
+
+    graph = FamilyGraph()
     graph.load(graph_path)
 
     persons_created = 0
     persons_updated = 0
-
-    # Cria/atualiza pessoas na BD
-    person_id_map = {}  # gedcom_id → BD id
+    person_id_map   = {}   # gedcom_id → BD id
 
     for gedcom_id, indi in data["individuals"].items():
         if not indi.get("name"):
             continue
 
-        # Verifica se já existe
+        # Match only on (user_id, gedcom_id) so two users with overlapping
+        # GEDCOM ids don't accidentally see each other's people.
         existing = await db.execute(
-            select(Person).where(Person.gedcom_id == indi["gedcom_id"])
+            select(Person).where(
+                Person.user_id   == user_id,
+                Person.gedcom_id == indi["gedcom_id"],
+            )
         )
         person = existing.scalar_one_or_none()
 
         notes_text = " ".join(indi.get("notes", []))
 
         if person:
-            # Atualiza
             person.name        = indi["name"]
             person.birth_date  = indi.get("birth_date")
             person.death_date  = indi.get("death_date")
@@ -259,8 +268,8 @@ async def gedcom_to_database(
             person.notes       = notes_text or None
             persons_updated += 1
         else:
-            # Cria
             person = Person(
+                user_id     = user_id,
                 name        = indi["name"],
                 birth_date  = indi.get("birth_date"),
                 death_date  = indi.get("death_date"),
@@ -271,15 +280,12 @@ async def gedcom_to_database(
             db.add(person)
             persons_created += 1
 
-        await db.flush()  # Obtem o ID
+        await db.flush()
         person_id_map[gedcom_id] = person.id
-
-        # Adiciona ao grafo
         graph.add_person(person)
 
     await db.commit()
 
-    # Adiciona relações familiares ao grafo
     relations_added = 0
     for fam_id, fam in data["families"].items():
         husband_id = person_id_map.get(fam.get("husband"))
@@ -290,15 +296,15 @@ async def gedcom_to_database(
             graph.add_relation(wife_id, husband_id, "cônjuge")
             relations_added += 2
 
-            # Evento de casamento na timeline
             if fam.get("marr_date"):
-                from backend.models.timeline import TimelineEvent, ConfidenceLevel
+                from backend.models.timeline import ConfidenceLevel, TimelineEvent
                 marr_event = TimelineEvent(
+                    user_id         = user_id,
                     event_date      = fam["marr_date"],
                     date_confidence = ConfidenceLevel.HIGH,
                     date_label      = fam["marr_date"].strftime("%d/%m/%Y") if fam["marr_date"] else None,
                     event_type      = "casamento",
-                    title           = f"Casamento",
+                    title           = "Casamento",
                     location        = fam.get("marr_place"),
                     person_ids      = [husband_id, wife_id],
                     sort_order      = int(fam["marr_date"].timestamp()) if fam["marr_date"] else 0,
@@ -319,8 +325,6 @@ async def gedcom_to_database(
 
     await db.commit()
 
-    # Guarda grafo atualizado
-    graph_path.parent.mkdir(parents=True, exist_ok=True)
     graph.save(graph_path)
 
     log.info("gedcom_imported",

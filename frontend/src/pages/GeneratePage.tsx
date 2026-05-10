@@ -29,14 +29,23 @@ export default function GeneratePage() {
   const [eventType, setEventType] = useState<string>("default");
   const [title, setTitle] = useState("");
   const [query, setQuery] = useState("");
+  const [customTone, setCustomTone] = useState("");
+  const [customStructure, setCustomStructure] = useState("");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [mode, setMode] = useState<"sync" | "background">("background");
 
+  const isCustom = eventType === "custom";
+
   const valid = useMemo(() => {
     if (step === 1) return !!eventType;
-    if (step === 3) return title.trim().length >= 3 && query.trim().length >= 5;
+    if (step === 3) {
+      const baseOk = title.trim().length >= 3 && query.trim().length >= 5;
+      // Custom theme requires at least a tone — structure is optional.
+      if (isCustom) return baseOk && customTone.trim().length >= 3;
+      return baseOk;
+    }
     return true;
-  }, [step, eventType, title, query]);
+  }, [step, eventType, title, query, isCustom, customTone]);
 
   const togglePerson = (id: number) => {
     setSelectedIds((prev) =>
@@ -52,6 +61,8 @@ export default function GeneratePage() {
         query: query.trim(),
         person_ids: selectedIds,
         project_id: projectId ?? undefined,
+        custom_tone:      isCustom ? customTone.trim() || undefined      : undefined,
+        custom_structure: isCustom ? customStructure.trim() || undefined : undefined,
         mode,
       },
       {
@@ -180,7 +191,37 @@ export default function GeneratePage() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("generate.queryPlaceholder")}
               />
+              <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
+                Esta descrição passa a ser a <strong>intenção principal</strong> do prompt enviado ao LLM.
+                Sê o mais específico possível: ângulo, emoção, período, eventos.
+              </p>
             </div>
+
+            {isCustom && (
+              <>
+                <div>
+                  <label className="label">Tom da narrativa</label>
+                  <input
+                    className="input"
+                    value={customTone}
+                    onChange={(e) => setCustomTone(e.target.value)}
+                    placeholder="ex.: melancólico e sarcástico, sombrio com humor seco, formal e crítico"
+                  />
+                  <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
+                    Obrigatório no tema personalizado — é o que distingue este texto dos outros.
+                  </p>
+                </div>
+                <div>
+                  <label className="label">Estrutura (opcional)</label>
+                  <input
+                    className="input"
+                    value={customStructure}
+                    onChange={(e) => setCustomStructure(e.target.value)}
+                    placeholder="ex.: cena inicial → conflito → desabafo final"
+                  />
+                </div>
+              </>
+            )}
           </div>
         )}
 

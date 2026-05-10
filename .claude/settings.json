@@ -16,10 +16,27 @@
       "Bash(grep -vE \"^$\")",
       "Bash(curl -s http://127.0.0.1:5173/)",
       "Bash(curl -fs http://127.0.0.1:11434/api/tags)",
-      "Bash(rm -f docs/architecture/tree.txt docs/architecture/tree-anotada.md docs/architecture/tree-modulos.md && echo \"removidos\")"
+      "Bash(rm -f docs/architecture/tree.txt docs/architecture/tree-anotada.md docs/architecture/tree-modulos.md && echo \"removidos\")",
+      "Bash(ollama list *)",
+      "Bash(ollama pull *)",
+      "Bash(pkill -9 -f \"celery -A backend\")",
+      "Bash(pkill -9 -f celery)",
+      "Bash(killall -9 celery)",
+      "Bash(pkill -9 -f \"backend.core.celery_app\")",
+      "Bash(echo \"exit_after_pkill=$?\")",
+      "Bash(bash -c 'pkill -9 -f \"backend.core.celery_app\" || true; sleep 2; ps aux | grep celery | grep -v grep | wc -l; echo \"---MEM---\"; free -h | head -3')",
+      "Bash(bash -c 'set +e; pkill -9 -f \"backend.core.celery_app\"; sleep 2; ps aux | grep celery | grep -v grep > /tmp/celery_check.txt; wc -l < /tmp/celery_check.txt; echo \"---\"; free -h | head -3')",
+      "Bash(echo \"exit=$?\")",
+      "Bash(awk '/celery -A/ && !/awk/ { print $2 }')",
+      "Bash(ps aux *)",
+      "Bash(sqlite3 /home/diogo05/family-stories/family_stories.db \"SELECT id, username, is_owner, is_active, created_at FROM users;\")",
+      "Bash(dpkg -l python3-venv)",
+      "Bash(venv/bin/python --version)",
+      "Bash(venv/bin/pip --version)"
     ],
     "additionalDirectories": [
-      "/home/diogo05/family-stories/docs/architecture"
+      "/home/diogo05/family-stories/docs/architecture",
+      "/tmp"
     ]
   }
 }

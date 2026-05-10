@@ -302,6 +302,8 @@ export interface GenerateInput {
   query: string;
   person_ids: number[];
   project_id?: number | null;
+  custom_tone?: string;
+  custom_structure?: string;
 }
 
 export function useGenerateNarrative() {
@@ -327,6 +329,20 @@ export function useDeleteStory() {
   return useMutation({
     mutationFn: async (id: number) => (await api.delete(`/api/v1/narrative/stories/${id}`)).data,
     onSuccess: () => qc.invalidateQueries({ queryKey: ["stories"] }),
+  });
+}
+
+export function useUpdateStory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; title?: string; narrative?: string }) => {
+      const { id, ...body } = input;
+      return (await api.patch(`/api/v1/narrative/stories/${id}`, body)).data as Story;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["stories"] });
+      qc.invalidateQueries({ queryKey: ["stories", vars.id] });
+    },
   });
 }
 

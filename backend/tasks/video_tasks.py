@@ -1,5 +1,7 @@
 """Celery tasks for M4 multimedia generation."""
 
+from uuid import UUID
+
 import structlog
 
 from backend.core.celery_app import celery_app
@@ -11,14 +13,22 @@ log = structlog.get_logger()
 
 
 @celery_app.task(bind=True, name="video.generate")
-def generate_video_task(self, task_record_id: int, story_id: int) -> dict:
-    """Build the documentary video for ``story_id`` in the background."""
-    log.info("video_task_start", task_record_id=task_record_id, story_id=story_id)
+def generate_video_task(self, task_record_id: int, story_id: int, user_id: str) -> dict:
+    """Build the documentary video for ``story_id`` in the background.
+
+    ``user_id`` is the UUID of the owner — the worker passes it through
+    to the processor so the story/photo lookups remain scoped to the
+    user that enqueued the job. Without this the worker would happily
+    operate on someone else's story.
+    """
+    log.info("video_task_start", task_record_id=task_record_id, story_id=story_id, user_id=user_id)
+
+    uid = UUID(user_id)
 
     async def _body() -> dict:
         async with AsyncSessionLocal() as session:
             processor = M4Processor()
-            record    = await processor.generate_video(story_id, session)
+            record    = await processor.generate_video(story_id, session, user_id=uid)
             return {
                 "video_id":     record.id,
                 "story_id":     story_id,

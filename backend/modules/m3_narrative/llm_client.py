@@ -30,7 +30,7 @@ class LLMClient:
     def _setup_gemini(self):
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        self._gemini = genai.GenerativeModel("gemini-2.0-flash-001")
+        self._gemini = genai.GenerativeModel(settings.GEMINI_MODEL)
 
     def generate(self, prompt: str, max_tokens: int = 1500) -> str:
         if self._ollama_ok:

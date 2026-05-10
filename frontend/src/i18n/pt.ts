@@ -96,8 +96,17 @@ export default {
   timeline: {
     title: "Linha Temporal",
     subtitle: "Todos os eventos ordenados no tempo.",
-    empty: "A linha temporal está vazia. Carrega fotografias para começar.",
+    empty: "A linha temporal está vazia. Carrega fotografias em",
     undated: "Sem data",
+  },
+  projectDetail: {
+    tabs: {
+      photos: "Fotografias",
+      timeline: "Linha Temporal",
+      family: "Família",
+      stories: "Histórias",
+      videos: "Vídeos",
+    },
   },
   stories: {
     title: "Histórias",

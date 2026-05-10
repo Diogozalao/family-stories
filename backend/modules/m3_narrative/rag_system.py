@@ -7,14 +7,23 @@ Como funciona:
 3. Apenas esses factos são injetados no prompt — evita alucinações
 
 É como dar ao LLM uma "pasta de documentos" específica antes de escrever.
+
+Isolamento multi-tenant: cada documento traz ``user_id`` na metadata,
+e ``search()`` filtra por esse campo. Assim a narrativa de um user nunca
+recebe factos vindos do arquivo de outro.
 """
 
 import chromadb
 import structlog
-from pathlib import Path
+
 from backend.core.config import settings
 
 log = structlog.get_logger()
+
+
+def _uid(user_id) -> str:
+    """Normaliza UUID/str para a string usada nos filtros do Chroma."""
+    return str(user_id)
 
 
 class RAGSystem:
@@ -30,16 +39,16 @@ class RAGSystem:
         log.info("rag_ready", path=str(db_path))
 
     def index_media(self, media_list: list) -> int:
-        """
-        Indexa todos os media processados pelo M1.
-        Cada media torna-se um 'documento' pesquisável.
+        """Indexa todos os media processados pelo M1.
+
+        Cada media só é indexado uma vez por owner e o seu ``user_id`` fica
+        na metadata — ``search`` filtra por aí.
         """
         documents = []
         metadatas = []
         ids       = []
 
         for media in media_list:
-            # Constrói texto pesquisável com todos os factos do media
             parts = []
             if media.ai_description:
                 parts.append(f"Descrição: {media.ai_description}")
@@ -61,44 +70,34 @@ class RAGSystem:
             if not parts:
                 continue
 
-            doc_id = f"media_{media.id}"
-            text   = " | ".join(parts)
+            doc_id  = f"media_{media.id}"
+            text    = " | ".join(parts)
+            user_id = _uid(media.user_id)
 
-            # Evita duplicados
+            metadata = {
+                "user_id":    user_id,
+                "media_id":   media.id,
+                "media_type": str(media.media_type),
+                "date":       str(media.date_taken) if media.date_taken else "",
+                "emotion":    media.ai_emotion or "",
+            }
+
             existing = self.collection.get(ids=[doc_id])
             if existing["ids"]:
-                self.collection.update(
-                    ids=[doc_id],
-                    documents=[text],
-                    metadatas=[{
-                        "media_id":   media.id,
-                        "media_type": str(media.media_type),
-                        "date":       str(media.date_taken) if media.date_taken else "",
-                        "emotion":    media.ai_emotion or "",
-                    }]
-                )
+                self.collection.update(ids=[doc_id], documents=[text], metadatas=[metadata])
             else:
                 documents.append(text)
-                metadatas.append({
-                    "media_id":   media.id,
-                    "media_type": str(media.media_type),
-                    "date":       str(media.date_taken) if media.date_taken else "",
-                    "emotion":    media.ai_emotion or "",
-                })
+                metadatas.append(metadata)
                 ids.append(doc_id)
 
         if documents:
-            self.collection.add(
-                documents=documents,
-                metadatas=metadatas,
-                ids=ids
-            )
+            self.collection.add(documents=documents, metadatas=metadatas, ids=ids)
             log.info("rag_indexed", count=len(documents))
 
         return len(documents)
 
     def index_events(self, events: list) -> int:
-        """Indexa os eventos da timeline do M2."""
+        """Indexa eventos da timeline do M2 (carrega user_id na metadata)."""
         documents = []
         metadatas = []
         ids       = []
@@ -119,16 +118,17 @@ class RAGSystem:
             if not parts:
                 continue
 
-            doc_id = f"event_{event.id}"
-            text   = " | ".join(parts)
+            doc_id   = f"event_{event.id}"
+            text     = " | ".join(parts)
+            user_id  = _uid(event.user_id)
+            metadata = {"user_id": user_id, "event_id": event.id, "type": event.event_type or ""}
 
             existing = self.collection.get(ids=[doc_id])
             if existing["ids"]:
-                self.collection.update(ids=[doc_id], documents=[text],
-                    metadatas=[{"event_id": event.id, "type": event.event_type or ""}])
+                self.collection.update(ids=[doc_id], documents=[text], metadatas=[metadata])
             else:
                 documents.append(text)
-                metadatas.append({"event_id": event.id, "type": event.event_type or ""})
+                metadatas.append(metadata)
                 ids.append(doc_id)
 
         if documents:
@@ -137,29 +137,31 @@ class RAGSystem:
 
         return len(documents)
 
-    def search(self, query: str, n_results: int = 5) -> list[str]:
-        """
-        Pesquisa os factos mais relevantes para uma query.
-        Ex: query="casamento família" → devolve factos sobre casamentos
-        """
+    def search(self, query: str, user_id, n_results: int = 5) -> list[str]:
+        """Pesquisa os factos mais relevantes para uma query, restrita ao owner."""
         if self.collection.count() == 0:
             return []
 
         results = self.collection.query(
-            query_texts=[query],
-            n_results=min(n_results, self.collection.count()),
+            query_texts = [query],
+            n_results   = min(n_results, self.collection.count()),
+            where       = {"user_id": _uid(user_id)},
         )
-
         return results["documents"][0] if results["documents"] else []
 
-    def get_all_facts(self, limit: int = 20) -> list[str]:
-        """Retorna todos os factos indexados (para narrativas completas)."""
+    def get_all_facts(self, user_id, limit: int = 20) -> list[str]:
+        """Retorna factos indexados pelo owner (até ``limit``)."""
         if self.collection.count() == 0:
             return []
-
-        results = self.collection.get(limit=limit)
+        results = self.collection.get(limit=limit, where={"user_id": _uid(user_id)})
         return results["documents"] if results["documents"] else []
+
+    def count_for(self, user_id) -> int:
+        """Quantos factos indexados pertencem ao owner."""
+        results = self.collection.get(where={"user_id": _uid(user_id)})
+        return len(results["ids"]) if results.get("ids") else 0
 
     @property
     def total_facts(self) -> int:
+        """Total global — usado para diagnóstico, não exposto a users."""
         return self.collection.count()

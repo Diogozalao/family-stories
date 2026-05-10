@@ -1,41 +1,53 @@
-import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+"""Module 2 — Organização Temporal.
 
-from backend.models.timeline import TimelineEvent, ConfidenceLevel
-from backend.modules.m2_temporal.timeline_builder import TimelineBuilder
-from backend.modules.m2_temporal.family_graph import FamilyGraph
-from backend.modules.m2_temporal.date_resolver import DateResolver
+Builds the per-user chronological timeline + family graph that the M3
+narrative module consumes downstream. Every operation here is scoped
+to a single ``user_id`` — the timeline and graph of one account never
+mix with another's.
+"""
+
+import structlog
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from backend.core.config import settings
+from backend.models.timeline import ConfidenceLevel, TimelineEvent
+from backend.modules.m2_temporal.date_resolver import DateResolver
+from backend.modules.m2_temporal.family_graph import FamilyGraph
+from backend.modules.m2_temporal.timeline_builder import TimelineBuilder
 
 log = structlog.get_logger()
 
+
+def _graph_path_for(user_id) -> "object":
+    """Return the on-disk path of the family graph belonging to ``user_id``."""
+    folder = settings.PROCESSED_DIR / "graphs"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / f"{user_id}.json"
+
+
 class M2Processor:
-    """
-    Orquestra o Módulo 2 — Organização Temporal:
-    1. Constrói timeline a partir dos media do M1
-    2. Valida e corrige datas
-    3. Constrói/atualiza grafo de relações familiares
-    4. Devolve timeline ordenada pronta para o M3
-    """
+    """Orquestra M2: timeline + grafo, sempre por utilizador."""
 
     def __init__(self):
         self.builder  = TimelineBuilder()
-        self.graph    = FamilyGraph()
         self.resolver = DateResolver()
-        
-        # Carrega grafo existente se houver
-        graph_path = settings.PROCESSED_DIR / "family_graph.json"
-        self.graph.load(graph_path)
 
-    async def process(self, db: AsyncSession) -> dict:
-        log.info("m2_start")
+    def _load_graph(self, user_id) -> FamilyGraph:
+        graph = FamilyGraph()
+        graph.load(_graph_path_for(user_id))
+        return graph
 
-        # 1. Constrói eventos a partir de media não processados
-        new_events = await self.builder.build_from_media(db)
+    async def process(self, db: AsyncSession, user_id) -> dict:
+        log.info("m2_start", user_id=str(user_id))
 
-        # 2. Valida datas de todos os eventos
-        all_events_result = await db.execute(select(TimelineEvent))
+        # 1. Build new timeline events from this user's M1 media.
+        new_events = await self.builder.build_from_media(db, user_id=user_id)
+
+        # 2. Validate and correct dates on this user's existing events.
+        all_events_result = await db.execute(
+            select(TimelineEvent).where(TimelineEvent.user_id == user_id)
+        )
         all_events = all_events_result.scalars().all()
 
         fixed = 0
@@ -51,19 +63,18 @@ class M2Processor:
 
         await db.commit()
 
-        # 3. Ordena a timeline
+        # 3. Sort the events for preview.
         sorted_events = self.resolver.sort_events(all_events)
 
-        # 4. Guarda grafo atualizado
-        graph_path = settings.PROCESSED_DIR / "family_graph.json"
-        graph_path.parent.mkdir(parents=True, exist_ok=True)
-        self.graph.save(graph_path)
+        # 4. Persist the (per-user) family graph snapshot to disk.
+        graph = self._load_graph(user_id)
+        graph.save(_graph_path_for(user_id))
 
         result = {
-            "total_events":     len(all_events),
-            "new_events":       len(new_events),
-            "dates_fixed":      fixed,
-            "graph_stats":      self.graph.stats,
+            "total_events":   len(all_events),
+            "new_events":     len(new_events),
+            "dates_fixed":    fixed,
+            "graph_stats":    graph.stats,
             "timeline_preview": [
                 {
                     "id":         e.id,
@@ -73,8 +84,8 @@ class M2Processor:
                     "type":       e.event_type,
                     "title":      e.title,
                 }
-                for e in sorted_events[:10]  # Primeiros 10 para preview
-            ]
+                for e in sorted_events[:10]
+            ],
         }
 
         log.info("m2_complete", **{k: v for k, v in result.items() if k != "timeline_preview"})

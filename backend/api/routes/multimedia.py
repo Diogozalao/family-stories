@@ -3,25 +3,26 @@
 Endpoints:
     POST   /api/v1/multimedia/generate/{story_id}  — build documentary
     GET    /api/v1/multimedia/video/{filename}     — download video
-    GET    /api/v1/multimedia/videos               — list all videos
+    GET    /api/v1/multimedia/videos               — list owned videos
     GET    /api/v1/multimedia/status/{video_id}    — per-video status
     DELETE /api/v1/multimedia/videos/{video_id}    — remove from disk + DB
-"""
 
-from pathlib import Path
+Every row in ``video_outputs`` carries ``user_id``; every read here
+filters by ``user.id`` so no caller can see/touch another user's videos.
+"""
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user, get_current_user_query_or_header
+from backend.core.auth import User, get_current_user, get_current_user_query_or_header
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
+from backend.core.supabase_storage import create_signed_url, delete_object
 from backend.models.task import TaskKind, TaskRecord, TaskState
-from backend.models.user import User
 from backend.models.video import VideoOutput
 from backend.modules.m4_multimedia.processor import M4Processor
 
@@ -39,16 +40,10 @@ async def generate_video(
     db:       AsyncSession = Depends(get_db),
     user:     User         = Depends(get_current_user),
 ):
-    """Build the documentary video for the given story.
-
-    Takes between 1 and 5 minutes depending on photo count.
-    ``mode=sync`` (default) blocks until the MP4 is on disk; the
-    response contains the download URL. ``mode=background`` enqueues
-    the job on Celery and returns a ``task_id`` that the client polls.
-    """
+    """Build the documentary video for ``story_id`` (owned by caller)."""
     if mode == "sync":
         try:
-            record = await processor.generate_video(story_id, db)
+            record = await processor.generate_video(story_id, db, user_id=user.id)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except Exception as exc:
@@ -67,17 +62,18 @@ async def generate_video(
         }
 
     task = TaskRecord(
+        user_id  = user.id,
         kind     = TaskKind.VIDEO,
         state    = TaskState.PENDING,
         story_id = story_id,
-        payload  = {"story_id": story_id},
+        payload  = {"story_id": story_id, "user_id": str(user.id)},
     )
     db.add(task)
     await db.commit()
     await db.refresh(task)
 
     from backend.tasks.video_tasks import generate_video_task
-    async_result = generate_video_task.delay(task.id, story_id)
+    async_result = generate_video_task.delay(task.id, story_id, str(user.id))
     task.celery_id = async_result.id
     await db.commit()
 
@@ -93,32 +89,41 @@ async def generate_video(
 @router.get("/video/{filename}")
 async def download_video(
     filename: str,
-    _user:    User = Depends(get_current_user_query_or_header),
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user_query_or_header),
 ):
-    """Stream the generated documentary MP4 back to the client.
+    """Redirect to a signed URL for the generated documentary MP4.
 
-    Accepts JWT in header or ``?token=`` query so ``<video>`` tags work.
+    Accepts JWT in header or ``?token=`` so ``<video>`` tags work. The
+    lookup is by ``filename + user_id`` so a user can never download a
+    video that doesn't belong to them even if they guess the filename.
     """
-    # Block path-traversal attempts — only allow a plain filename component.
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
 
-    video_path = settings.PROCESSED_DIR / "videos" / filename
-    if not video_path.exists():
+    record = (await db.execute(
+        select(VideoOutput).where(
+            VideoOutput.filename == filename,
+            VideoOutput.user_id  == user.id,
+        )
+    )).scalar_one_or_none()
+    if not record or not record.file_path:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    return FileResponse(
-        path=str(video_path),
-        media_type="video/mp4",
-        filename=filename,
-    )
+    signed = await create_signed_url(record.file_path, expires_in=3600)
+    return RedirectResponse(url=signed, status_code=302)
 
 
 @router.get("/videos")
-async def list_videos(db: AsyncSession = Depends(get_db)):
-    """Return every video record, newest first."""
+async def list_videos(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Return every video record owned by the caller, newest first."""
     result = await db.execute(
-        select(VideoOutput).order_by(VideoOutput.created_at.desc())
+        select(VideoOutput)
+        .where(VideoOutput.user_id == user.id)
+        .order_by(VideoOutput.created_at.desc())
     )
     videos = result.scalars().all()
     return [
@@ -137,9 +142,15 @@ async def list_videos(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/status/{video_id}")
-async def video_status(video_id: int, db: AsyncSession = Depends(get_db)):
-    """Return the status of a specific video by id."""
-    video = await db.get(VideoOutput, video_id)
+async def video_status(
+    video_id: int,
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user),
+):
+    """Return the status of a specific video by id — owner only."""
+    video = (await db.execute(
+        select(VideoOutput).where(VideoOutput.id == video_id, VideoOutput.user_id == user.id)
+    )).scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Video record not found")
     return {
@@ -159,15 +170,18 @@ async def delete_video(
     db:       AsyncSession = Depends(get_db),
     user:     User         = Depends(get_current_user),
 ):
-    """Delete a video from both disk and database."""
-    video = await db.get(VideoOutput, video_id)
+    """Delete a video from Supabase Storage and the database — owner only."""
+    video = (await db.execute(
+        select(VideoOutput).where(VideoOutput.id == video_id, VideoOutput.user_id == user.id)
+    )).scalar_one_or_none()
     if not video:
         raise HTTPException(status_code=404, detail="Not found")
 
     if video.file_path:
-        disk_path = Path(video.file_path)
-        if disk_path.exists():
-            disk_path.unlink()
+        try:
+            await delete_object(video.file_path)
+        except Exception as exc:
+            log.warning("storage_delete_swallowed", key=video.file_path, error=str(exc))
 
     await db.delete(video)
     await db.commit()

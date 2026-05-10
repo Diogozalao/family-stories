@@ -96,8 +96,17 @@ export default {
   timeline: {
     title: "Timeline",
     subtitle: "Every event in chronological order.",
-    empty: "The timeline is empty. Upload photos to get started.",
+    empty: "The timeline is empty. Upload photos in",
     undated: "Undated",
+  },
+  projectDetail: {
+    tabs: {
+      photos: "Photos",
+      timeline: "Timeline",
+      family: "Family",
+      stories: "Stories",
+      videos: "Videos",
+    },
   },
   stories: {
     title: "Stories",

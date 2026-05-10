@@ -5,25 +5,30 @@ written to disk. Accepted files are routed to the M1 ingestion pipeline
 straight away; the HTTP response is returned as soon as the file is
 persisted and registered, while any heavy AI work can run in a
 background task downstream.
+
+Every row this module touches in ``media_files`` is scoped to the
+authenticated ``user.id`` — the backend connects to Postgres as the
+``postgres`` role (which bypasses RLS), so we cannot rely on the
+database to enforce isolation. The ``WHERE user_id = ...`` filter on
+every query and the ``user_id = ...`` assignment on every insert IS the
+isolation layer.
 """
 
-import uuid
 from pathlib import Path
 
-import aiofiles
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user, get_current_user_query_or_header
+from backend.core.auth import User, get_current_user, get_current_user_query_or_header
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
+from backend.core.supabase_storage import create_signed_url, delete_object
 from backend.core.upload_validator import validate_photo
 from backend.models.media import MediaFile
-from backend.models.user import User
 from backend.modules.m1_ingestion.processor import M1Processor
 from backend.schemas.media import MediaFileResponse, UploadResponse
 
@@ -31,35 +36,17 @@ router    = APIRouter(prefix="/api/v1", tags=["upload"])
 log       = structlog.get_logger()
 processor = M1Processor()
 
-# Extensions accepted by the photo endpoints. MIME validation is the
-# authoritative check — this set only prevents obviously wrong filenames
-# from reaching the expensive magic-byte scan.
 PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".tiff"}
+MAX_BATCH_FILES  = 50
 
-MAX_BATCH_FILES = 50
 
-
-async def _save_and_ingest(
-    file:    UploadFile,
-    content: bytes,
-    db:      AsyncSession,
-) -> MediaFile:
-    """Persist validated bytes to ``data/raw/photos`` and run M1 ingestion."""
-    ext = Path(file.filename).suffix.lower() or ".jpg"
-    unique_name = f"{uuid.uuid4().hex}{ext}"
-    dest_folder = settings.RAW_DIR / "photos"
-    dest_folder.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_folder / unique_name
-
-    async with aiofiles.open(dest_path, "wb") as fh:
-        await fh.write(content)
-
-    log.info("file_saved", filename=file.filename, path=str(dest_path), size=len(content))
-
+async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id) -> MediaFile:
+    """Hand validated bytes off to M1 — no disk persistence at this layer."""
     return await processor.process(
-        file_path         = dest_path,
+        content           = content,
         original_filename = file.filename,
         db                = db,
+        user_id           = user_id,
     )
 
 
@@ -80,7 +67,7 @@ async def upload_file(
         )
 
     validated = await validate_photo(file)
-    record    = await _save_and_ingest(file, validated.content, db)
+    record    = await _ingest(file, validated.content, db, user.id)
 
     return UploadResponse(
         message    = "File received and processed successfully",
@@ -99,12 +86,7 @@ async def upload_multiple_files(
     db:      AsyncSession = Depends(get_db),
     user:    User         = Depends(get_current_user),
 ):
-    """Upload up to ``MAX_BATCH_FILES`` photos in one request.
-
-    Bad files are skipped (not fatal) so a single broken photo does not
-    prevent the rest of a batch from being ingested. Errors for skipped
-    files are logged.
-    """
+    """Upload up to ``MAX_BATCH_FILES`` photos in one request."""
     if len(files) > MAX_BATCH_FILES:
         raise HTTPException(
             status_code=400,
@@ -122,7 +104,7 @@ async def upload_multiple_files(
                 continue
 
             validated = await validate_photo(file)
-            record    = await _save_and_ingest(file, validated.content, db)
+            record    = await _ingest(file, validated.content, db, user.id)
             results.append(UploadResponse(
                 message    = "Processed successfully",
                 file_id    = record.id,
@@ -144,9 +126,15 @@ async def upload_multiple_files(
 
 
 @router.get("/media/{file_id}", response_model=MediaFileResponse)
-async def get_media(file_id: int, db: AsyncSession = Depends(get_db)):
-    """Return the M1 record for a specific file id."""
-    result = await db.execute(select(MediaFile).where(MediaFile.id == file_id))
+async def get_media(
+    file_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Return the M1 record for a specific file id — owned rows only."""
+    result = await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )
     record = result.scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
@@ -154,9 +142,16 @@ async def get_media(file_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/media", response_model=list[MediaFileResponse])
-async def list_media(db: AsyncSession = Depends(get_db)):
-    """Return every ingested media file, newest first."""
-    result = await db.execute(select(MediaFile).order_by(MediaFile.created_at.desc()))
+async def list_media(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Return every ingested media file owned by the caller, newest first."""
+    result = await db.execute(
+        select(MediaFile)
+        .where(MediaFile.user_id == user.id)
+        .order_by(MediaFile.created_at.desc())
+    )
     return result.scalars().all()
 
 
@@ -164,20 +159,23 @@ async def list_media(db: AsyncSession = Depends(get_db)):
 async def serve_media_bytes(
     file_id: int,
     db:      AsyncSession = Depends(get_db),
-    _user:   User         = Depends(get_current_user_query_or_header),
+    user:    User         = Depends(get_current_user_query_or_header),
 ):
-    """Stream the raw photo bytes — used by the frontend ``<img>`` tags.
+    """Redirect to a short-lived signed URL for the photo in Supabase Storage.
 
-    Accepts JWT either in ``Authorization`` header or in ``?token=`` query
-    so that bare ``<img>`` tags (which can't set headers) still authenticate.
+    We don't proxy the bytes through FastAPI any more — the browser
+    follows the 302 and pulls the file straight from Supabase. Auth is
+    enforced here (we confirm ``user_id == owner``) and the signed URL
+    is single-asset, short-lived, so it can't be reused to enumerate.
     """
-    record = (await db.execute(select(MediaFile).where(MediaFile.id == file_id))).scalar_one_or_none()
+    record = (await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )).scalar_one_or_none()
     if not record or not record.file_path:
         raise HTTPException(status_code=404, detail="File not found")
-    disk_path = Path(record.file_path)
-    if not disk_path.exists():
-        raise HTTPException(status_code=404, detail="File missing from disk")
-    return FileResponse(str(disk_path), filename=record.original_filename)
+
+    signed = await create_signed_url(record.file_path, expires_in=300)
+    return RedirectResponse(url=signed, status_code=302)
 
 
 @router.delete("/media/{file_id}")
@@ -186,14 +184,19 @@ async def delete_media(
     db:      AsyncSession = Depends(get_db),
     user:    User         = Depends(get_current_user),
 ):
-    """Remove a photo both from disk and the database."""
-    record = (await db.execute(select(MediaFile).where(MediaFile.id == file_id))).scalar_one_or_none()
+    """Remove a photo from Supabase Storage and the database — owned rows only."""
+    record = (await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )).scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
     if record.file_path:
-        disk_path = Path(record.file_path)
-        if disk_path.exists():
-            disk_path.unlink()
+        try:
+            await delete_object(record.file_path)
+        except Exception as exc:
+            # Don't block the DB delete on a Storage hiccup — log loudly and
+            # let the row go, otherwise we'd leak ghost objects.
+            log.warning("storage_delete_swallowed", key=record.file_path, error=str(exc))
     await db.delete(record)
     await db.commit()
     return {"message": "Deleted"}

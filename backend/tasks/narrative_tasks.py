@@ -1,5 +1,7 @@
 """Celery tasks for M3 narrative generation."""
 
+from uuid import UUID
+
 import structlog
 
 from backend.core.celery_app import celery_app
@@ -18,21 +20,30 @@ def generate_narrative_task(
 ) -> dict:
     """Run ``NarrativeGenerator.generate`` on a worker and persist the story.
 
-    ``payload`` mirrors ``GenerateRequest`` — the route serializes it
-    straight from the Pydantic model before enqueuing.
+    ``payload`` mirrors ``GenerateRequest`` plus the ``user_id`` injected
+    by the enqueuer (the worker has no HTTP context so it cannot decode
+    the JWT itself — the owning user must be passed in explicitly).
     """
     log.info("narrative_task_start", task_record_id=task_record_id, payload=payload)
+
+    user_id_raw = payload.get("user_id")
+    if not user_id_raw:
+        raise ValueError("narrative task payload missing user_id")
+    user_id = UUID(user_id_raw)
 
     async def _body() -> dict:
         async with AsyncSessionLocal() as session:
             generator = NarrativeGenerator()
             story = await generator.generate(
-                db         = session,
-                title      = payload["title"],
-                event_type = payload.get("event_type", "default"),
-                query      = payload.get("query"),
-                person_ids = payload.get("person_ids") or [],
-                project_id = payload.get("project_id"),
+                db               = session,
+                user_id          = user_id,
+                title            = payload["title"],
+                event_type       = payload.get("event_type", "default"),
+                query            = payload.get("query"),
+                person_ids       = payload.get("person_ids") or [],
+                project_id       = payload.get("project_id"),
+                custom_tone      = payload.get("custom_tone"),
+                custom_structure = payload.get("custom_structure"),
             )
             return {
                 "story_id":      story.id,

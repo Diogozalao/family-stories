@@ -4,8 +4,8 @@ Clients start a background job by calling one of the ``/generate``
 routes; those routes return a ``task_id`` immediately. The client then
 polls this endpoint until ``state`` is ``done`` or ``failed``.
 
-The cancel/delete endpoints let the user stop in-flight work and prune
-the history without touching domain records (stories, videos).
+All endpoints filter ``task_records`` by ``user.id`` so a caller can
+neither see nor cancel another user's jobs.
 """
 
 from datetime import UTC, datetime
@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.core.auth import User, get_current_user
 from backend.core.celery_app import celery_app
 from backend.core.database import get_db
 from backend.models.task import TaskRecord, TaskState
@@ -39,21 +40,39 @@ def _serialize(record: TaskRecord) -> dict:
     }
 
 
-@router.get("/{task_id}")
-async def get_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """Return the current state of one task by id."""
-    record = await db.get(TaskRecord, task_id)
+async def _get_owned(db: AsyncSession, task_id: int, user_id) -> TaskRecord:
+    record = (await db.execute(
+        select(TaskRecord).where(TaskRecord.id == task_id, TaskRecord.user_id == user_id)
+    )).scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="Task not found")
+    return record
+
+
+@router.get("/{task_id}")
+async def get_task(
+    task_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Return the current state of one task — owner only."""
+    record = await _get_owned(db, task_id, user.id)
     return _serialize(record)
 
 
 @router.get("")
-async def list_tasks(limit: int = 50, db: AsyncSession = Depends(get_db)):
-    """Return the most recent tasks (for admin panels / debugging)."""
+async def list_tasks(
+    limit: int = 50,
+    db:    AsyncSession = Depends(get_db),
+    user:  User         = Depends(get_current_user),
+):
+    """Return the caller's most recent tasks."""
     limit = max(1, min(limit, 200))
     result = await db.execute(
-        select(TaskRecord).order_by(TaskRecord.created_at.desc()).limit(limit)
+        select(TaskRecord)
+        .where(TaskRecord.user_id == user.id)
+        .order_by(TaskRecord.created_at.desc())
+        .limit(limit)
     )
     return [_serialize(r) for r in result.scalars().all()]
 
@@ -69,11 +88,13 @@ def _revoke_celery(celery_id: str | None) -> None:
 
 
 @router.post("/{task_id}/cancel")
-async def cancel_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """Stop a pending/running task. Keeps the row in history as ``failed``."""
-    record = await db.get(TaskRecord, task_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Task not found")
+async def cancel_task(
+    task_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Stop a pending/running task. Keeps the row as ``failed`` — owner only."""
+    record = await _get_owned(db, task_id, user.id)
     if record.state in (TaskState.DONE, TaskState.FAILED):
         return _serialize(record)
 
@@ -88,11 +109,13 @@ async def cancel_task(task_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/{task_id}", status_code=204)
-async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
-    """Remove a task entry from history. Revokes Celery first if still active."""
-    record = await db.get(TaskRecord, task_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Task not found")
+async def delete_task(
+    task_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Remove a task from history — owner only."""
+    record = await _get_owned(db, task_id, user.id)
 
     if record.state in (TaskState.PENDING, TaskState.RUNNING):
         _revoke_celery(record.celery_id)
@@ -103,10 +126,16 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("", status_code=204)
-async def clear_finished_tasks(db: AsyncSession = Depends(get_db)):
-    """Delete all done/failed tasks at once. Active tasks are kept untouched."""
+async def clear_finished_tasks(
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
+):
+    """Delete the caller's done/failed tasks at once. Active tasks untouched."""
     result = await db.execute(
-        select(TaskRecord).where(TaskRecord.state.in_([TaskState.DONE, TaskState.FAILED]))
+        select(TaskRecord).where(
+            TaskRecord.user_id == user.id,
+            TaskRecord.state.in_([TaskState.DONE, TaskState.FAILED]),
+        )
     )
     rows = result.scalars().all()
     for r in rows:

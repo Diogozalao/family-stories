@@ -38,27 +38,34 @@ class TimelineBuilder:
     - Atribui nível de confiança à data
     """
 
-    async def build_from_media(self, db: AsyncSession) -> list[TimelineEvent]:
-        # Busca todos os media processados sem evento ainda
+    async def build_from_media(self, db: AsyncSession, user_id) -> list[TimelineEvent]:
+        """Build timeline events from media owned by ``user_id``.
+
+        Restricted to that user's media so we never cross-pollinate the
+        timeline with someone else's photos.
+        """
         result = await db.execute(
             select(MediaFile).where(
-                MediaFile.status == ProcessingStatus.COMPLETED,
-                MediaFile.media_type.in_([MediaType.PHOTO, MediaType.VIDEO, MediaType.DOCUMENT])
+                MediaFile.user_id    == user_id,
+                MediaFile.status     == ProcessingStatus.COMPLETED,
+                MediaFile.media_type.in_([MediaType.PHOTO, MediaType.VIDEO, MediaType.DOCUMENT]),
             )
         )
         media_files = result.scalars().all()
-        log.info("timeline_build_start", total_files=len(media_files))
+        log.info("timeline_build_start", total_files=len(media_files), user_id=str(user_id))
 
         events = []
         for mf in media_files:
-            # Verifica se já existe evento para este media
             existing = await db.execute(
-                select(TimelineEvent).where(TimelineEvent.media_file_id == mf.id)
+                select(TimelineEvent).where(
+                    TimelineEvent.media_file_id == mf.id,
+                    TimelineEvent.user_id       == user_id,
+                )
             )
             if existing.scalar_one_or_none():
-                continue  # já processado
+                continue
 
-            event = self._create_event(mf)
+            event = self._create_event(mf, user_id)
             db.add(event)
             events.append(event)
 
@@ -66,12 +73,13 @@ class TimelineBuilder:
         log.info("timeline_build_done", events_created=len(events))
         return events
 
-    def _create_event(self, mf: MediaFile) -> TimelineEvent:
+    def _create_event(self, mf: MediaFile, user_id) -> TimelineEvent:
         date, confidence = self._resolve_date(mf)
         event_type = self._classify_event(mf)
         title = self._generate_title(mf, date)
 
         return TimelineEvent(
+            user_id         = user_id,
             event_date      = date,
             date_confidence = confidence,
             date_label      = self._date_label(date, confidence),

@@ -1,8 +1,9 @@
 """Projetos / coleções — espaços de trabalho que agrupam fotos, histórias e vídeos.
 
 Um ``Project`` é uma vista filtrada e curada sobre a Biblioteca global.
-A intenção é separar contextos (ex.: *Casamento dos avós*, *Viagem ao
-Algarve 1985*) sem duplicar fotografias no disco.
+Toda a query/insert nesta route filtra/atribui por ``user.id`` — RLS
+é bypassada porque o backend conecta como ``postgres``, portanto este
+filtro **é** a barreira de isolamento entre utilizadores.
 """
 
 from datetime import UTC, datetime
@@ -14,12 +15,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.auth import get_current_user
+from backend.core.auth import User, get_current_user
 from backend.core.database import get_db
 from backend.models.media import MediaFile
 from backend.models.narrative import Story
 from backend.models.project import Project, ProjectMedia
-from backend.models.user import User
 from backend.models.video import VideoOutput
 
 router = APIRouter(prefix="/api/v1/projects", tags=["projects"])
@@ -45,8 +45,10 @@ class MediaIdsRequest(BaseModel):
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
-async def _get_or_404(db: AsyncSession, project_id: int) -> Project:
-    project = await db.get(Project, project_id)
+async def _get_or_404(db: AsyncSession, project_id: int, user_id) -> Project:
+    project = (await db.execute(
+        select(Project).where(Project.id == project_id, Project.user_id == user_id)
+    )).scalar_one_or_none()
     if project is None:
         raise HTTPException(status_code=404, detail="Projeto não encontrado")
     return project
@@ -82,11 +84,15 @@ async def _serialize(db: AsyncSession, project: Project) -> dict:
 
 @router.get("")
 async def list_projects(
-    db:    AsyncSession = Depends(get_db),
-    _user: User         = Depends(get_current_user),
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
 ):
-    """Lista todos os projetos, mais recentes primeiro."""
-    result = await db.execute(select(Project).order_by(Project.updated_at.desc()))
+    """Lista os projetos do utilizador, mais recentes primeiro."""
+    result = await db.execute(
+        select(Project)
+        .where(Project.user_id == user.id)
+        .order_by(Project.updated_at.desc())
+    )
     projects = result.scalars().all()
     return [await _serialize(db, p) for p in projects]
 
@@ -95,9 +101,9 @@ async def list_projects(
 async def create_project(
     payload: ProjectCreate,
     db:      AsyncSession = Depends(get_db),
-    _user:   User         = Depends(get_current_user),
+    user:    User         = Depends(get_current_user),
 ):
-    project = Project(name=payload.name.strip(), description=payload.description)
+    project = Project(user_id=user.id, name=payload.name.strip(), description=payload.description)
     db.add(project)
     await db.commit()
     await db.refresh(project)
@@ -109,9 +115,9 @@ async def create_project(
 async def get_project(
     project_id: int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    project = await _get_or_404(db, project_id)
+    project = await _get_or_404(db, project_id, user.id)
     return await _serialize(db, project)
 
 
@@ -120,16 +126,15 @@ async def update_project(
     project_id: int,
     payload:    ProjectUpdate,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    project = await _get_or_404(db, project_id)
+    project = await _get_or_404(db, project_id, user.id)
 
     if payload.name is not None:
         project.name = payload.name.strip()
     if payload.description is not None:
         project.description = payload.description
     if payload.cover_media_id is not None:
-        # Validar que a foto existe e pertence ao projeto.
         is_member = (await db.execute(
             select(ProjectMedia.id).where(
                 ProjectMedia.project_id == project_id,
@@ -151,16 +156,9 @@ async def update_project(
 async def delete_project(
     project_id: int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    """Elimina o projeto.
-
-    As fotografias na ``Biblioteca`` permanecem intactas — só
-    desaparecem as associações em ``project_media`` (CASCADE).
-    Histórias e vídeos perdem a ligação (``ON DELETE SET NULL``)
-    mas ficam acessíveis nas listagens globais.
-    """
-    project = await _get_or_404(db, project_id)
+    project = await _get_or_404(db, project_id, user.id)
     await db.delete(project)
     await db.commit()
     log.info("project_deleted", project_id=project_id)
@@ -172,13 +170,13 @@ async def delete_project(
 async def list_project_media(
     project_id: int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    await _get_or_404(db, project_id)
+    await _get_or_404(db, project_id, user.id)
     result = await db.execute(
         select(MediaFile)
         .join(ProjectMedia, ProjectMedia.media_id == MediaFile.id)
-        .where(ProjectMedia.project_id == project_id)
+        .where(ProjectMedia.project_id == project_id, MediaFile.user_id == user.id)
         .order_by(MediaFile.date_taken.desc().nullslast(), MediaFile.created_at.desc())
     )
     return result.scalars().all()
@@ -189,10 +187,14 @@ async def add_media_to_project(
     project_id: int,
     payload:    MediaIdsRequest,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    """Adiciona fotos ao projeto. Idempotente — duplicados são ignorados."""
-    await _get_or_404(db, project_id)
+    """Adiciona fotos ao projeto. Idempotente — duplicados são ignorados.
+
+    Só permite associar fotos que pertencem ao utilizador — assim um user
+    não consegue ligar (intencional ou acidentalmente) uma foto de outro.
+    """
+    await _get_or_404(db, project_id, user.id)
     if not payload.media_ids:
         return {"added": 0}
 
@@ -204,8 +206,12 @@ async def add_media_to_project(
     )).scalars().all()
     already = set(existing)
 
+    # Só conta como "valid" as fotos cujo owner é o caller.
     valid_ids = (await db.execute(
-        select(MediaFile.id).where(MediaFile.id.in_(payload.media_ids))
+        select(MediaFile.id).where(
+            MediaFile.id.in_(payload.media_ids),
+            MediaFile.user_id == user.id,
+        )
     )).scalars().all()
     valid = set(valid_ids)
 
@@ -217,8 +223,9 @@ async def add_media_to_project(
         added += 1
 
     if added:
-        # Atualizar updated_at do projeto para que se mova para o topo da lista.
-        project = await db.get(Project, project_id)
+        project = (await db.execute(
+            select(Project).where(Project.id == project_id, Project.user_id == user.id)
+        )).scalar_one_or_none()
         if project is not None:
             project.updated_at = datetime.now(UTC)
 
@@ -232,19 +239,16 @@ async def remove_media_from_project(
     project_id: int,
     media_id:   int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    """Remove a foto do projeto. A foto continua na Biblioteca."""
-    await _get_or_404(db, project_id)
+    project = await _get_or_404(db, project_id, user.id)
     await db.execute(
         delete(ProjectMedia).where(
             ProjectMedia.project_id == project_id,
             ProjectMedia.media_id   == media_id,
         )
     )
-    # Se era capa, limpar.
-    project = await db.get(Project, project_id)
-    if project is not None and project.cover_media_id == media_id:
+    if project.cover_media_id == media_id:
         project.cover_media_id = None
     await db.commit()
 
@@ -255,11 +259,13 @@ async def remove_media_from_project(
 async def list_project_stories(
     project_id: int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    await _get_or_404(db, project_id)
+    await _get_or_404(db, project_id, user.id)
     result = await db.execute(
-        select(Story).where(Story.project_id == project_id).order_by(Story.created_at.desc())
+        select(Story)
+        .where(Story.project_id == project_id, Story.user_id == user.id)
+        .order_by(Story.created_at.desc())
     )
     return result.scalars().all()
 
@@ -268,10 +274,12 @@ async def list_project_stories(
 async def list_project_videos(
     project_id: int,
     db:         AsyncSession = Depends(get_db),
-    _user:      User         = Depends(get_current_user),
+    user:       User         = Depends(get_current_user),
 ):
-    await _get_or_404(db, project_id)
+    await _get_or_404(db, project_id, user.id)
     result = await db.execute(
-        select(VideoOutput).where(VideoOutput.project_id == project_id).order_by(VideoOutput.created_at.desc())
+        select(VideoOutput)
+        .where(VideoOutput.project_id == project_id, VideoOutput.user_id == user.id)
+        .order_by(VideoOutput.created_at.desc())
     )
     return result.scalars().all()

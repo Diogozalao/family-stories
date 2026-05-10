@@ -33,8 +33,10 @@ class Settings(BaseSettings):
 
     # External AI services.
     GEMINI_API_KEY:  str = ""
+    GEMINI_MODEL:    str = "gemini-1.5-flash"
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL:    str = "llama3.1"
+    OLLAMA_MODEL:    str = "llama3.2:3b"
+    NARRATIVE_MAX_TOKENS: int = 3500
 
     # Upload size limits (in megabytes).
     MAX_PHOTO_SIZE_MB:  int = 25
@@ -66,9 +68,26 @@ class Settings(BaseSettings):
     # Token de reset de password — vida útil em minutos.
     PASSWORD_RESET_TOKEN_TTL_MINUTES: int = 60
 
+    # ── Supabase ─────────────────────────────────────────────────────
+    # Auth (signup/login/reset) e BD passam a ser geridos pelo Supabase.
+    # ``SUPABASE_URL`` é público; ``SERVICE_ROLE_KEY`` é privado e só
+    # deve ser usado pelo backend para operações administrativas.
+    SUPABASE_URL:              str = ""
+    SUPABASE_ANON_KEY:         str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_DB_URL:           str = ""
+    SUPABASE_DB_DIRECT_URL:    str = ""
+
+    # JWKS endpoint usado para validar tokens emitidos pelo Supabase Auth.
+    # Construído automaticamente a partir do SUPABASE_URL.
+    @property
+    def SUPABASE_JWKS_URL(self) -> str:
+        return f"{self.SUPABASE_URL.rstrip('/')}/auth/v1/.well-known/jwks.json"
+
     class Config:
         env_file          = ".env"
         env_file_encoding = "utf-8"
+        extra             = "ignore"   # ignora NEXT_PUBLIC_* e outras vars do frontend
 
 
 settings = Settings()
