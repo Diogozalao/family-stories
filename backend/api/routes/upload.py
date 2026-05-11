@@ -26,7 +26,12 @@ from backend.core.auth import User, get_current_user, get_current_user_query_or_
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
-from backend.core.supabase_storage import create_signed_url, delete_object
+from backend.core.supabase_storage import (
+    cached_signed_url,
+    create_signed_url,
+    delete_object,
+    invalidate_signed_url,
+)
 from backend.core.upload_validator import validate_photo
 from backend.models.media import MediaFile
 from backend.modules.m1_ingestion.processor import M1Processor
@@ -155,18 +160,18 @@ async def list_media(
     return result.scalars().all()
 
 
-@router.get("/media/{file_id}/file")
-async def serve_media_bytes(
+@router.get("/media/{file_id}/url")
+async def get_media_url(
     file_id: int,
     db:      AsyncSession = Depends(get_db),
-    user:    User         = Depends(get_current_user_query_or_header),
+    user:    User         = Depends(get_current_user),
 ):
-    """Redirect to a short-lived signed URL for the photo in Supabase Storage.
+    """Return a fresh signed URL for the photo in Supabase Storage.
 
-    We don't proxy the bytes through FastAPI any more — the browser
-    follows the 302 and pulls the file straight from Supabase. Auth is
-    enforced here (we confirm ``user_id == owner``) and the signed URL
-    is single-asset, short-lived, so it can't be reused to enumerate.
+    The frontend caches this JSON response via React Query so an ``<img>``
+    that already loaded keeps its URL across navigations (no flicker, no
+    re-download). We hand out URLs valid for an hour so the cache stays
+    warm even on a multi-page session.
     """
     record = (await db.execute(
         select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
@@ -174,7 +179,28 @@ async def serve_media_bytes(
     if not record or not record.file_path:
         raise HTTPException(status_code=404, detail="File not found")
 
-    signed = await create_signed_url(record.file_path, expires_in=300)
+    signed = await cached_signed_url(record.file_path, expires_in=3600)
+    return {"url": signed, "expires_in": 3600}
+
+
+@router.get("/media/{file_id}/file")
+async def serve_media_bytes(
+    file_id: int,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user_query_or_header),
+):
+    """Legacy ``<img>``/``<video>`` redirect endpoint.
+
+    Kept around for ``<video>`` tags and direct browser links that can't
+    call the JSON endpoint above. Issues a 302 to a fresh signed URL.
+    """
+    record = (await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )).scalar_one_or_none()
+    if not record or not record.file_path:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    signed = await cached_signed_url(record.file_path, expires_in=3600)
     return RedirectResponse(url=signed, status_code=302)
 
 
@@ -191,6 +217,7 @@ async def delete_media(
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
     if record.file_path:
+        invalidate_signed_url(record.file_path)
         try:
             await delete_object(record.file_path)
         except Exception as exc:

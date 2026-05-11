@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   CheckCircle2, Eye, EyeOff, KeyRound, Loader2, ShieldAlert,
@@ -8,38 +8,61 @@ import AuthShell from "../components/auth/AuthShell";
 import LandingHeader from "../components/landing/LandingHeader";
 import { useResetPassword } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
+import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
 
 export default function ResetPasswordPage() {
-  const [params] = useSearchParams();
   const navigate = useNavigate();
   const reset = useResetPassword();
 
-  const token = params.get("token") ?? "";
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
   const [done, setDone] = useState(false);
+  // The email link drops the user here with a ``#access_token=`` URL
+  // fragment; Supabase swaps that for a session asynchronously. We
+  // gate the form on that session existing so the "Link inválido" view
+  // only appears when the recovery handshake truly failed.
+  const [sessionState, setSessionState] = useState<"checking" | "ready" | "missing">("checking");
 
   useEffect(() => {
     setPw("");
     setConfirm("");
   }, []);
 
-  const tokenMissing = token.length < 32;
-  const tooShort = pw.length > 0 && pw.length < 8;
-  const mismatch = confirm.length > 0 && confirm !== pw;
-  const canSubmit = !tokenMissing && pw.length >= 8 && confirm === pw;
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setSessionState(data.session ? "ready" : "missing");
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        setSessionState("ready");
+      }
+    });
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const tooShort  = pw.length > 0 && pw.length < 8;
+  const mismatch  = confirm.length > 0 && confirm !== pw;
+  const canSubmit = sessionState === "ready" && pw.length >= 8 && confirm === pw;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     reset.mutate(
-      { token, new_password: pw },
+      { new_password: pw },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           setDone(true);
           toast.success("Palavra-passe atualizada");
+          // Sign out so the user lands on the login form with the new
+          // credentials, rather than staying in the recovery session.
+          await supabase.auth.signOut();
           setTimeout(() => navigate("/login", { replace: true }), 2500);
         },
         onError: (err) => toast.error(extractErrorMessage(err)),
@@ -52,7 +75,9 @@ export default function ResetPasswordPage() {
       <LandingHeader />
 
       <AuthShell>
-        {tokenMissing ? (
+        {sessionState === "checking" ? (
+          <Checking />
+        ) : sessionState === "missing" ? (
           <InvalidToken />
         ) : done ? (
           <DoneState />
@@ -140,6 +165,15 @@ export default function ResetPasswordPage() {
           </>
         )}
       </AuthShell>
+    </div>
+  );
+}
+
+function Checking() {
+  return (
+    <div className="text-center">
+      <Loader2 className="mx-auto h-6 w-6 animate-spin text-stone-500" />
+      <p className="mt-4 text-sm text-stone-500">A validar o link…</p>
     </div>
   );
 }

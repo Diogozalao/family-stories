@@ -31,7 +31,7 @@ class VideoOutput(Base):
     file_path    = Column(String(500), nullable=True)        # Supabase Storage object key
     file_size_mb = Column(Float, nullable=True)
     photos_used  = Column(Integer, nullable=True)
-    status       = Column(Enum(VideoStatus, name="video_status", create_type=False),
+    status       = Column(Enum(VideoStatus, name="video_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
                           default=VideoStatus.PROCESSING)
     error_message = Column(Text, nullable=True)
 

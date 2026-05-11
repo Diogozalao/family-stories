@@ -24,6 +24,7 @@ export interface Person {
   birth_date?: string | null;
   birth_place?: string | null;
   gedcom_id?: string | null;
+  family_label?: string | null;
 }
 
 export interface TimelineEvent {

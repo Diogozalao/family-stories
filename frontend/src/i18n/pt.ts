@@ -26,6 +26,8 @@ export default {
     open: "Abrir",
     retry: "Tentar novamente",
     signOut: "Terminar sessão",
+    language: "Idioma",
+    theme: "Tema",
   },
   auth: {
     welcome: "Bem-vindo de volta",
@@ -41,7 +43,80 @@ export default {
     loggedOut: "Sessão terminada.",
     invalid: "Credenciais inválidas",
     passwordHint: "Mínimo de 8 caracteres",
-    registerHint: "Este arquivo é pessoal. Só podes criar um dono.",
+    name: "Nome",
+    namePlaceholder: "Como queres ser chamado",
+    nameTooShort: "Indica pelo menos 2 caracteres.",
+    emailInvalid: "Indica um email válido.",
+    forgotLink: "Esqueceste-te?",
+    checkEmailTitle: "Verifica o teu email.",
+    checkEmailBody: "Enviámos um link de confirmação. Carrega nele para ativares a conta.",
+    accountCreated: "Conta criada. Verifica o teu email para confirmar.",
+  },
+  landing: {
+    navAbout: "Sobre",
+    navFeatures: "Capacidades",
+    navHow: "Como funciona",
+    navPrivacy: "Privacidade",
+    signIn: "Entrar",
+    getStarted: "Começar",
+  },
+  about: {
+    tag: "O nosso projeto",
+    heroTitle: "Histórias que ficam na família, contadas pelas próprias fotografias.",
+    heroLead:
+      "O Living Memory é um arquivo familiar inteligente: organiza fotografias, " +
+      "documentos e árvores genealógicas e usa IA para tecer narrativas e vídeos " +
+      "que preservam memórias que de outra forma se perderiam.",
+    cta: "Começar agora",
+
+    missionTitle: "A nossa missão",
+    missionP1:
+      "Quase todas as famílias guardam caixas de fotografias antigas — " +
+      "negativos por digitalizar, álbuns sem legendas, pessoas a desaparecer " +
+      "das memórias dos mais novos. O tempo que era preciso para transformar " +
+      "tudo isso em histórias contadas raramente existe.",
+    missionP2:
+      "Acreditamos que a inteligência artificial deve devolver esse tempo às " +
+      "pessoas — não substituir as histórias, mas dar-lhes uma forma. Cada " +
+      "narrativa gerada é uma porta para a conversa que se segue.",
+
+    pillar1Title: "Centrado nas pessoas",
+    pillar1Body:
+      "A tecnologia desaparece — fica a memória. O sistema é simples o suficiente " +
+      "para um avô o usar com o neto ao lado.",
+    pillar2Title: "Fundamentado em factos",
+    pillar2Body:
+      "Cada narrativa parte de dados reais: datas EXIF, descrições do Gemini Vision, " +
+      "GEDCOM. O LLM não inventa pessoas nem datas.",
+    pillar3Title: "Privacidade primeiro",
+    pillar3Body:
+      "Cada conta tem o seu arquivo isolado por Row Level Security. Ninguém vê " +
+      "as tuas fotografias sem a tua autorização.",
+
+    pipelineTitle: "Como funciona",
+    pipelineLead:
+      "Quatro módulos encadeados transformam ficheiros em histórias e vídeos.",
+    step1Title: "Ingestão",
+    step1Body: "Lê fotografias e documentos, extrai EXIF, descrições com Gemini Vision e texto via OCR.",
+    step2Title: "Temporal",
+    step2Body: "Constrói a timeline familiar e o grafo de relações a partir do GEDCOM.",
+    step3Title: "Narrativa",
+    step3Body: "LLM + RAG geram histórias ancoradas só nos factos do teu arquivo.",
+    step4Title: "Multimédia",
+    step4Body: "Slideshow legendado, narração TTS e exportação para MP4.",
+
+    audienceTitle: "Para quem é",
+    audienceLead:
+      "Pensado para qualquer pessoa que tenha memórias para preservar — não é preciso saber de tecnologia.",
+    aud1Title: "Famílias",
+    aud1Body: "Junta as fotografias de várias gerações num só arquivo coerente.",
+    aud2Title: "Curadores",
+    aud2Body: "Quem cuida do legado de avós, pais e familiares já partidos.",
+    aud3Title: "Investigadores",
+    aud3Body: "Genealogistas e historiadores familiares com árvores GEDCOM extensas.",
+
+    ctaTitle: "Começa pela primeira fotografia.",
+    ctaLead: "Não precisas de tudo já organizado — o sistema aprende contigo à medida que carregas.",
   },
   nav: {
     dashboard: "Início",
@@ -69,6 +144,24 @@ export default {
     importTree: "Importar árvore",
     writeStory: "Escrever história",
     makeVideo: "Criar vídeo",
+    heroTitle: "Bom voltar a ver-te, {{name}}.",
+    heroSub: "O teu arquivo familiar — sempre vivo, sempre a crescer.",
+    heroCta: "Continuar onde paraste",
+    recentActivity: "Atividade recente",
+    activityEmpty: "Ainda sem atividade.",
+    activityPhoto: "Carregaste {{name}}",
+    activityStory: "Escreveste «{{title}}»",
+    activityVideo: "Criaste um vídeo",
+    startHere: "Começa por aqui",
+    startHereLead: "Vai precisar de 3 passos para teres a primeira história gerada.",
+    step1: "Carrega as primeiras fotografias",
+    step1Body: "Arrasta-as para a biblioteca — o sistema lê EXIF e descreve cada uma com IA.",
+    step2: "Importa a tua árvore genealógica",
+    step2Body: "Sobe um ficheiro GEDCOM (exportado do Ancestry, MyHeritage…) para enriqueceres a narrativa.",
+    step3: "Escreve a primeira história",
+    step3Body: "Escolhe um tema, pessoas, e deixa o LLM tecer o texto a partir dos teus factos.",
+    runningTasks: "Tarefas em curso",
+    noRunningTasks: "Nenhuma tarefa em curso.",
   },
   library: {
     title: "Biblioteca",
@@ -88,10 +181,23 @@ export default {
     importGedcom: "Importar GEDCOM",
     dropGedcom: "Arrasta um ficheiro .ged para aqui",
     noTree: "Ainda não importaste uma árvore.",
+    noMatch: "Nenhuma pessoa corresponde aos filtros.",
     persons: "Pessoas",
     relations: "Relações",
     born: "Nascido(a) em {{date}}",
     bornAt: "em {{place}}",
+    allFamilies: "Todas",
+    unlabeled: "Sem grupo",
+    importedAs: "Importado como \"{{label}}\".",
+    labelDialogTitle: "Nome desta família",
+    labelDialogLead: "Identifica esta árvore para a poderes filtrar dos outros ramos.",
+    labelField: "Nome da família",
+    labelPlaceholder: "ex.: Dinis, Nogueira, Avós paternos",
+    labelHint: "Podes deixar em branco se for uma árvore única.",
+    confirmRemoveAll: "Apagar todas as pessoas importadas? Esta ação não pode ser desfeita.",
+    confirmRemoveLabel: "Apagar todas as pessoas da família \"{{label}}\"?",
+    importedSummary: "{{count, number}} pessoas importadas para \"{{label}}\".",
+    importedSummaryWithSkipped: "{{created}} pessoas importadas para \"{{label}}\" ({{skipped}} ignoradas por não terem nome).",
   },
   timeline: {
     title: "Linha Temporal",

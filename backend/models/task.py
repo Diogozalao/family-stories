@@ -32,8 +32,8 @@ class TaskRecord(Base):
     id        = Column(BigInteger, primary_key=True, index=True)
     user_id   = Column(UUID(as_uuid=True), nullable=False, index=True)
     celery_id = Column(String(64), unique=True, index=True, nullable=True)
-    kind      = Column(Enum(TaskKind,  name="task_kind",  create_type=False), nullable=False)
-    state     = Column(Enum(TaskState, name="task_state", create_type=False),
+    kind      = Column(Enum(TaskKind,  name="task_kind",  create_type=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    state     = Column(Enum(TaskState, name="task_state", create_type=False, values_callable=lambda x: [e.value for e in x]),
                        default=TaskState.PENDING, nullable=False)
 
     story_id  = Column(BigInteger, ForeignKey("stories.id",       ondelete="CASCADE"), nullable=True)

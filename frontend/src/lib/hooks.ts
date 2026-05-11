@@ -1,64 +1,104 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE } from "./api";
+import { supabase } from "./supabase";
 import type {
   HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
   TaskRecord, TimelineEvent, Video,
 } from "./types";
-import { useAuthStore, type User } from "../store/auth";
 
 // ── Auth ────────────────────────────────────────────────────────────────
+//
+// Every flow below delegates to ``supabase.auth.*``. The Zustand store
+// is kept in sync by the ``SessionLoader`` listener — none of these
+// hooks have to write to the store themselves.
+
 export function useLogin() {
-  const setAuth = useAuthStore((s) => s.setAuth);
   return useMutation({
     mutationFn: async (input: { username: string; password: string }) => {
-      const form = new URLSearchParams();
-      form.set("username", input.username);
-      form.set("password", input.password);
-      const { data } = await api.post("/api/v1/auth/login", form, {
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email:    input.username,
+        password: input.password,
       });
-      return data as { access_token: string; user: User };
+      if (error) throw error;
+      return data;
     },
-    onSuccess: (data) => setAuth(data.access_token, data.user),
+  });
+}
+
+export function useRegister() {
+  return useMutation({
+    mutationFn: async (input: { email: string; password: string; username?: string }) => {
+      const { data, error } = await supabase.auth.signUp({
+        email:    input.email,
+        password: input.password,
+        options:  {
+          // ``user_metadata`` is the only Supabase field for arbitrary
+          // signup-time data — we store the display name here so the UI
+          // can show "Diogo" instead of the email on every page.
+          data: { username: input.username?.trim() || undefined },
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useLogout() {
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    },
   });
 }
 
 export function useChangePassword() {
+  // Supabase doesn't natively re-verify the current password before
+  // updating — the active session is treated as proof of identity. We
+  // therefore ignore ``current_password`` for now to stay compatible
+  // with the existing UI; tighten this later if it matters.
   return useMutation({
-    mutationFn: async (input: { current_password: string; new_password: string }) =>
-      (await api.post("/api/v1/auth/password", input)).data,
+    mutationFn: async (input: { current_password?: string; new_password: string }) => {
+      const { error } = await supabase.auth.updateUser({ password: input.new_password });
+      if (error) throw error;
+    },
   });
 }
 
 export function useForgotPassword() {
   return useMutation({
-    mutationFn: async (input: { email: string }) =>
-      (await api.post("/api/v1/auth/forgot-password", input)).data,
+    mutationFn: async (input: { email: string }) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(input.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+    },
   });
 }
 
 export function useResetPassword() {
+  // When the user lands on /reset-password via the email link, Supabase
+  // has already turned the URL fragment into an active session — we just
+  // call ``updateUser`` with the new password. The legacy ``token`` arg
+  // is accepted but ignored so callers don't need to change shape yet.
   return useMutation({
-    mutationFn: async (input: { token: string; new_password: string }) =>
-      (await api.post("/api/v1/auth/reset-password", input)).data,
+    mutationFn: async (input: { token?: string; new_password: string }) => {
+      const { error } = await supabase.auth.updateUser({ password: input.new_password });
+      if (error) throw error;
+    },
   });
 }
 
 export function useDeleteAccount() {
+  // Implementação atual: simples sign-out + nota. Apagar a conta
+  // requer permissões admin que ainda não expusemos via backend. Volta
+  // a isto quando precisares mesmo (ver TODO em routes/auth.py).
   return useMutation({
-    mutationFn: async (input: { current_password: string; confirm: string }) =>
-      (await api.post("/api/v1/auth/delete-account", input)).data,
-  });
-}
-
-export function useRegister() {
-  const setAuth = useAuthStore((s) => s.setAuth);
-  return useMutation({
-    mutationFn: async (input: { username: string; password: string }) => {
-      const { data } = await api.post("/api/v1/auth/register", input);
-      return data as { access_token: string; user: User };
+    mutationFn: async (_input: { current_password: string; confirm: string }) => {
+      await supabase.auth.signOut();
+      throw new Error("A eliminação definitiva de conta ainda não está disponível — só sessão terminada.");
     },
-    onSuccess: (data) => setAuth(data.access_token, data.user),
   });
 }
 
@@ -216,16 +256,46 @@ export function usePersons() {
 export function useUploadGedcom() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (input: { file: File; familyLabel?: string }) => {
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", input.file);
+      if (input.familyLabel) form.append("family_label", input.familyLabel);
+      // 5-minute ceiling for very large trees — the backend usually finishes
+      // in seconds with the session pooler, but the previous timeout (none)
+      // surfaced confusing "Network Error" toasts when the browser itself
+      // gave up first.
       const { data } = await api.post("/api/v1/genealogy/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 300_000,
       });
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["persons"] });
+      qc.invalidateQueries({ queryKey: ["families"] });
+      qc.invalidateQueries({ queryKey: ["graph"] });
+    },
+  });
+}
+
+export function useFamilies() {
+  return useQuery<{ label: string | null; count: number }[]>({
+    queryKey: ["families"],
+    queryFn: async () => (await api.get("/api/v1/genealogy/families")).data,
+  });
+}
+
+export function useClearFamily() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (familyLabel?: string) => {
+      const params = familyLabel ? { params: { family_label: familyLabel } } : {};
+      const { data } = await api.delete("/api/v1/genealogy/persons", params);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["persons"] });
+      qc.invalidateQueries({ queryKey: ["families"] });
       qc.invalidateQueries({ queryKey: ["graph"] });
     },
   });

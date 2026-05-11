@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AtSign, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
+import { AtSign, Eye, EyeOff, Heart, Loader2, LogIn, Sparkles } from "lucide-react";
 import { useLogin } from "../lib/hooks";
 import { useAuthStore } from "../store/auth";
 import { extractErrorMessage } from "../lib/api";
@@ -69,6 +69,10 @@ export default function LoginPage() {
 
       <AuthShell>
         <header className="mb-7 text-center">
+          <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+            <Heart className="h-3 w-3" />
+            Living Memory
+          </span>
           <h1 className="font-serif text-3xl font-semibold tracking-tight sm:text-[2rem]">
             {t("auth.welcome")}
           </h1>
@@ -107,7 +111,7 @@ export default function LoginPage() {
               />
             </div>
             {emailInvalid && (
-              <p className="mt-1.5 text-xs text-rose-600">Indica um email válido.</p>
+              <p className="mt-1.5 text-xs text-rose-600">{t("auth.emailInvalid")}</p>
             )}
           </div>
 
@@ -135,7 +139,7 @@ export default function LoginPage() {
             </div>
             <div className="mt-2 flex justify-end">
               <Link to="/forgot-password" className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
-                Esqueceste-te?
+                {t("auth.forgotLink")}
               </Link>
             </div>
           </div>
@@ -154,14 +158,20 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-7 text-center text-sm text-stone-600 dark:text-stone-400">
+        <div className="my-6 flex items-center gap-3">
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+          <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+          <span className="h-px flex-1 bg-stone-200 dark:bg-stone-800" />
+        </div>
+
+        <p className="text-center text-sm text-stone-600 dark:text-stone-400">
           {t("auth.noAccount")}{" "}
           <Link to="/register" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
             {t("auth.register")}
           </Link>
         </p>
 
-        <p className="mt-6 text-center text-xs italic text-stone-500 dark:text-stone-500">
+        <p className="mt-4 text-center text-xs italic text-stone-500 dark:text-stone-500">
           {t("app.tagline")}
         </p>
 

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Calendar } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { useTimeline } from "../lib/hooks";
-import { photoUrl } from "../lib/photo";
+import Photo from "../components/media/Photo";
 import type { TimelineEvent } from "../lib/types";
 
 export default function TimelinePage() {
@@ -80,12 +80,12 @@ function EventRow({ ev }: { ev: TimelineEvent }) {
           </p>
         )}
         {ev.media_file_id && (
-          <img
-            src={photoUrl(ev.media_file_id)}
-            alt=""
-            loading="lazy"
-            className="mt-3 max-h-48 rounded-lg border border-stone-200 object-cover dark:border-stone-800"
-          />
+          <div className="relative mt-3 h-48 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+            <Photo
+              mediaId={ev.media_file_id}
+              className="h-full w-full object-cover"
+            />
+          </div>
         )}
       </div>
     </div>

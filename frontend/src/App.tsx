@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import RequireAuth from "./components/auth/RequireAuth";
+import SessionLoader from "./components/auth/SessionLoader";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import AboutPage from "./pages/AboutPage";
 import DashboardPage from "./pages/DashboardPage";
 import LibraryPage from "./pages/LibraryPage";
 import ProjectsPage from "./pages/ProjectsPage";
@@ -21,11 +23,13 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
   return (
+    <SessionLoader>
     <Routes>
       <Route path="/login"           element={<LoginPage />} />
       <Route path="/register"        element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password"  element={<ResetPasswordPage />} />
+      <Route path="/about"           element={<AboutPage />} />
 
       <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route path="/"            element={<DashboardPage />} />
@@ -45,5 +49,6 @@ export default function App() {
       <Route path="/404" element={<NotFoundPage />} />
       <Route path="*"    element={<Navigate to="/404" replace />} />
     </Routes>
+    </SessionLoader>
   );
 }

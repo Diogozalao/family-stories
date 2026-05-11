@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
 import Logo from "../brand/Logo";
 import { cn } from "../../lib/utils";
-
-const LINKS: { label: string; href: string }[] = [
-  { label: "Capacidades",   href: "#features" },
-  { label: "Como funciona", href: "#how"      },
-  { label: "Privacidade",   href: "#privacy"  },
-];
 
 /**
  * Sticky landing header — visible on the public ``/login`` and
@@ -16,7 +11,15 @@ const LINKS: { label: string; href: string }[] = [
  * the user starts scrolling so the hero stays visually clean.
  */
 export default function LandingHeader() {
+  const { t } = useTranslation();
   const [scrolled, setScrolled] = useState(false);
+
+  const LINKS: { label: string; href: string }[] = [
+    { label: t("landing.navAbout"),    href: "/about"    },
+    { label: t("landing.navFeatures"), href: "#features" },
+    { label: t("landing.navHow"),      href: "#how"      },
+    { label: t("landing.navPrivacy"),  href: "#privacy"  },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -40,15 +43,18 @@ export default function LandingHeader() {
         </a>
 
         <nav className="ml-6 hidden items-center gap-1 md:flex">
-          {LINKS.map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100"
-            >
-              {l.label}
-            </a>
-          ))}
+          {LINKS.map((l) => {
+            const cls =
+              "rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600 transition hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-stone-100";
+            // Hash anchors stay on the landing page and use plain <a> for
+            // the smooth-scroll behaviour; route paths go through <Link>
+            // so the SPA doesn't full-reload.
+            return l.href.startsWith("#") ? (
+              <a key={l.href} href={l.href} className={cls}>{l.label}</a>
+            ) : (
+              <Link key={l.href} to={l.href} className={cls}>{l.label}</Link>
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -56,11 +62,11 @@ export default function LandingHeader() {
             to="/login"
             className="hidden rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900 sm:block"
           >
-            Entrar
+            {t("landing.signIn")}
           </Link>
           <Link to="/register" className="btn btn-accent !py-1.5 !px-3 text-sm">
             <Sparkles className="h-4 w-4" />
-            <span>Começar</span>
+            <span>{t("landing.getStarted")}</span>
           </Link>
         </div>
       </div>

@@ -6,8 +6,6 @@ trusts that the migration has already happened. This keeps schema
 ownership in one place — the SQL file — which is what we want.
 """
 
-import uuid
-
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -32,23 +30,26 @@ def _to_async_url(url: str) -> str:
 
 _DATABASE_URL = _to_async_url(settings.SUPABASE_DB_URL or settings.DATABASE_URL)
 
-# Supabase's transaction pooler (port 6543) rebinds each transaction to a
-# random backend connection, which breaks asyncpg's named prepared
-# statements. The two-part workaround is the standard recipe:
-#   1. Disable asyncpg's statement cache so it never reuses statements
-#      across transactions.
-#   2. Generate unique server-side prepared-statement names so the pooler
-#      never sees a collision either.
-# See https://github.com/sqlalchemy/sqlalchemy/discussions/9038
+# We target the Supabase **session pooler** (port 5432 on the
+# pooler.supabase.com host) where each session is sticky to one backend
+# Postgres process. This lets asyncpg keep its prepared-statement cache
+# alive across queries, which is the difference between ~10-50 ms of
+# parse+plan overhead per query (transaction pooler 6543) and ~0 ms once
+# the statement is cached (session pooler 5432).
+#
+# If you ever need the transaction pooler, switch back to:
+#   connect_args = {
+#     "statement_cache_size": 0,
+#     "prepared_statement_cache_size": 0,
+#     "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4().hex}__",
+#   }
 engine = create_async_engine(
     _DATABASE_URL,
     echo          = False,
     pool_pre_ping = True,
-    connect_args  = {
-        "statement_cache_size":         0,
-        "prepared_statement_cache_size": 0,
-        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4().hex}__",
-    },
+    pool_size     = 5,
+    max_overflow  = 5,
+    pool_recycle  = 1800,   # Recycle every 30 min to dodge mid-life timeouts.
 )
 
 AsyncSessionLocal = async_sessionmaker(

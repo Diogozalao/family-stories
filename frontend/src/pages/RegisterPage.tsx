@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import axios from "axios";
-import { AtSign, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import { AtSign, Eye, EyeOff, Loader2, User as UserIcon, UserPlus } from "lucide-react";
 import { useRegister } from "../lib/hooks";
 import { useAuthStore } from "../store/auth";
 import { extractErrorMessage } from "../lib/api";
@@ -17,14 +16,16 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();
 
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [ownerExists, setOwnerExists] = useState(false);
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false);
 
   useEffect(() => {
     const reset = () => {
       if (document.visibilityState === "visible") {
+        setUsername("");
         setEmail("");
         setPassword("");
       }
@@ -39,28 +40,31 @@ export default function RegisterPage() {
 
   if (token) return <Navigate to="/" replace />;
 
-  const pwTooShort = password.length > 0 && password.length < 8;
+  const pwTooShort   = password.length > 0 && password.length < 8;
   const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
-  const canSubmit = EMAIL_RE.test(email) && password.length >= 8;
+  const nameTooShort = username.length > 0 && username.trim().length < 2;
+  const canSubmit    = username.trim().length >= 2 && EMAIL_RE.test(email) && password.length >= 8;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
     register.mutate(
-      { username: email, password },
+      { email, password, username: username.trim() },
       {
-        onSuccess: () => {
-          toast.success(t("common.success"));
-          navigate("/", { replace: true });
-        },
-        onError: (err) => {
-          if (axios.isAxiosError(err) && err.response?.status === 409) {
-            setOwnerExists(true);
-            toast.error("Já existe um dono neste arquivo.");
+        onSuccess: (data) => {
+          // When "Confirm email" is enabled in Supabase, the SDK returns
+          // ``data.session === null`` and the user gets an email with
+          // the verification link. We surface a friendly note instead
+          // of pretending the signup is complete.
+          if (data?.session) {
+            toast.success(t("common.success"));
+            navigate("/", { replace: true });
           } else {
-            toast.error(extractErrorMessage(err));
+            setNeedsEmailConfirm(true);
+            toast.success(t("auth.accountCreated"));
           }
         },
+        onError: (err) => toast.error(extractErrorMessage(err)),
       },
     );
   };
@@ -76,13 +80,12 @@ export default function RegisterPage() {
         </p>
       </header>
 
-      {ownerExists && (
-        <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
-          <p className="font-medium">Este arquivo já tem dono.</p>
-          <p className="mt-1 text-amber-800 dark:text-amber-300">
-            Só podes ter uma conta por base de dados.{" "}
-            <Link to="/login" className="font-semibold underline">Faz login</Link>{" "}
-            com as credenciais originais, ou apaga a BD para começar de novo.
+      {needsEmailConfirm && (
+        <div className="mb-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+          <p className="font-medium">{t("auth.checkEmailTitle")}</p>
+          <p className="mt-1 text-emerald-800 dark:text-emerald-300">
+            {t("auth.checkEmailBody")}{" "}
+            <Link to="/login" className="font-semibold underline">{t("auth.login")}</Link>.
           </p>
         </div>
       )}
@@ -97,13 +100,35 @@ export default function RegisterPage() {
         <input type="password" name="x_pass_dummy" autoComplete="new-password"     className="hidden" tabIndex={-1} />
 
         <div>
+          <label className="label" htmlFor="reg-name">{t("auth.name")}</label>
+          <div className="relative">
+            <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+            <input
+              id="reg-name"
+              name="reg-name-9af2"
+              autoFocus
+              required
+              minLength={2}
+              type="text"
+              placeholder={t("auth.namePlaceholder")}
+              className="input py-3 pl-10 text-[15px]"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          {nameTooShort && (
+            <p className="mt-1.5 text-xs text-rose-600">{t("auth.nameTooShort")}</p>
+          )}
+        </div>
+
+        <div>
           <label className="label" htmlFor="reg-email">Email</label>
           <div className="relative">
             <AtSign className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
               id="reg-email"
               name="reg-email-9af2"
-              autoFocus
               required
               type="email"
               inputMode="email"
@@ -115,7 +140,7 @@ export default function RegisterPage() {
             />
           </div>
           {emailInvalid && (
-            <p className="mt-1.5 text-xs text-rose-600">Indica um email válido.</p>
+            <p className="mt-1.5 text-xs text-rose-600">{t("auth.emailInvalid")}</p>
           )}
         </div>
 
@@ -145,10 +170,6 @@ export default function RegisterPage() {
           <p className={`mt-2 text-xs ${pwTooShort ? "text-rose-600" : "text-stone-500 dark:text-stone-500"}`}>
             {t("auth.passwordHint")}
           </p>
-        </div>
-
-        <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs leading-relaxed text-stone-600 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-400">
-          {t("auth.registerHint")}
         </div>
 
         <button

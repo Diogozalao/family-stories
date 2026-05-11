@@ -14,7 +14,7 @@ import {
   useUploadGedcom,
 } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
-import { photoUrl } from "../lib/photo";
+import Photo from "../components/media/Photo";
 import { cn, initials } from "../lib/utils";
 import type { MediaFile, TimelineEvent } from "../lib/types";
 
@@ -142,10 +142,9 @@ function PhotosTab({ projectId }: { projectId: number }) {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {items.map((m) => (
             <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900">
-              <img
-                src={photoUrl(m.id)}
+              <Photo
+                mediaId={m.id}
                 alt={m.original_filename}
-                loading="lazy"
                 className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
               />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
@@ -253,10 +252,9 @@ function PhotoPickerModal({
                         : "border-stone-200 hover:border-stone-300 dark:border-stone-800 dark:hover:border-stone-700",
                     )}
                   >
-                    <img
-                      src={photoUrl(m.id)}
+                    <Photo
+                      mediaId={m.id}
                       alt={m.original_filename}
-                      loading="lazy"
                       className="h-full w-full object-cover"
                     />
                     {isSel && (
@@ -369,12 +367,9 @@ function TimelineRow({ ev }: { ev: TimelineEvent }) {
           </p>
         )}
         {ev.media_file_id && (
-          <img
-            src={photoUrl(ev.media_file_id)}
-            alt=""
-            loading="lazy"
-            className="mt-3 max-h-48 rounded-lg border border-stone-200 object-cover dark:border-stone-800"
-          />
+          <div className="relative mt-3 h-48 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+            <Photo mediaId={ev.media_file_id} className="h-full w-full object-cover" />
+          </div>
         )}
       </div>
     </div>

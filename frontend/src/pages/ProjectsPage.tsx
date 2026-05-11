@@ -7,7 +7,7 @@ import {
 import PageHeader from "../components/ui/PageHeader";
 import { useCreateProject, useDeleteProject, useProjects } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
-import { photoUrl } from "../lib/photo";
+import Photo from "../components/media/Photo";
 import type { Project } from "../lib/types";
 
 export default function ProjectsPage() {
@@ -67,10 +67,9 @@ function ProjectCard({ project }: { project: Project }) {
     >
       <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-stone-200 to-amber-100 dark:from-stone-800 dark:to-stone-900">
         {project.cover_media_id ? (
-          <img
-            src={photoUrl(project.cover_media_id)}
+          <Photo
+            mediaId={project.cover_media_id}
             alt=""
-            loading="lazy"
             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
           />
         ) : (

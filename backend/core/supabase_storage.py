@@ -112,6 +112,33 @@ async def delete_object(object_key: str) -> None:
     log.info("storage_delete_ok", key=object_key)
 
 
+_signed_url_cache: dict[str, tuple[str, float]] = {}
+
+
+async def cached_signed_url(object_key: str, expires_in: int = 3600, refresh_buffer: int = 300) -> str:
+    """Memoised wrapper around ``create_signed_url``.
+
+    Returns the same signed URL for ``object_key`` until ``refresh_buffer``
+    seconds before it expires. Keeping the redirect target stable lets
+    the browser cache the actual photo bytes across page navigations —
+    otherwise every render of an ``<img>`` would trigger a fresh
+    download even though nothing changed.
+    """
+    import time
+    now = time.time()
+    cached = _signed_url_cache.get(object_key)
+    if cached and cached[1] - refresh_buffer > now:
+        return cached[0]
+    url = await create_signed_url(object_key, expires_in=expires_in)
+    _signed_url_cache[object_key] = (url, now + expires_in)
+    return url
+
+
+def invalidate_signed_url(object_key: str) -> None:
+    """Drop the cached signed URL for ``object_key`` (e.g. after delete)."""
+    _signed_url_cache.pop(object_key, None)
+
+
 async def create_signed_url(object_key: str, expires_in: int = 3600) -> str:
     """Return a time-limited URL the browser can hit without auth headers.
 
@@ -134,9 +161,12 @@ async def create_signed_url(object_key: str, expires_in: int = 3600) -> str:
         if not signed:
             raise RuntimeError("Supabase Storage did not return a signedURL")
 
-    # Supabase returns the path-relative URL ("/object/sign/...") — we
-    # prepend the storage host so the caller gets a fully-qualified URL.
+    # Supabase normally returns a path-relative URL like
+    # ``/object/sign/{bucket}/{path}?token=...``. We prepend the
+    # ``/storage/v1`` API base so the browser hits the correct host.
+    # When the response is already absolute we keep it as-is.
+    if signed.startswith("/storage/v1/"):
+        return f"{settings.SUPABASE_URL.rstrip('/')}{signed}"
     if signed.startswith("/"):
-        return f"{_api_base()}{signed[len('/storage/v1'):]}" if signed.startswith("/storage/v1") \
-               else f"{settings.SUPABASE_URL.rstrip('/')}{signed}"
+        return f"{_api_base()}{signed}"
     return signed

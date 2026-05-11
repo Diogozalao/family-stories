@@ -21,7 +21,11 @@ from backend.core.auth import User, get_current_user, get_current_user_query_or_
 from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
-from backend.core.supabase_storage import create_signed_url, delete_object
+from backend.core.supabase_storage import (
+    cached_signed_url,
+    delete_object,
+    invalidate_signed_url,
+)
 from backend.models.task import TaskKind, TaskRecord, TaskState
 from backend.models.video import VideoOutput
 from backend.modules.m4_multimedia.processor import M4Processor
@@ -110,7 +114,7 @@ async def download_video(
     if not record or not record.file_path:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    signed = await create_signed_url(record.file_path, expires_in=3600)
+    signed = await cached_signed_url(record.file_path, expires_in=3600)
     return RedirectResponse(url=signed, status_code=302)
 
 
@@ -178,6 +182,7 @@ async def delete_video(
         raise HTTPException(status_code=404, detail="Not found")
 
     if video.file_path:
+        invalidate_signed_url(video.file_path)
         try:
             await delete_object(video.file_path)
         except Exception as exc:

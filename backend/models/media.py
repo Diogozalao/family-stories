@@ -42,7 +42,7 @@ class MediaFile(Base):
     file_path         = Column(String(500), nullable=False)   # Supabase Storage object key
     file_size         = Column(Integer)
     mime_type         = Column(String(100))
-    media_type        = Column(Enum(MediaType, name="media_type", create_type=False), nullable=False)
+    media_type        = Column(Enum(MediaType, name="media_type", create_type=False, values_callable=lambda x: [e.value for e in x]), nullable=False)
 
     date_taken    = Column(DateTime(timezone=True), nullable=True)
     latitude      = Column(Float, nullable=True)
@@ -64,7 +64,7 @@ class MediaFile(Base):
     checksum_md5 = Column(String(32), nullable=True)
     raw_exif     = Column(JSONB, nullable=True)
 
-    status        = Column(Enum(ProcessingStatus, name="processing_status", create_type=False),
+    status        = Column(Enum(ProcessingStatus, name="processing_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
                            default=ProcessingStatus.PENDING)
     error_message = Column(Text, nullable=True)
 

@@ -92,9 +92,9 @@ function AccountSection() {
     <div className="space-y-6">
       <Card title="Perfil" icon={UserCircle2}>
         <dl className="space-y-3 text-sm">
-          <Field label={t("auth.username")} value={user?.username ?? "—"} />
-          <Field label="ID" value={user?.id?.toString() ?? "—"} mono />
-          <Field label="Owner" value={user?.is_owner ? "Sim" : "Não"} />
+          <Field label={t("auth.name")}  value={user?.username ?? "—"} />
+          <Field label="Email"           value={user?.email ?? "—"} />
+          <Field label="ID"              value={user?.id ?? "—"} mono />
         </dl>
       </Card>
 
@@ -251,7 +251,6 @@ function DangerSection() {
 
 function DeleteAccountForm() {
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
   const del = useDeleteAccount();
   const [open, setOpen] = useState(false);
   const [pw, setPw] = useState("");
@@ -268,7 +267,6 @@ function DeleteAccountForm() {
       {
         onSuccess: () => {
           toast.success("Conta e dados eliminados.");
-          logout();
           navigate("/register", { replace: true });
         },
         onError: (err) => toast.error(extractErrorMessage(err)),

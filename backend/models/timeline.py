@@ -21,15 +21,19 @@ class ConfidenceLevel(str, enum.Enum):
 class Person(Base):
     __tablename__ = "persons"
 
-    id          = Column(BigInteger, primary_key=True, index=True)
-    user_id     = Column(UUID(as_uuid=True), nullable=False, index=True)
-    name        = Column(String(255), nullable=False)
-    birth_date  = Column(DateTime(timezone=True), nullable=True)
-    death_date  = Column(DateTime(timezone=True), nullable=True)
-    birth_place = Column(String(255), nullable=True)
-    notes       = Column(Text, nullable=True)
-    gedcom_id   = Column(String(100), nullable=True)
-    created_at  = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    id           = Column(BigInteger, primary_key=True, index=True)
+    user_id      = Column(UUID(as_uuid=True), nullable=False, index=True)
+    name         = Column(String(255), nullable=False)
+    birth_date   = Column(DateTime(timezone=True), nullable=True)
+    death_date   = Column(DateTime(timezone=True), nullable=True)
+    birth_place  = Column(String(255), nullable=True)
+    notes        = Column(Text, nullable=True)
+    gedcom_id    = Column(String(100), nullable=True)
+    # Free-form label set at GEDCOM import time ("Dinis", "Nogueira", …)
+    # so the Family page can group/filter trees coming from different
+    # imports without forcing them into the same soup.
+    family_label = Column(String(120), nullable=True)
+    created_at   = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class TimelineEvent(Base):
@@ -39,7 +43,7 @@ class TimelineEvent(Base):
     user_id         = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     event_date      = Column(DateTime(timezone=True), nullable=True)
-    date_confidence = Column(Enum(ConfidenceLevel, name="confidence_level", create_type=False),
+    date_confidence = Column(Enum(ConfidenceLevel, name="confidence_level", create_type=False, values_callable=lambda x: [e.value for e in x]),
                              default=ConfidenceLevel.LOW)
     date_label      = Column(String(100), nullable=True)
 

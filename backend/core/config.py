@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     # Upload size limits (in megabytes).
     MAX_PHOTO_SIZE_MB:  int = 25
-    MAX_GEDCOM_SIZE_MB: int = 50
+    MAX_GEDCOM_SIZE_MB: int = 100   # ample headroom for trees with thousands of persons
 
     # Rate limits applied by slowapi middleware (per client IP).
     RATE_LIMIT_DEFAULT:  str = "100/minute"

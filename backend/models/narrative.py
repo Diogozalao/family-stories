@@ -34,7 +34,7 @@ class Story(Base):
     llm_backend   = Column(String(50), nullable=True)
     facts_used    = Column(Integer, default=0)
     prompt_used   = Column(Text, nullable=True)
-    status        = Column(Enum(StoryStatus, name="story_status", create_type=False),
+    status        = Column(Enum(StoryStatus, name="story_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
                            default=StoryStatus.DRAFT)
     person_ids    = Column(JSONB, default=list)
 

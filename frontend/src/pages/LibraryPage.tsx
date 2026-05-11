@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight, Loader2, Trash2, UploadCloud, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
+import Photo from "../components/media/Photo";
 import { useBuildTimeline, useDeletePhoto, useMedia, useUploadPhoto } from "../lib/hooks";
 import { photoUrl } from "../lib/photo";
 import { extractErrorMessage } from "../lib/api";
@@ -126,10 +127,9 @@ export default function LibraryPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {items.map((m, idx) => (
               <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900">
-                <img
-                  src={photoUrl(m.id)}
+                <Photo
+                  mediaId={m.id}
                   alt={m.original_filename}
-                  loading="lazy"
                   onClick={() => setViewerIndex(idx)}
                   className="h-full w-full cursor-zoom-in object-cover transition duration-500 group-hover:scale-105"
                 />
