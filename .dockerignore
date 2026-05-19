@@ -1,0 +1,41 @@
+.git
+.github
+.gitignore
+.vscode
+.idea
+
+# Local secrets & state — must never enter the production image.
+.env
+.env.*
+*.db
+*.sqlite
+
+# Frontend lives on Vercel; don't bloat the backend image with it.
+frontend
+node_modules
+
+# Local working data is regenerated at runtime, no need to ship it.
+data/raw/photos/*
+data/raw/gedcom/*
+data/processed/audio/*
+data/processed/videos/*
+data/processed/chroma_db
+data/processed/graphs/*
+
+# Python + tooling artefacts.
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+venv
+.venv
+
+# Logs.
+logs
+*.log
+
+# OS junk.
+.DS_Store
+Thumbs.db
