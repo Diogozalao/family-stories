@@ -403,7 +403,10 @@ function FamilyTab() {
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
     try {
-      const r = await upload.mutateAsync(files[0]);
+      // ``useUploadGedcom`` expects ``{file, familyLabel?}`` since the
+      // multi-family-label refactor — passing the bare File here is what
+      // broke the production build.
+      const r = await upload.mutateAsync({ file: files[0] });
       toast.success(`${r.message ?? t("common.success")}`);
     } catch (err) {
       toast.error(extractErrorMessage(err));

@@ -309,7 +309,11 @@ type ActivityItem = {
 function ActivityFeed({
   media, stories, videos, emptyLabel, labelPhoto, labelStory, labelVideo,
 }: {
-  media:   { id: number; original_filename: string; created_at: string }[];
+  // ``created_at`` is optional in some of the source types (MediaFile)
+  // because the backend may omit it for rows still being ingested. The
+  // feed below tolerates ``undefined`` by skipping the timestamp string,
+  // so the looser type here matches reality.
+  media:   { id: number; original_filename: string; created_at?: string }[];
   stories: { id: number; title: string; created_at: string }[];
   videos:  { id: number; created_at: string }[];
   emptyLabel: string;
@@ -319,7 +323,7 @@ function ActivityFeed({
 }) {
   const items: ActivityItem[] = [
     ...media.slice(0, 5).map((m) => ({
-      ts: m.created_at, kind: "photo" as const, icon: ImageIcon,
+      ts: m.created_at ?? "", kind: "photo" as const, icon: ImageIcon,
       text: labelPhoto(m.original_filename), href: "/library",
     })),
     ...stories.slice(0, 5).map((s) => ({
