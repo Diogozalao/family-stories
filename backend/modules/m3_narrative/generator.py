@@ -80,6 +80,7 @@ class NarrativeGenerator:
         project_id:       int  = None,
         custom_tone:      str  = None,
         custom_structure: str  = None,
+        language:         str  = "pt",
     ) -> Story:
 
         log.info("generating_narrative",
@@ -138,6 +139,21 @@ class NarrativeGenerator:
             user_focus     = user_focus,
         )
 
+        # The templates are written in Portuguese; we steer the LLM with a
+        # short suffix that overrides the output language when the caller
+        # asks for English. Llama 3.1 and Gemini both honour this without
+        # needing parallel template translations.
+        lang_code = (language or "pt").lower()
+        if lang_code == "en":
+            prompt += (
+                "\n\nIMPORTANT: Write the entire narrative in natural, "
+                "literary English (British). Do not include any Portuguese "
+                "words except for proper nouns (people, places). Keep the "
+                "memoir tone and the structure described above."
+            )
+        else:
+            prompt += "\n\nIMPORTANTE: Escreve a narrativa inteira em português europeu (pt-PT)."
+
         try:
             narrative_text = self.llm.generate(
                 prompt,
@@ -166,6 +182,7 @@ class NarrativeGenerator:
             status        = StoryStatus.COMPLETED,
             person_ids    = person_ids or [],
             project_id    = project_id,
+            language      = lang_code,
         )
         db.add(story)
         await db.commit()

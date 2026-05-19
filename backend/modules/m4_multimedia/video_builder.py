@@ -3,12 +3,18 @@
 Pipeline:
     1. Fit each photo to a 1280x720 frame (letterbox + blurred background
        fill) so photos are never cropped nor stretched.
-    2. Apply a subtle Ken Burns zoom on top of the fitted frame.
+    2. Apply a subtle Ken Burns motion — zoom in/out plus a directional
+       pan picked per clip so two consecutive photos never move the same
+       way.
     3. Crossfade transitions between clips for smooth flow.
     4. Optional title card, lower-third captions and background music.
-    5. Export as H.264 MP4.
+    5. Final fade-to-black so the documentary closes cleanly instead of
+       cutting off mid-frame.
+    6. Export as H.264 MP4.
 """
 
+import math
+import random
 from pathlib import Path
 
 import numpy as np
@@ -22,10 +28,12 @@ TARGET_H = 720
 FPS      = 24
 
 # Per-clip motion & transition timing.
-KEN_BURNS_ZOOM    = 1.06   # Max zoom factor at the end of motion (very subtle).
-CROSSFADE_SECONDS = 0.9    # Overlap between consecutive clips.
-TITLE_DURATION    = 4.0    # Length of the opening title card.
-MIN_PHOTO_DURATION = 5.5   # Floor per photo, even for long slideshows.
+KEN_BURNS_ZOOM     = 1.08   # Max zoom factor at the end of motion (subtle, cinematic).
+KEN_BURNS_PAN_FRAC = 0.10   # Max pan distance as fraction of frame width/height.
+CROSSFADE_SECONDS  = 1.2    # Overlap between consecutive clips (smoother than 0.9).
+TITLE_DURATION     = 4.0    # Length of the opening title card.
+END_FADE_SECONDS   = 1.5    # Fade-to-black before the last frame.
+MIN_PHOTO_DURATION = 5.5    # Floor per photo, even for long slideshows.
 
 # Font lookup (Linux). Falls back to PIL default if none are present.
 FONT_PATHS_SERIF = [
@@ -83,12 +91,21 @@ def _fit_to_frame(img: Image.Image) -> Image.Image:
     return canvas
 
 
-def _make_ken_burns_clip(image_path: Path, duration: float, zoom_in: bool = True):
+def _make_ken_burns_clip(
+    image_path: Path,
+    duration:   float,
+    zoom_in:    bool = True,
+    pan_angle:  float | None = None,
+):
     """Build a Ken Burns clip from an image, using the fitted frame.
 
     The fitted frame already contains the whole photo (letterboxed over a
-    blurred backdrop) so the zoom operates on the composed canvas, not on
-    the raw photo. This keeps subjects visible and avoids aggressive crops.
+    blurred backdrop) so the zoom operates on the composed canvas. On top
+    of the zoom we add a directional pan: the crop window slides across
+    the frame along a vector defined by ``pan_angle`` (radians). When
+    omitted, a deterministic angle per photo is chosen from the file
+    path's hash so two adjacent clips don't accidentally drift the same
+    way.
     """
     from moviepy.editor import VideoClip
 
@@ -98,16 +115,30 @@ def _make_ken_burns_clip(image_path: Path, duration: float, zoom_in: bool = True
     start_zoom = 1.0             if zoom_in else KEN_BURNS_ZOOM
     end_zoom   = KEN_BURNS_ZOOM  if zoom_in else 1.0
 
+    # Pan vector — direction is deterministic from the file path so the
+    # same photo always animates identically (useful for cache + tests).
+    if pan_angle is None:
+        rnd = random.Random(str(image_path))
+        pan_angle = rnd.uniform(0.0, 2 * math.pi)
+    pan_dx = math.cos(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_W
+    pan_dy = math.sin(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_H
+
     def make_frame(t: float) -> np.ndarray:
         progress = min(max(t / max(duration, 0.001), 0.0), 1.0)
         # Smoothstep easing: slow at start and end, avoids mechanical feel.
         eased = progress * progress * (3.0 - 2.0 * progress)
-        zoom = start_zoom + (end_zoom - start_zoom) * eased
+        zoom  = start_zoom + (end_zoom - start_zoom) * eased
 
         crop_w = int(TARGET_W / zoom)
         crop_h = int(TARGET_H / zoom)
-        x = (TARGET_W - crop_w) // 2
-        y = (TARGET_H - crop_h) // 2
+        # Pan from (-pan_dx/2, -pan_dy/2) to (+pan_dx/2, +pan_dy/2) over the
+        # eased timeline so the camera glides instead of jumping.
+        offset_x = int((eased - 0.5) * pan_dx)
+        offset_y = int((eased - 0.5) * pan_dy)
+
+        # Clamp the crop window so it never spills outside the canvas.
+        x = max(0, min(TARGET_W - crop_w, (TARGET_W - crop_w) // 2 + offset_x))
+        y = max(0, min(TARGET_H - crop_h, (TARGET_H - crop_h) // 2 + offset_y))
         window = base[y:y + crop_h, x:x + crop_w]
         return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H), Image.BILINEAR))
 
@@ -268,6 +299,13 @@ def build_slideshow(
                                    duration=photo_duration))
 
     video = _concatenate_with_crossfade(clips, CROSSFADE_SECONDS)
+
+    # Close on a fade to black so the last frame doesn't hard-cut. The
+    # ``fadeout`` MoviePy helper darkens the picture and (when present)
+    # mixes the audio down to silence over the same window.
+    fade_window = min(END_FADE_SECONDS, video.duration / 4)
+    if fade_window > 0.2:
+        video = video.fadeout(fade_window)
 
     # ── Audio track ──────────────────────────────────────────────────────
     # Silent lead-in while the title card plays, then narration. If the

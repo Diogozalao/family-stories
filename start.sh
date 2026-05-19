@@ -99,7 +99,12 @@ URL="http://localhost:5173"
 if command -v wslview >/dev/null 2>&1; then
   wslview "$URL" >/dev/null 2>&1 &
 elif command -v cmd.exe >/dev/null 2>&1; then
-  cmd.exe /c start "$URL" >/dev/null 2>&1 &
+  # ``start`` treats the first quoted argument as the WINDOW TITLE — so
+  # ``start "http://..."`` would open a blank window with that title and
+  # fall back to the browser homepage (often a hijacked search page).
+  # The empty "" reserves the title slot so the URL goes through as the
+  # target.
+  cmd.exe /c start "" "$URL" >/dev/null 2>&1 &
 elif command -v xdg-open >/dev/null 2>&1; then
   xdg-open "$URL" >/dev/null 2>&1 &
 fi

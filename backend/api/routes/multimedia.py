@@ -45,6 +45,11 @@ async def generate_video(
     user:     User         = Depends(get_current_user),
 ):
     """Build the documentary video for ``story_id`` (owned by caller)."""
+    # See ``narrative.generate_narrative`` — same rationale, no worker in cloud.
+    if mode == "background" and not settings.CELERY_ENABLED:
+        log.info("video_celery_disabled_running_sync")
+        mode = "sync"
+
     if mode == "sync":
         try:
             record = await processor.generate_video(story_id, db, user_id=user.id)

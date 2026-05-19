@@ -14,6 +14,9 @@ class GenerateRequest(BaseModel):
     # predefined themes.
     custom_tone:      Optional[str] = None
     custom_structure: Optional[str] = None
+    # Output language for the narrative ("pt" or "en"). Stored on the
+    # Story so the M4 TTS later picks the matching voice.
+    language:         str           = "pt"
 
     class Config:
         json_schema_extra = {
@@ -45,6 +48,7 @@ class StoryResponse(BaseModel):
     facts_used:    int
     status:        StoryStatus
     project_id:    Optional[int] = None
+    language:      str           = "pt"
     created_at:    datetime
 
     class Config:

@@ -30,6 +30,12 @@ class Settings(BaseSettings):
 
     # Redis / Celery broker URL (used by async job queue).
     REDIS_URL: str = "redis://localhost:6379/0"
+    # Toggle the Celery job queue. Set ``CELERY_ENABLED=False`` when
+    # deploying to environments without a worker — every ``mode=background``
+    # API call is then transparently downgraded to a synchronous run, so
+    # the user still gets their narrative/video, just from the same HTTP
+    # request instead of via a follow-up task poll.
+    CELERY_ENABLED: bool = True
 
     # External AI services.
     GEMINI_API_KEY:  str = ""

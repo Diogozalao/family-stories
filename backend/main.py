@@ -11,6 +11,8 @@ Wires together:
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
+import os
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -82,9 +84,18 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+# CORS — always allow local dev hosts; extend with whatever the
+# CORS_ORIGINS env var lists (comma-separated). In production this is
+# where the Vercel domain goes:
+#   CORS_ORIGINS="https://family-stories.vercel.app,https://www.diogo.pt"
+_extra_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = ["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins     = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        *_extra_origins,
+    ],
     allow_credentials = True,
     allow_methods     = ["*"],
     allow_headers     = ["*"],

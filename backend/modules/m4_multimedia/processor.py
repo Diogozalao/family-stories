@@ -37,7 +37,9 @@ class M4Processor:
     """
 
     def __init__(self):
-        self.tts = TTSGenerator(lang="pt", tld="pt")
+        # Default to Portuguese; ``_run`` instantiates a fresh ``TTSGenerator``
+        # per call once it knows the language the story was written in.
+        self.tts = TTSGenerator(language="pt")
 
     async def generate_video(self, story_id: int, db: AsyncSession, user_id) -> VideoOutput:
         """Generate the documentary for ``story_id`` and persist the result.
@@ -150,8 +152,16 @@ class M4Processor:
 
             loop = asyncio.get_event_loop()
 
-            log.info("m4_tts", story_id=story_id, chars=len(story.narrative))
-            await loop.run_in_executor(None, self.tts.generate, story.narrative, audio_path)
+            # Pick the TTS voice that matches the language the LLM wrote the
+            # story in. ``story.language`` was captured at narrative-generation
+            # time so the documentary keeps the same language even if the user
+            # later flips the UI toggle.
+            story_language = (getattr(story, "language", None) or "pt").lower()
+            tts = TTSGenerator(language=story_language)
+
+            log.info("m4_tts", story_id=story_id, chars=len(story.narrative),
+                     language=story_language, voice=tts.voice)
+            await loop.run_in_executor(None, tts.generate, story.narrative, audio_path)
 
             log.info("m4_video", story_id=story_id, photos=len(photo_paths))
             await loop.run_in_executor(

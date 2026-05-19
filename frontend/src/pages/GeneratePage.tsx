@@ -14,7 +14,7 @@ import { cn, initials } from "../lib/utils";
 type Step = 1 | 2 | 3 | 4;
 
 export default function GeneratePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const projectId = params.get("project") ? Number(params.get("project")) : null;
@@ -63,6 +63,9 @@ export default function GeneratePage() {
         project_id: projectId ?? undefined,
         custom_tone:      isCustom ? customTone.trim() || undefined      : undefined,
         custom_structure: isCustom ? customStructure.trim() || undefined : undefined,
+        // i18n.language is "pt" or "en" — the M3 LLM writes in that
+        // language and the M4 TTS later picks the matching voice.
+        language:         i18n.language === "en" ? "en" : "pt",
         mode,
       },
       {

@@ -1,0 +1,68 @@
+# Render infra-as-code for the Family Stories backend.
+#
+# After connecting the GitHub repo, Render uses this file to spin up the
+# FastAPI service exactly the same way every time. Set the secret env
+# vars (SUPABASE_*, GEMINI_API_KEY, …) in the Render dashboard — they
+# don't belong in the repo.
+#
+# To deploy:
+#   1. Push this file to ``main``.
+#   2. Render dashboard → New → Blueprint → pick this repo.
+#   3. Fill in the env vars marked ``sync: false`` below.
+#
+# Background worker (Celery) is intentionally omitted — narrative + video
+# generation runs in ``mode=sync`` in cloud. Add a ``worker`` service
+# here if you later want the async flow.
+
+services:
+  - type:    web
+    name:    family-stories-backend
+    runtime: python
+    region:  frankfurt
+    plan:    free                       # 0€, sleeps after 15 min idle
+    autoDeploy: true
+    rootDir: .
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      uvicorn backend.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /healthz
+    envVars:
+      # ── Public-ish ─────────────────────────────────────────
+      - key: DEBUG
+        value: "False"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # ── Secrets (set in dashboard) ────────────────────────
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: SUPABASE_DB_DIRECT_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # ── App config ────────────────────────────────────────
+      - key: GEMINI_MODEL
+        value: gemini-1.5-flash
+      - key: NARRATIVE_MAX_TOKENS
+        value: "3500"
+      # The frontend's deployed origin — used by the CORS middleware.
+      # Set this after the first Vercel deploy gives you the URL.
+      - key: CORS_ORIGINS
+        sync: false
+      # Ollama unreachable in cloud — keep the var so config.py validates
+      # but point at a sentinel so the auto-fallback to Gemini fires.
+      - key: OLLAMA_BASE_URL
+        value: http://disabled.invalid
+      - key: OLLAMA_MODEL
+        value: llama3.2:3b
+      # Redis isn't deployed; Celery is unused. Settings still expects
+      # the var, so we point at a no-op URL.
+      - key: REDIS_URL
+        value: redis://disabled.invalid:6379/0
+      - key: CELERY_ENABLED
+        value: "False"

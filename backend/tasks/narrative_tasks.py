@@ -44,6 +44,7 @@ def generate_narrative_task(
                 project_id       = payload.get("project_id"),
                 custom_tone      = payload.get("custom_tone"),
                 custom_structure = payload.get("custom_structure"),
+                language         = payload.get("language", "pt"),
             )
             return {
                 "story_id":      story.id,

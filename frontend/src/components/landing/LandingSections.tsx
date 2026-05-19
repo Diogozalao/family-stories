@@ -1,22 +1,9 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowDown, BookOpen, Camera, Clock, Film, Lock,
+  BookOpen, Camera, Clock, Film, Lock,
   Network, Sparkles, Wand2, type LucideIcon,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-
-/** Hint at the bottom of the hero — the chevron pulses to invite scroll. */
-export function ScrollHint() {
-  return (
-    <a
-      href="#features"
-      className="group mt-12 inline-flex flex-col items-center gap-1.5 text-xs uppercase tracking-[0.2em] text-stone-500 transition hover:text-stone-900 dark:text-stone-500 dark:hover:text-stone-100"
-    >
-      <span>Descobre mais</span>
-      <ArrowDown className="h-4 w-4 animate-bounce" />
-    </a>
-  );
-}
 
 /** Four headline capabilities of the system. */
 export function FeaturesSection() {

@@ -52,6 +52,13 @@ async def generate_narrative(
             detail=f"Invalid event_type. Available: {list(NARRATIVE_TEMPLATES.keys())}",
         )
 
+    # In environments without a Celery worker we transparently downgrade
+    # background requests to sync so the user still gets their story —
+    # they only lose the ability to navigate away while it runs.
+    if mode == "background" and not settings.CELERY_ENABLED:
+        log.info("narrative_celery_disabled_running_sync")
+        mode = "sync"
+
     if mode == "sync":
         try:
             story = await generator.generate(
@@ -64,6 +71,7 @@ async def generate_narrative(
                 project_id       = payload.project_id,
                 custom_tone      = payload.custom_tone,
                 custom_structure = payload.custom_structure,
+                language         = payload.language,
             )
         except PermissionError as exc:
             raise HTTPException(status_code=404, detail=str(exc))

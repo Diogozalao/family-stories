@@ -5,6 +5,7 @@ import type {
   HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
   TaskRecord, TimelineEvent, Video,
 } from "./types";
+import { useAuthStore } from "../store/auth";
 
 // ── Auth ────────────────────────────────────────────────────────────────
 //
@@ -40,15 +41,6 @@ export function useRegister() {
       });
       if (error) throw error;
       return data;
-    },
-  });
-}
-
-export function useLogout() {
-  return useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
     },
   });
 }
@@ -191,20 +183,6 @@ export function useCreateProject() {
   });
 }
 
-export function useUpdateProject() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (input: { id: number; name?: string; description?: string; cover_media_id?: number }) => {
-      const { id, ...body } = input;
-      return (await api.patch(`/api/v1/projects/${id}`, body)).data as Project;
-    },
-    onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["projects"] });
-      qc.invalidateQueries({ queryKey: ["projects", vars.id] });
-    },
-  });
-}
-
 export function useDeleteProject() {
   const qc = useQueryClient();
   return useMutation({
@@ -301,19 +279,6 @@ export function useClearFamily() {
   });
 }
 
-export function useFamilyGraph() {
-  return useQuery<{ nodes: unknown[]; links: unknown[] }>({
-    queryKey: ["graph"],
-    queryFn: async () => {
-      try {
-        return (await api.get("/api/v1/genealogy/graph")).data;
-      } catch {
-        return { nodes: [], links: [] };
-      }
-    },
-  });
-}
-
 // ── Timeline ────────────────────────────────────────────────────────────
 export function useTimeline() {
   return useQuery<TimelineEvent[]>({
@@ -374,6 +339,10 @@ export interface GenerateInput {
   project_id?: number | null;
   custom_tone?: string;
   custom_structure?: string;
+  /** Two-letter language code — defaults to the active i18n locale on the
+   *  caller side. Stored on the Story so the M4 TTS later picks the
+   *  matching voice (e.g. ``pt-PT-DuarteNeural`` vs ``en-GB-RyanNeural``). */
+  language?: string;
 }
 
 export function useGenerateNarrative() {
@@ -481,14 +450,3 @@ export function useClearFinishedTasks() {
   });
 }
 
-export function useTask(id: number | null) {
-  return useQuery<TaskRecord>({
-    queryKey: ["tasks", id],
-    queryFn: async () => (await api.get(`/api/v1/tasks/${id}`)).data,
-    enabled: id !== null,
-    refetchInterval: (q) => {
-      const s = q.state.data?.state;
-      return s === "done" || s === "failed" ? false : 2_000;
-    },
-  });
-}
