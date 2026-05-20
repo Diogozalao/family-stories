@@ -85,20 +85,24 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 # CORS — always allow local dev hosts; extend with whatever the
-# CORS_ORIGINS env var lists (comma-separated). In production this is
-# where the Vercel domain goes:
-#   CORS_ORIGINS="https://family-stories.vercel.app,https://www.diogo.pt"
+# CORS_ORIGINS env var lists (comma-separated, exact origins) and/or
+# CORS_ORIGIN_REGEX (single regex). In production this is where the
+# Vercel domain(s) go:
+#   CORS_ORIGINS="https://family-stories-4wzx.vercel.app"
+#   CORS_ORIGIN_REGEX="https://family-stories-.*\.vercel\.app"  # preview deploys
 _extra_origins = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+_origin_regex  = os.environ.get("CORS_ORIGIN_REGEX") or None
 app.add_middleware(
     CORSMiddleware,
-    allow_origins     = [
+    allow_origins       = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         *_extra_origins,
     ],
-    allow_credentials = True,
-    allow_methods     = ["*"],
-    allow_headers     = ["*"],
+    allow_origin_regex  = _origin_regex,
+    allow_credentials   = True,
+    allow_methods       = ["*"],
+    allow_headers       = ["*"],
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────

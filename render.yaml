@@ -53,6 +53,10 @@ services:
       # Set this after the first Vercel deploy gives you the URL.
       - key: CORS_ORIGINS
         sync: false
+      # Optional regex for Vercel preview deploys (one regex, not a list).
+      # Example: ^https://family-stories-.*\.vercel\.app$
+      - key: CORS_ORIGIN_REGEX
+        sync: false
       # Ollama unreachable in cloud — keep the var so config.py validates
       # but point at a sentinel so the auto-fallback to Gemini fires.
       - key: OLLAMA_BASE_URL
