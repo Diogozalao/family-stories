@@ -16,7 +16,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # System packages our wheels link against. Keep this list tight — every
 # extra MB delays Render's free-tier cold start.
+#
+# Why ``build-essential`` + ``python3-dev``: ``chroma-hnswlib`` (pulled in
+# by ``chromadb``) has no prebuilt wheel for Python 3.12 and tries to
+# compile its C++ extension at install time. The ``slim`` image ships
+# with ``g++`` but is missing the C++ standard library headers, so the
+# ``-std=c++11`` test in chroma-hnswlib's setup.py fails. ``build-
+# essential`` pulls the full toolchain (gcc, g++, libstdc++-dev, make)
+# and fixes the build.
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential       \
+        python3-dev           \
         ffmpeg                \
         libmagic1             \
         tesseract-ocr         \
