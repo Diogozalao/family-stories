@@ -55,6 +55,12 @@ slowapi==0.1.9
 python-dotenv==1.0.1
 structlog==24.1.0
 httpx==0.27.0
+aiofiles==23.2.1
+# Python client for Ollama. The server itself is local-only — in cloud
+# the import still has to succeed because ``llm_client.py`` references
+# it at module load; ``LLMClient._check_ollama()`` then fails gracefully
+# at runtime and falls back to Gemini.
+ollama==0.3.3
 
 # Testes
 pytest==8.2.0
