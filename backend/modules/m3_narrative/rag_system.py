@@ -1,24 +1,37 @@
 """
 Sistema RAG (Retrieval-Augmented Generation).
 
-Como funciona:
-1. Todos os factos extraídos pelo M1/M2 são guardados numa base de dados vetorial (ChromaDB)
-2. Quando o LLM precisa de gerar uma narrativa, o RAG pesquisa os factos mais relevantes
+Como funciona (modo cheio, com ChromaDB instalado):
+1. Todos os factos extraídos pelo M1/M2 são guardados numa base vetorial
+2. Quando o LLM precisa de gerar uma narrativa, o RAG pesquisa os factos relevantes
 3. Apenas esses factos são injetados no prompt — evita alucinações
 
-É como dar ao LLM uma "pasta de documentos" específica antes de escrever.
+Modo degradado (sem ChromaDB — usado no deploy do Render, onde o
+chromadb tem um custo de build inviável para o free tier):
+   * ``index_media``/``index_events`` viram no-ops
+   * ``search`` devolve sempre ``[]`` — o M3 ainda funciona, apenas
+     deixa de ter o passo de retrieval e usa todos os factos como contexto.
 
 Isolamento multi-tenant: cada documento traz ``user_id`` na metadata,
-e ``search()`` filtra por esse campo. Assim a narrativa de um user nunca
-recebe factos vindos do arquivo de outro.
+e ``search()`` filtra por esse campo.
 """
 
-import chromadb
 import structlog
 
 from backend.core.config import settings
 
 log = structlog.get_logger()
+
+# Try to import chromadb at module load time. When the wheel isn't
+# available (deployment images, low-memory hosts) we still let the rest
+# of M3 load — the RAGSystem just becomes a stub.
+try:
+    import chromadb
+    _CHROMA_AVAILABLE = True
+except Exception as _exc:                      # noqa: BLE001
+    chromadb = None                            # type: ignore[assignment]
+    _CHROMA_AVAILABLE = False
+    log.info("rag_chromadb_unavailable", reason=str(_exc))
 
 
 def _uid(user_id) -> str:
@@ -28,6 +41,12 @@ def _uid(user_id) -> str:
 
 class RAGSystem:
     def __init__(self):
+        if not _CHROMA_AVAILABLE:
+            self.client = None
+            self.collection = None
+            log.info("rag_ready", mode="stub")
+            return
+
         db_path = settings.PROCESSED_DIR / "chroma_db"
         db_path.mkdir(parents=True, exist_ok=True)
 
@@ -44,6 +63,8 @@ class RAGSystem:
         Cada media só é indexado uma vez por owner e o seu ``user_id`` fica
         na metadata — ``search`` filtra por aí.
         """
+        if self.collection is None:
+            return 0
         documents = []
         metadatas = []
         ids       = []
@@ -98,6 +119,8 @@ class RAGSystem:
 
     def index_events(self, events: list) -> int:
         """Indexa eventos da timeline do M2 (carrega user_id na metadata)."""
+        if self.collection is None:
+            return 0
         documents = []
         metadatas = []
         ids       = []
@@ -139,7 +162,7 @@ class RAGSystem:
 
     def search(self, query: str, user_id, n_results: int = 5) -> list[str]:
         """Pesquisa os factos mais relevantes para uma query, restrita ao owner."""
-        if self.collection.count() == 0:
+        if self.collection is None or self.collection.count() == 0:
             return []
 
         results = self.collection.query(
@@ -151,17 +174,21 @@ class RAGSystem:
 
     def get_all_facts(self, user_id, limit: int = 20) -> list[str]:
         """Retorna factos indexados pelo owner (até ``limit``)."""
-        if self.collection.count() == 0:
+        if self.collection is None or self.collection.count() == 0:
             return []
         results = self.collection.get(limit=limit, where={"user_id": _uid(user_id)})
         return results["documents"] if results["documents"] else []
 
     def count_for(self, user_id) -> int:
         """Quantos factos indexados pertencem ao owner."""
+        if self.collection is None:
+            return 0
         results = self.collection.get(where={"user_id": _uid(user_id)})
         return len(results["ids"]) if results.get("ids") else 0
 
     @property
     def total_facts(self) -> int:
         """Total global — usado para diagnóstico, não exposto a users."""
+        if self.collection is None:
+            return 0
         return self.collection.count()
