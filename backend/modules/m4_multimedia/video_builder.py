@@ -361,3 +361,125 @@ def build_slideshow(
     size_mb = round(output_path.stat().st_size / 1024 / 1024, 2)
     log.info("m4_complete", output=str(output_path), size_mb=size_mb)
     return output_path
+
+
+# Slightly lower per-photo floor for scene mode: here the pacing is driven
+# by each scene's narration, so we want to respect the audio rather than
+# stretch every photo to the slideshow minimum.
+MIN_SCENE_PHOTO_DURATION = 3.0
+
+
+def plan_scene_durations(scene_audio_durations: list[float],
+                         scene_photo_counts: list[int]) -> list[float]:
+    """Per-photo on-screen duration for each scene (pure, unit-testable).
+
+    Each scene's narration time is split across its photos, with a floor
+    so individual photos never flash by. The crossfade overlap is added
+    back per photo so the concatenated timeline stays close to the
+    narration length. Returns one duration per scene (applied to every
+    photo of that scene).
+    """
+    durations: list[float] = []
+    for audio_dur, n_photos in zip(scene_audio_durations, scene_photo_counts):
+        if n_photos <= 0:
+            durations.append(0.0)
+            continue
+        per_photo = max(MIN_SCENE_PHOTO_DURATION,
+                        audio_dur / n_photos + CROSSFADE_SECONDS)
+        durations.append(per_photo)
+    return durations
+
+
+def build_documentary(
+    scenes:                list[dict],
+    output_path:           Path,
+    title:                 str,
+    background_music_path: Path | None = None,
+) -> Path:
+    """Assemble a documentary that *syncs* each photo to its narration.
+
+    ``scenes`` is an ordered list of already-prepared scene dicts:
+
+        {"audio_path": Path, "photo_paths": [Path, ...], "caption": str|None}
+
+    Each scene's photos are shown for (roughly) the duration of that
+    scene's narration, so the viewer sees the photo being talked about.
+    The narration track is the concatenation of the per-scene audio, in
+    order, after a silent lead-in for the title card — which keeps audio
+    and visuals aligned scene by scene instead of by a flat even split.
+    """
+    from moviepy.audio.AudioClip import AudioClip
+    from moviepy.editor import AudioFileClip, ColorClip, concatenate_audioclips
+
+    usable = [s for s in scenes if s.get("photo_paths") and s.get("audio_path")]
+    if not usable:
+        raise ValueError("No usable scenes (need photos + narration) to build the documentary.")
+
+    scene_audios   = [AudioFileClip(str(s["audio_path"])) for s in usable]
+    photo_counts   = [len(s["photo_paths"]) for s in usable]
+    per_photo_durs = plan_scene_durations([a.duration for a in scene_audios], photo_counts)
+
+    log.info("m4_building_scenes", scenes=len(usable),
+             photos=sum(photo_counts),
+             total_audio=round(sum(a.duration for a in scene_audios), 1))
+
+    clips = [_make_title_card(title, TITLE_DURATION)]
+    for s_index, scene in enumerate(usable):
+        per = per_photo_durs[s_index]
+        caption = scene.get("caption")
+        for p_index, photo in enumerate(scene["photo_paths"]):
+            try:
+                base = _make_ken_burns_clip(photo, per, zoom_in=(p_index % 2 == 0))
+                clips.append(_add_caption(base, caption))
+            except Exception as exc:
+                log.warning("m4_scene_photo_error", photo=str(photo), error=str(exc))
+                clips.append(ColorClip((TARGET_W, TARGET_H), color=[10, 10, 10], duration=per))
+
+    video = _concatenate_with_crossfade(clips, CROSSFADE_SECONDS)
+
+    fade_window = min(END_FADE_SECONDS, video.duration / 4)
+    if fade_window > 0.2:
+        video = video.fadeout(fade_window)
+
+    # ── Audio: silent lead-in over the title, then the scene narrations ──
+    lead_silence = AudioClip(lambda t: [0.0, 0.0], duration=TITLE_DURATION, fps=44100)
+    narration_track = concatenate_audioclips([lead_silence, *scene_audios])
+
+    if narration_track.duration < video.duration:
+        tail = AudioClip(lambda t: [0.0, 0.0],
+                         duration=video.duration - narration_track.duration, fps=44100)
+        narration_track = concatenate_audioclips([narration_track, tail])
+    else:
+        narration_track = narration_track.subclip(0, video.duration)
+
+    if background_music_path and background_music_path.exists():
+        try:
+            music = AudioFileClip(str(background_music_path))
+            loops = int(video.duration / music.duration) + 2
+            music_track = concatenate_audioclips([music] * loops).subclip(0, video.duration)
+            music_track = music_track.volumex(0.12)
+            from moviepy.audio.AudioClip import CompositeAudioClip
+            final_audio = CompositeAudioClip([narration_track, music_track])
+        except Exception as exc:
+            log.warning("m4_music_skip", error=str(exc))
+            final_audio = narration_track
+    else:
+        final_audio = narration_track
+
+    video = video.set_audio(final_audio)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_audio = output_path.with_suffix(".tmp.m4a")
+    video.write_videofile(
+        str(output_path), fps=FPS, codec="libx264", audio_codec="aac",
+        temp_audiofile=str(tmp_audio), remove_temp=True, logger=None,
+        preset="veryfast", ffmpeg_params=["-crf", "23", "-pix_fmt", "yuv420p"],
+    )
+
+    for a in scene_audios:
+        a.close()
+    video.close()
+
+    size_mb = round(output_path.stat().st_size / 1024 / 1024, 2)
+    log.info("m4_complete_scenes", output=str(output_path), size_mb=size_mb)
+    return output_path

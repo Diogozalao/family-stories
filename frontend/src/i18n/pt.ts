@@ -254,6 +254,8 @@ export default {
     confirmRemoveLabel: "Apagar todas as pessoas da família \"{{label}}\"?",
     importedSummary: "{{count, number}} pessoas importadas para \"{{label}}\".",
     importedSummaryWithSkipped: "{{created}} pessoas importadas para \"{{label}}\" ({{skipped}} ignoradas por não terem nome).",
+    importColdSuccess: "Importação concluída. O servidor estava a acordar, por isso demorou um pouco mais.",
+    importColdRetry: "O servidor estava a acordar e o pedido não chegou a concluir. Espera uns segundos e tenta importar novamente.",
   },
   timeline: {
     title: "Linha Temporal",

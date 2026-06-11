@@ -121,23 +121,64 @@ class M4Processor:
         run_id = uuid.uuid4().hex[:8]
         work   = Path(tempfile.mkdtemp(prefix=f"m4_{run_id}_"))
         photos_dir   = work / "photos"
+        audio_dir    = work / "audio"
         audio_path   = work / "narration.mp3"
         video_name   = f"documentario_{story_id}_{run_id}.mp4"
         video_local  = work / video_name
         photos_dir.mkdir()
+        audio_dir.mkdir()
 
         try:
-            # Pull each source photo from Storage into the scratch dir.
+            loop = asyncio.get_event_loop()
+
+            # Pick the TTS voice that matches the language the LLM wrote the
+            # story in. ``story.language`` was captured at narrative-generation
+            # time so the documentary keeps the same language even if the user
+            # later flips the UI toggle.
+            story_language = (getattr(story, "language", None) or "pt").lower()
+            tts = TTSGenerator(language=story_language)
+
+            # Per-id download cache so a photo referenced by one scene is
+            # only fetched from Storage once.
+            downloaded: dict[int, Path] = {}
+
+            async def _fetch(media) -> Path | None:
+                if media.id in downloaded:
+                    return downloaded[media.id]
+                if not media.file_path:
+                    return None
+                local = photos_dir / f"{media.id}_{Path(media.file_path).name}"
+                try:
+                    await download_to_disk(media.file_path, local)
+                except Exception as exc:
+                    log.warning("m4_photo_fetch_failed", key=media.file_path, error=str(exc))
+                    return None
+                downloaded[media.id] = local
+                return local
+
+            # ── Scene-based path (preferred) ────────────────────────────
+            # When the story carries a scene breakdown, build a documentary
+            # that shows each photo exactly while its narration plays.
+            scenes = getattr(story, "scenes", None)
+            if scenes:
+                assembly = await self._build_scene_assembly(
+                    scenes, {p.id: p for p in photos}, _fetch, audio_dir, tts, loop)
+                if assembly:
+                    used = sum(len(s["photo_paths"]) for s in assembly)
+                    log.info("m4_scene_mode", story_id=story_id,
+                             scenes=len(assembly), photos=used)
+                    await loop.run_in_executor(
+                        None, video_builder.build_documentary,
+                        assembly, video_local, story.title, None)
+                    return await self._finalize(user_id, video_name, video_local, used)
+                log.info("m4_scene_empty_fallback", story_id=story_id)
+
+            # ── Legacy even-split slideshow (fallback) ──────────────────
             photo_paths: list[Path] = []
             captions:    list[str]  = []
             for photo in photos:
-                if not photo.file_path:
-                    continue
-                local = photos_dir / Path(photo.file_path).name
-                try:
-                    await download_to_disk(photo.file_path, local)
-                except Exception as exc:
-                    log.warning("m4_photo_fetch_failed", key=photo.file_path, error=str(exc))
+                local = await _fetch(photo)
+                if not local:
                     continue
                 photo_paths.append(local)
                 parts: list[str] = []
@@ -150,42 +191,84 @@ class M4Processor:
             if not photo_paths:
                 raise ValueError("Falha ao obter fotografias do Storage para montar o vídeo.")
 
-            loop = asyncio.get_event_loop()
-
-            # Pick the TTS voice that matches the language the LLM wrote the
-            # story in. ``story.language`` was captured at narrative-generation
-            # time so the documentary keeps the same language even if the user
-            # later flips the UI toggle.
-            story_language = (getattr(story, "language", None) or "pt").lower()
-            tts = TTSGenerator(language=story_language)
-
             log.info("m4_tts", story_id=story_id, chars=len(story.narrative),
                      language=story_language, voice=tts.voice)
             await loop.run_in_executor(None, tts.generate, story.narrative, audio_path)
 
             log.info("m4_video", story_id=story_id, photos=len(photo_paths))
             await loop.run_in_executor(
-                None,
-                video_builder.build_slideshow,
-                photo_paths,
-                audio_path,
-                video_local,
-                story.title,
-                captions,
-                None,    # No background music by default.
-            )
+                None, video_builder.build_slideshow,
+                photo_paths, audio_path, video_local, story.title, captions, None)
 
-            # Push the finished MP4 to Storage and keep the object key as
-            # the canonical "where the video lives" pointer in the DB.
-            video_key = object_key_for(user_id, "videos", video_name)
-            await upload_bytes(video_key, video_local.read_bytes(), content_type="video/mp4")
-            size_mb = round(video_local.stat().st_size / 1024 / 1024, 2)
-
-            return {
-                "filename":    video_name,
-                "file_path":   video_key,
-                "photos_used": len(photo_paths),
-                "size_mb":     size_mb,
-            }
+            return await self._finalize(user_id, video_name, video_local, len(photo_paths))
         finally:
             shutil.rmtree(work, ignore_errors=True)
+
+    async def _build_scene_assembly(self, scenes, photo_by_id, fetch, audio_dir, tts, loop):
+        """Resolve scene photos, coalesce photo-less scenes and synthesise
+        one narration clip per scene.
+
+        Returns a list of ``{"audio_path", "photo_paths", "caption"}`` ready
+        for :func:`video_builder.build_documentary`, or ``[]`` if nothing
+        usable could be resolved (caller then falls back to the slideshow).
+        """
+        # 1) Resolve each scene's photos from Storage (skipping missing ones).
+        resolved: list[dict] = []
+        for scene in scenes:
+            paths: list[Path] = []
+            for pid in scene.get("photo_ids", []) or []:
+                media = photo_by_id.get(pid)
+                if media is None:
+                    continue
+                local = await fetch(media)
+                if local:
+                    paths.append(local)
+            resolved.append({
+                "text":    (scene.get("text") or "").strip(),
+                "paths":   paths,
+                "caption": scene.get("caption"),
+            })
+
+        # 2) Coalesce: a scene whose photos couldn't be resolved donates its
+        #    narration text to the next scene that has photos, so no prose is
+        #    lost and every rendered scene has something to show.
+        merged: list[dict] = []
+        carry = ""
+        for r in resolved:
+            if r["paths"]:
+                text = f"{carry} {r['text']}".strip() if carry else r["text"]
+                merged.append({"text": text, "paths": r["paths"], "caption": r["caption"]})
+                carry = ""
+            else:
+                carry = f"{carry} {r['text']}".strip() if carry else r["text"]
+        if carry and merged:
+            merged[-1]["text"] = f"{merged[-1]['text']} {carry}".strip()
+
+        if not merged:
+            return []
+
+        # 3) One narration MP3 per scene.
+        assembly: list[dict] = []
+        for index, scene in enumerate(merged):
+            if not scene["text"]:
+                continue
+            audio_path = audio_dir / f"scene_{index:02d}.mp3"
+            await loop.run_in_executor(None, tts.generate, scene["text"], audio_path)
+            assembly.append({
+                "audio_path":  audio_path,
+                "photo_paths": scene["paths"],
+                "caption":     scene["caption"],
+            })
+        return assembly
+
+    async def _finalize(self, user_id, video_name: str, video_local: Path, photos_used: int) -> dict:
+        """Upload the rendered MP4 to Storage and return the DB pointer dict."""
+        video_key = object_key_for(user_id, "videos", video_name)
+        await upload_bytes(video_key, video_local.read_bytes(), content_type="video/mp4")
+        size_mb = round(video_local.stat().st_size / 1024 / 1024, 2)
+        return {
+            "filename":    video_name,
+            "file_path":   video_key,
+            "photos_used": photos_used,
+            "size_mb":     size_mb,
+        }

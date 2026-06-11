@@ -121,6 +121,27 @@ class NarrativeGenerator:
             )
         all_media = media_result.scalars().all()
 
+        # ── RAG retrieval ────────────────────────────────────────────────
+        # When the library is large and the user gave a focus, narrow the
+        # photos down to the ones the RAG considers relevant to the theme
+        # before building the prompt. This is the retrieval half of RAG —
+        # it keeps the context focused and within the model's window. In
+        # stub mode (no ChromaDB) ``search_media_ids`` returns [] and we
+        # transparently keep every photo.
+        focus_for_retrieval = (query or title or "").strip()
+        if focus_for_retrieval and len(all_media) > 12:
+            try:
+                relevant_ids = set(self.rag.search_media_ids(
+                    focus_for_retrieval, user_id, n_results=14))
+                if relevant_ids:
+                    selected = [m for m in all_media if m.id in relevant_ids]
+                    if len(selected) >= 4:
+                        log.info("rag_narrowed_media",
+                                 total=len(all_media), kept=len(selected))
+                        all_media = selected
+            except Exception as exc:                       # never block generation
+                log.warning("rag_select_failed", error=str(exc))
+
         events_context = self._build_events_from_media(all_media)
         family_context = self._build_family_context(graph, person_ids)
 
@@ -170,6 +191,21 @@ class NarrativeGenerator:
                 "treating as a generation failure."
             )
 
+        # ── Scene segmentation ───────────────────────────────────────────
+        # Pair each paragraph of prose with the photos that illustrate it,
+        # so M4 can sync each photo to its stretch of narration. Defensive:
+        # any failure here just leaves ``scenes=None`` and M4 falls back to
+        # the legacy even-split slideshow.
+        scenes = None
+        try:
+            from backend.modules.m3_narrative.scene_builder import build_scenes
+            scenes = build_scenes(narrative_text, all_media) or None
+            if scenes:
+                log.info("scenes_built", n_scenes=len(scenes),
+                         photos=sum(len(s["photo_ids"]) for s in scenes))
+        except Exception as exc:
+            log.warning("scene_build_failed", error=str(exc))
+
         story = Story(
             user_id       = user_id,
             title         = title,
@@ -183,6 +219,7 @@ class NarrativeGenerator:
             person_ids    = person_ids or [],
             project_id    = project_id,
             language      = lang_code,
+            scenes        = scenes,
         )
         db.add(story)
         await db.commit()

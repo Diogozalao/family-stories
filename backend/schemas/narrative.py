@@ -28,6 +28,18 @@ class GenerateRequest(BaseModel):
             }
         }
 
+class Scene(BaseModel):
+    """One scene of a scene-segmented narrative.
+
+    ``text`` is the prose for this beat; ``photo_ids`` are the media rows
+    that illustrate it (shown, in M4, exactly while ``text`` is narrated);
+    ``caption`` is a short date/place label burned as a lower-third.
+    """
+    text:      str
+    photo_ids: List[int] = []
+    caption:   Optional[str] = None
+
+
 class UpdateStoryRequest(BaseModel):
     """Partial update of a generated story.
 
@@ -49,6 +61,7 @@ class StoryResponse(BaseModel):
     status:        StoryStatus
     project_id:    Optional[int] = None
     language:      str           = "pt"
+    scenes:        Optional[List[Scene]] = None
     created_at:    datetime
 
     class Config:

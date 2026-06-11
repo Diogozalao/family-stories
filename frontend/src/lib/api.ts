@@ -52,6 +52,17 @@ export function mediaUrl(path: string): string {
   return `${API_BASE}${path}${sep}token=${encodeURIComponent(token)}`;
 }
 
+/**
+ * True when an axios error never received an HTTP response — i.e. the
+ * connection dropped, timed out, or the response was lost (classic on a
+ * free-tier backend waking from sleep). In these cases the request may
+ * still have reached the server and committed, so callers should verify
+ * by refetching rather than assuming outright failure.
+ */
+export function isLostResponse(err: unknown): boolean {
+  return axios.isAxiosError(err) && !err.response;
+}
+
 export function extractErrorMessage(err: unknown, fallback = "Something went wrong"): string {
   if (axios.isAxiosError(err)) {
     const detail = (err.response?.data as { detail?: unknown } | undefined)?.detail;

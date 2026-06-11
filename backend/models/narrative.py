@@ -40,6 +40,11 @@ class Story(Base):
     # Two-letter language code (``pt`` or ``en``) — drives the TTS voice
     # when M4 builds the documentary so the audio matches the prose.
     language      = Column(String(8), nullable=False, default="pt")
+    # Scene-segmented form of ``narrative``: a list of
+    # ``{"text", "photo_ids", "caption"}`` objects. Lets M4 show each
+    # photo exactly while its stretch of narration plays. ``None`` for
+    # legacy stories — M4 then falls back to the even-split slideshow.
+    scenes        = Column(JSONB, nullable=True)
 
     created_at    = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at    = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC),

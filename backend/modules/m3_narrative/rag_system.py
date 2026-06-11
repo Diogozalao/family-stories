@@ -172,6 +172,33 @@ class RAGSystem:
         )
         return results["documents"][0] if results["documents"] else []
 
+    def search_media_ids(self, query: str, user_id, n_results: int = 12) -> list[int]:
+        """Return the ``media_id``s most relevant to ``query`` for this owner.
+
+        Used by the generator to *narrow* a large library down to the
+        photos that actually matter to the user's theme before building
+        the prompt — the retrieval half of RAG. Returns ``[]`` in stub
+        mode (no ChromaDB) or when nothing is indexed, so the caller
+        falls back to using every photo.
+        """
+        if self.collection is None or not query:
+            return []
+        count = self.collection.count()
+        if count == 0:
+            return []
+        results = self.collection.query(
+            query_texts = [query],
+            n_results   = min(n_results, count),
+            where       = {"user_id": _uid(user_id)},
+        )
+        metadatas = (results.get("metadatas") or [[]])[0]
+        ids: list[int] = []
+        for md in metadatas:
+            mid = (md or {}).get("media_id")
+            if mid is not None:
+                ids.append(int(mid))
+        return ids
+
     def get_all_facts(self, user_id, limit: int = 20) -> list[str]:
         """Retorna factos indexados pelo owner (até ``limit``)."""
         if self.collection is None or self.collection.count() == 0:

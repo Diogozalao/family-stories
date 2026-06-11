@@ -10,6 +10,25 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-11 — Pipeline por cenas (narrativa↔vídeo sincronizados)
+
+- **[Reescrita]** `cap6_implementacao.tex` · §M3 (RAG) — passa a descrever
+  o *retrieval* efetivamente ligado à geração (seleção do subconjunto de
+  fotos relevantes via `search_media_ids`).
+- **[Adição]** `cap6_implementacao.tex` · nova subsecção *"Segmentação em
+  cenas"* (M3) + excerto `lst:scene` com a forma de uma cena.
+- **[Reescrita]** `cap6_implementacao.tex` · §M4 *"Narração e sincronização
+  áudio-vídeo por cena"* — modo documentário (`build_documentary`), TTS por
+  cena + novo excerto `lst:plandur` (`plan_scene_durations`).
+- **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — campo
+  `scenes` (JSON) na entidade `Story`.
+
+> Nota: estas mudanças refletem código já implementado e testado
+> (7 testes novos em `test_scene_builder.py`, 36 testes unitários a passar).
+> Migração de BD necessária: `backend/sql/0004_story_scenes.sql`.
+
+---
+
 ## 2026-06-11 — Criação inicial do relatório
 
 - **[Adição]** `main.tex` — documento mestre: pacotes, estilos, índices

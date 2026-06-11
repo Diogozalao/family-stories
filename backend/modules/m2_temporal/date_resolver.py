@@ -1,5 +1,5 @@
 import structlog
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Optional
 
 log = structlog.get_logger()
@@ -11,9 +11,9 @@ class DateResolver:
         if date is None:
             return None, "sem data"
 
-        # Remove timezone info para comparação simples
+        # Remove timezone info para comparação simples (ambos naive)
         date_naive = date.replace(tzinfo=None) if date.tzinfo else date
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         # Data anterior a 1800
         if date_naive < self.MIN_VALID_DATE:

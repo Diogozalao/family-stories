@@ -112,6 +112,14 @@ campo, garantindo o isolamento multi-inquilino. No momento da geração,
 apenas os factos relevantes são injetados no \emph{prompt}, reduzindo a
 alucinação.
 
+O passo de \emph{retrieval} está efetivamente ligado à geração: quando a
+biblioteca de fotografias é grande e o utilizador indica um foco, o
+método \texttt{search\_media\_ids} seleciona o subconjunto de fotografias
+mais relevante ao tema (via similaridade vetorial, filtrada por
+\texttt{user\_id}), e só esse subconjunto entra no \emph{prompt} — o que
+mantém o contexto focado e dentro da janela do modelo, reduzindo a
+alucinação.
+
 A decisão de engenharia mais interessante é a \textbf{degradação
 graciosa}. Quando a biblioteca ChromaDB não está instalada — por exemplo,
 no \emph{deploy} gratuito do Render, onde o custo de \emph{build} é
@@ -171,6 +179,35 @@ PT_PT_RULES = """REGRAS OBRIGATORIAS DE PORTUGUES EUROPEU (NAO BRASILEIRO):
 - Colocacao do pronome: "da-me", "faz-me" (NUNCA "me da", "me faz")."""
 \end{lstlisting}
 
+\subsection{Segmentação em cenas (sincronização narrativa--imagem)}
+\label{sub:cenas}
+
+Para que o vídeo deixe de ser um \emph{slideshow} com tempos arbitrários
+e passe a um verdadeiro documentário, introduziu-se uma etapa de
+\textbf{segmentação em cenas} (\texttt{scene\_builder.py}). Após gerar a
+prosa, o M3 divide-a em parágrafos (cada parágrafo $=$ uma cena) e
+associa a cada cena as fotografias que melhor a ilustram, produzindo uma
+estrutura serializável guardada na coluna \texttt{stories.scenes}:
+
+\begin{lstlisting}[language=Python,caption={Forma de uma cena, guardada em
+\texttt{stories.scenes}.},label={lst:scene}]
+{"text": "Era o verao de 1962, quando...", "photo_ids": [12, 7],
+ "caption": "Lisboa, 1962"}
+\end{lstlisting}
+
+A atribuição foto\,$\rightarrow$\,parágrafo é \emph{determinística e sem
+dependências externas}: pontua-se a sobreposição léxica entre cada
+parágrafo e a ``impressão digital'' textual de cada fotografia (descrição
+de IA, \emph{tags}, cenário, sugestão narrativa, \textsc{ocr}, local). É,
+na prática, um passo de \emph{retrieval} que ancora os visuais à prosa.
+Quando não há sinal léxico, recorre-se a uma distribuição cronológica
+equitativa, garantindo que nenhuma cena fica sem fotografia. Toda a etapa
+é defensiva: qualquer falha deixa \texttt{scenes\,=\,None} e o M4 regressa
+ao \emph{slideshow} clássico. Esta abordagem responde diretamente ao que o
+estudo inicial identificou como o desafio técnico central do M4
+(\Cref{sub:geracao_video}): cada fotografia visível exatamente durante a
+sua narração.
+
 \section{Módulo M4 --- Geração Multimédia}
 \label{sec:impl_m4}
 
@@ -217,17 +254,41 @@ def make_frame(t: float) -> np.ndarray:
     return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H)))
 \end{lstlisting}
 
-\subsection{Narração e sincronização áudio-vídeo}
+\subsection{Narração e sincronização áudio-vídeo por cena}
 
-A narração é gerada por \textbf{síntese de voz} na língua em que a
-história foi escrita (capturada em \texttt{Story.language} no momento da
-geração), garantindo coerência mesmo que o utilizador altere depois o
-idioma da interface. O áudio é cuidadosamente alinhado: silêncio durante o
-cartão de título e, em seguida, a narração; se esta termina antes dos
-visuais, é preenchida com silêncio; se é mais longa, é cortada — mantendo
-a duração A/V consistente. Há ainda suporte opcional para música de fundo
-em volume reduzido. A \Cref{fig:frame_video} mostra um fotograma típico do
-resultado.
+A narração é gerada por \textbf{síntese de voz} (vozes neuronais
+europeias do \emph{edge-tts}, com \emph{gTTS} como alternativa) na língua
+em que a história foi escrita (capturada em \texttt{Story.language}),
+garantindo coerência mesmo que o utilizador altere depois o idioma da
+interface.
+
+Quando a história tem cenas (\Cref{sub:cenas}), o M4 entra em
+\textbf{modo documentário} (\texttt{build\_documentary}): sintetiza
+\emph{uma narração por cena}, mostra as fotografias dessa cena durante
+(aproximadamente) a duração da sua narração e concatena os áudios das
+cenas, em ordem, após um silêncio inicial sobre o cartão de título. Assim,
+o espetador vê a fotografia que está a ser narrada — a sincronização
+semântica que distingue um documentário de uma simples apresentação. O
+\Cref{lst:plandur} mostra o cálculo determinístico (e testado
+unitariamente) da duração de cada fotografia a partir da narração da
+cena. Na ausência de cenas, mantém-se o alinhamento clássico por
+duração total (silêncio no título, narração única, preenchimento/corte
+para igualar a duração A/V). A \Cref{fig:frame_video} mostra um fotograma
+típico do resultado.
+
+\begin{lstlisting}[language=Python,caption={Distribuição da narração de
+cada cena pelas suas fotografias, com piso mínimo e compensação de
+\emph{crossfade} (\texttt{video\_builder.py}).},label={lst:plandur}]
+def plan_scene_durations(scene_audio_durations, scene_photo_counts):
+    durations = []
+    for audio_dur, n_photos in zip(scene_audio_durations, scene_photo_counts):
+        if n_photos <= 0:
+            durations.append(0.0); continue
+        per_photo = max(MIN_SCENE_PHOTO_DURATION,
+                        audio_dur / n_photos + CROSSFADE_SECONDS)
+        durations.append(per_photo)
+    return durations
+\end{lstlisting}
 
 \begin{figure}[H]
 \centering

@@ -138,7 +138,11 @@ em PostgreSQL (Supabase). As entidades principais são:
   descrição, tipo, local, data resolvida).
   \item \texttt{Story} — narrativa gerada (título, texto, tipo de evento,
   \emph{template} usado, \emph{backend} de \textsc{llm}, número de factos
-  usados, \emph{prompt}, idioma, projeto associado).
+  usados, \emph{prompt}, idioma, projeto associado). Inclui ainda o campo
+  \texttt{scenes} (\textsc{json}): a forma segmentada em cenas da
+  narrativa --- uma lista de \texttt{\{text, photo\_ids, caption\}} que
+  permite ao M4 sincronizar cada fotografia com a sua narração
+  (\Cref{sub:cenas}).
   \item \texttt{VideoOutput} — vídeo gerado (nome, chave de objeto,
   tamanho, fotografias usadas, estado, história e projeto associados).
   \item \texttt{Project} e \texttt{ProjectMedia} — projetos (coleções) e
