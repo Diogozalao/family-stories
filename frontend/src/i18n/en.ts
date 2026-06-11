@@ -297,6 +297,8 @@ export default {
     generate: "Generate story",
     generating: "Writing the narrative…",
     generateVideo: "Then, make a documentary video",
+    recovered: "Story created! The server was waking up, so it took a little longer.",
+    coldRetry: "The server was waking up and the request didn't finish. Wait a few seconds and try generating again.",
     templates: {
       default: "Family memory",
       fotografia: "Photograph",

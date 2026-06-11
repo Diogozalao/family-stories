@@ -305,6 +305,8 @@ export default {
     generate: "Gerar história",
     generating: "A gerar a narrativa…",
     generateVideo: "Depois, criar vídeo documental",
+    recovered: "História criada! O servidor estava a acordar, por isso demorou um pouco mais.",
+    coldRetry: "O servidor estava a acordar e o pedido não concluiu. Espera uns segundos e tenta gerar novamente.",
     templates: {
       default: "Memória Familiar",
       fotografia: "Fotografia",

@@ -1,14 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, FolderKanban, Loader2, Sparkles } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useGenerateNarrative, useIndexFacts, usePersons, useProject,
+  useGenerateNarrative, useIndexFacts, usePersons, useProject, useStories,
   useTemplates,
 } from "../lib/hooks";
-import { extractErrorMessage } from "../lib/api";
+import { extractErrorMessage, isLostResponse } from "../lib/api";
+import type { Story } from "../lib/types";
+import { useGenerateDraft } from "../store/generateDraft";
 import { cn, initials } from "../lib/utils";
 
 type Step = 1 | 2 | 3 | 4;
@@ -16,23 +19,24 @@ type Step = 1 | 2 | 3 | 4;
 export default function GeneratePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [params] = useSearchParams();
   const projectId = params.get("project") ? Number(params.get("project")) : null;
   const { data: project } = useProject(projectId);
 
   const { data: templates } = useTemplates();
   const { data: persons } = usePersons();
+  const { data: stories } = useStories();
   const gen = useGenerateNarrative();
   const index = useIndexFacts();
 
-  const [step, setStep] = useState<Step>(1);
-  const [eventType, setEventType] = useState<string>("default");
-  const [title, setTitle] = useState("");
-  const [query, setQuery] = useState("");
-  const [customTone, setCustomTone] = useState("");
-  const [customStructure, setCustomStructure] = useState("");
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [mode, setMode] = useState<"sync" | "background">("background");
+  // Wizard state lives in a persisted store so navigating away (and back)
+  // doesn't wipe what the user has filled in.
+  const {
+    step, eventType, title, query, customTone, customStructure,
+    selectedIds, mode, patch, reset,
+  } = useGenerateDraft();
+  const setStep = (s: Step) => patch({ step: s });
 
   const isCustom = eventType === "custom";
 
@@ -48,12 +52,25 @@ export default function GeneratePage() {
   }, [step, eventType, title, query, isCustom, customTone]);
 
   const togglePerson = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+    patch({
+      selectedIds: selectedIds.includes(id)
+        ? selectedIds.filter((x) => x !== id)
+        : [...selectedIds, id],
+    });
+  };
+
+  // Navigate to the freshly created story (where the "make video" button is)
+  // so the user is immediately ready to produce the documentary.
+  const goToStory = (id: number) => {
+    reset();
+    navigate(projectId ? `/projects/${projectId}` : `/stories/${id}`);
   };
 
   const handleGenerate = () => {
+    // Snapshot which stories already exist so we can spot the new one if the
+    // response is lost to a cold-start drop (see onError below).
+    const beforeIds = new Set((stories ?? []).map((s) => s.id));
+
     gen.mutate(
       {
         title: title.trim(),
@@ -70,14 +87,43 @@ export default function GeneratePage() {
       },
       {
         onSuccess: (data: any) => {
-          if (mode === "sync" && data?.id) {
-            navigate(projectId ? `/projects/${projectId}` : `/stories/${data.id}`);
-          } else {
+          // Sync result (or a background request that the cloud downgraded
+          // to sync because there's no Celery worker) gives us a Story.
+          if (data?.id) {
+            goToStory(data.id);
+            return;
+          }
+          // A real queued task (only when a worker exists): poll via Tasks.
+          if (data?.task_id) {
+            reset();
             toast.success(t("videos.processing"));
             navigate(projectId ? `/projects/${projectId}` : "/tasks");
+            return;
           }
+          reset();
+          navigate("/stories");
         },
-        onError: (err) => toast.error(extractErrorMessage(err)),
+        onError: async (err) => {
+          // Cold-start lost response: the story was very likely created on
+          // the server even though the reply never came back. Give it a
+          // moment, refetch, and if a new story appeared, open it — instead
+          // of a scary "Network Error". We never re-submit (that would
+          // create a duplicate story).
+          if (isLostResponse(err)) {
+            await new Promise((r) => setTimeout(r, 3000));
+            await qc.refetchQueries({ queryKey: ["stories"] });
+            const fresh = qc.getQueryData<Story[]>(["stories"]) ?? [];
+            const created = fresh.find((s) => !beforeIds.has(s.id));
+            if (created) {
+              toast.success(t("generate.recovered"));
+              goToStory(created.id);
+              return;
+            }
+            toast.error(t("generate.coldRetry"));
+            return;
+          }
+          toast.error(extractErrorMessage(err));
+        },
       },
     );
   };
@@ -125,7 +171,7 @@ export default function GeneratePage() {
               {(templates ?? [{ id: "default", name: "Memória Familiar", tone: "nostalgic", structure: "" }]).map((tpl) => (
                 <button
                   key={tpl.id}
-                  onClick={() => setEventType(tpl.id)}
+                  onClick={() => patch({ eventType: tpl.id })}
                   className={cn(
                     "rounded-2xl border p-4 text-left transition",
                     eventType === tpl.id
@@ -182,7 +228,7 @@ export default function GeneratePage() {
               <input
                 className="input"
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => patch({ title: e.target.value })}
                 placeholder={t("generate.storyTitlePlaceholder")}
               />
             </div>
@@ -191,7 +237,7 @@ export default function GeneratePage() {
               <textarea
                 className="input min-h-[140px] resize-y"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => patch({ query: e.target.value })}
                 placeholder={t("generate.queryPlaceholder")}
               />
               <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
@@ -207,7 +253,7 @@ export default function GeneratePage() {
                   <input
                     className="input"
                     value={customTone}
-                    onChange={(e) => setCustomTone(e.target.value)}
+                    onChange={(e) => patch({ customTone: e.target.value })}
                     placeholder="ex.: melancólico e sarcástico, sombrio com humor seco, formal e crítico"
                   />
                   <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
@@ -219,7 +265,7 @@ export default function GeneratePage() {
                   <input
                     className="input"
                     value={customStructure}
-                    onChange={(e) => setCustomStructure(e.target.value)}
+                    onChange={(e) => patch({ customStructure: e.target.value })}
                     placeholder="ex.: cena inicial → conflito → desabafo final"
                   />
                 </div>
@@ -240,11 +286,11 @@ export default function GeneratePage() {
 
             <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs dark:border-stone-800 dark:bg-stone-900/60">
               <label className="flex items-center gap-2">
-                <input type="radio" checked={mode === "background"} onChange={() => setMode("background")} />
+                <input type="radio" checked={mode === "background"} onChange={() => patch({ mode: "background" })} />
                 <span>Em segundo plano (recomendado)</span>
               </label>
               <label className="flex items-center gap-2">
-                <input type="radio" checked={mode === "sync"} onChange={() => setMode("sync")} />
+                <input type="radio" checked={mode === "sync"} onChange={() => patch({ mode: "sync" })} />
                 <span>Aguardar resultado</span>
               </label>
             </div>
@@ -253,7 +299,7 @@ export default function GeneratePage() {
 
         <div className="mt-8 flex items-center justify-between border-t border-stone-100 pt-5 dark:border-stone-800">
           <button
-            onClick={() => setStep((s) => (Math.max(1, s - 1) as Step))}
+            onClick={() => setStep(Math.max(1, step - 1) as Step)}
             disabled={step === 1}
             className="btn btn-ghost"
           >
@@ -263,7 +309,7 @@ export default function GeneratePage() {
 
           {step < 4 ? (
             <button
-              onClick={() => setStep((s) => (Math.min(4, s + 1) as Step))}
+              onClick={() => setStep(Math.min(4, step + 1) as Step)}
               disabled={!valid}
               className="btn btn-primary"
             >
