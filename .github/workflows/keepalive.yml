@@ -1,0 +1,45 @@
+name: Keep backend awake
+
+# Pings the Render free backend so it doesn't spin down after ~15 min idle.
+# A spun-down instance makes the first request (e.g. a GEDCOM import) drop its
+# response mid-flight, which the frontend shows as a "Network Error" even
+# though the request actually completed on the server.
+#
+# Caveats (read before relying on this):
+#   * GitHub's scheduled runs are *best-effort* and can be delayed several
+#     minutes under load, so this is a "good enough" keep-alive. For a hard
+#     guarantee, use an external pinger as well (cron-job.org / UptimeRobot).
+#   * GitHub auto-disables scheduled workflows after 60 days without any repo
+#     activity — push a commit or re-enable it from the Actions tab.
+#   * Scheduled workflows only run from the default branch (main).
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # every 10 minutes (times are UTC)
+  workflow_dispatch: {}        # lets you trigger it by hand from the Actions tab
+
+# If you ever change the Render URL, edit BACKEND_URL below (or override it
+# with a repository variable of the same name in Settings → Secrets and
+# variables → Actions → Variables).
+env:
+  BACKEND_URL: ${{ vars.BACKEND_URL || 'https://family-stories-backend-gmxy.onrender.com/healthz' }}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping the backend health endpoint
+        run: |
+          echo "Pinging $BACKEND_URL"
+          # --retry rides out a cold start (the first hit wakes the instance
+          # and may time out before the boot finishes). We log the status but
+          # don't fail the job on a non-2xx body, since /healthz returns 200
+          # even when optional deps (ollama/redis) are intentionally disabled.
+          code=$(curl -sS -o /dev/null -w "%{http_code}" \
+                   --max-time 90 --retry 3 --retry-delay 15 --retry-all-errors \
+                   "$BACKEND_URL" || echo "000")
+          echo "HTTP status: $code"
+          if [ "$code" = "000" ]; then
+            echo "::warning::No response yet — the backend may still be cold-starting."
+          fi
