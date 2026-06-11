@@ -45,11 +45,6 @@ async def generate_video(
     user:     User         = Depends(get_current_user),
 ):
     """Build the documentary video for ``story_id`` (owned by caller)."""
-    # See ``narrative.generate_narrative`` — same rationale, no worker in cloud.
-    if mode == "background" and not settings.CELERY_ENABLED:
-        log.info("video_celery_disabled_running_sync")
-        mode = "sync"
-
     if mode == "sync":
         try:
             record = await processor.generate_video(story_id, db, user_id=user.id)
@@ -81,15 +76,23 @@ async def generate_video(
     await db.commit()
     await db.refresh(task)
 
-    from backend.tasks.video_tasks import generate_video_task
-    async_result = generate_video_task.delay(task.id, story_id, str(user.id))
-    task.celery_id = async_result.id
-    await db.commit()
+    # Celery worker if available, otherwise run in-process on this server so
+    # the free cloud tier still gets true background generation.
+    if settings.CELERY_ENABLED:
+        from backend.tasks.video_tasks import generate_video_task
+        celery_id = generate_video_task.delay(task.id, story_id, str(user.id)).id
+        task.celery_id = celery_id
+        await db.commit()
+    else:
+        from backend.tasks.bodies import video_body
+        from backend.tasks.inproc import run_in_background
+        celery_id = run_in_background(task.id, lambda: video_body(story_id, user.id))
 
-    log.info("video_task_enqueued", task_record_id=task.id, celery_id=async_result.id)
+    log.info("video_task_enqueued", task_record_id=task.id,
+             celery_id=celery_id, celery=settings.CELERY_ENABLED)
     return {
         "task_id":   task.id,
-        "celery_id": async_result.id,
+        "celery_id": celery_id,
         "state":     task.state,
         "poll_url":  f"/api/v1/tasks/{task.id}",
     }

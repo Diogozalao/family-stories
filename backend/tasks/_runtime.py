@@ -35,16 +35,26 @@ def run_async(coro: Awaitable[T]) -> T:
 async def mark_task_state(
     task_record_id: int,
     *,
-    state:     TaskState,
-    celery_id: str | None = None,
-    result:    dict       | None = None,
-    error:     str        | None = None,
+    state:            TaskState,
+    celery_id:        str | None = None,
+    result:           dict       | None = None,
+    error:            str        | None = None,
+    skip_if_terminal: bool       = False,
 ) -> None:
-    """Update one ``TaskRecord`` row with the latest worker state."""
+    """Update one ``TaskRecord`` row with the latest worker state.
+
+    When ``skip_if_terminal`` is set, the update is a no-op if the row is
+    already ``done``/``failed`` — this stops a task that the user cancelled
+    mid-run (marked ``failed``) from being resurrected to ``done`` when its
+    background thread finally finishes.
+    """
     async with AsyncSessionLocal() as session:
         record = await session.get(TaskRecord, task_record_id)
         if record is None:
             log.warning("task_record_missing", id=task_record_id)
+            return
+        if skip_if_terminal and record.state in (TaskState.DONE, TaskState.FAILED):
+            log.info("task_state_skip_terminal", id=task_record_id, current=record.state.value)
             return
         record.state      = state
         record.updated_at = datetime.now(UTC)
@@ -52,6 +62,12 @@ async def mark_task_state(
             record.celery_id = celery_id
         if result is not None:
             record.result = result
+            # Deep-link the produced artifact so the UI's task toast can offer
+            # an "Open" action straight to the story / video.
+            if result.get("story_id") is not None:
+                record.story_id = result["story_id"]
+            if result.get("video_id") is not None:
+                record.video_id = result["video_id"]
         if error is not None:
             record.error = error
         await session.commit()
@@ -74,5 +90,7 @@ async def run_with_tracking(
         log.exception("task_failed", task_record_id=task_record_id, error=str(exc))
         await mark_task_state(task_record_id, state=TaskState.FAILED, error=str(exc))
         raise
-    await mark_task_state(task_record_id, state=TaskState.DONE, result=result)
+    # ``skip_if_terminal`` so a user cancellation (FAILED) isn't overwritten.
+    await mark_task_state(task_record_id, state=TaskState.DONE, result=result,
+                          skip_if_terminal=True)
     return result

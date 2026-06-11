@@ -52,13 +52,6 @@ async def generate_narrative(
             detail=f"Invalid event_type. Available: {list(NARRATIVE_TEMPLATES.keys())}",
         )
 
-    # In environments without a Celery worker we transparently downgrade
-    # background requests to sync so the user still gets their story —
-    # they only lose the ability to navigate away while it runs.
-    if mode == "background" and not settings.CELERY_ENABLED:
-        log.info("narrative_celery_disabled_running_sync")
-        mode = "sync"
-
     if mode == "sync":
         try:
             story = await generator.generate(
@@ -77,26 +70,36 @@ async def generate_narrative(
             raise HTTPException(status_code=404, detail=str(exc))
         return StoryResponse.model_validate(story)
 
-    # Background mode — create a tracking record first, then enqueue.
+    # Background mode — create the tracking record first, then run the job
+    # either on a Celery worker (if one exists) or in-process on this very
+    # server (free cloud tier). Either way the request returns immediately
+    # and the client polls /api/v1/tasks/{id}.
+    job_payload = {**payload.model_dump(), "user_id": str(user.id)}
     record = TaskRecord(
         user_id = user.id,
         kind    = TaskKind.NARRATIVE,
         state   = TaskState.PENDING,
-        payload = {**payload.model_dump(), "user_id": str(user.id)},
+        payload = job_payload,
     )
     db.add(record)
     await db.commit()
     await db.refresh(record)
 
-    from backend.tasks.narrative_tasks import generate_narrative_task
-    async_result = generate_narrative_task.delay(record.id, {**payload.model_dump(), "user_id": str(user.id)})
-    record.celery_id = async_result.id
-    await db.commit()
+    if settings.CELERY_ENABLED:
+        from backend.tasks.narrative_tasks import generate_narrative_task
+        celery_id = generate_narrative_task.delay(record.id, job_payload).id
+        record.celery_id = celery_id
+        await db.commit()
+    else:
+        from backend.tasks.bodies import narrative_body
+        from backend.tasks.inproc import run_in_background
+        celery_id = run_in_background(record.id, lambda: narrative_body(job_payload))
 
-    log.info("narrative_task_enqueued", task_record_id=record.id, celery_id=async_result.id)
+    log.info("narrative_task_enqueued", task_record_id=record.id,
+             celery_id=celery_id, celery=settings.CELERY_ENABLED)
     return {
         "task_id":   record.id,
-        "celery_id": async_result.id,
+        "celery_id": celery_id,
         "state":     record.state,
         "poll_url":  f"/api/v1/tasks/{record.id}",
     }

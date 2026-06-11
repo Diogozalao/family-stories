@@ -10,6 +10,18 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-11 — Geração assíncrona in-process (sem Celery na nuvem)
+
+- **[Reescrita]** `cap6_implementacao.tex` · §"Fila de tarefas e sweep de
+  órfãs" — passa a descrever as duas vias de execução em segundo plano
+  (Celery+Redis OU executor *in-process* num thread pool quando
+  `CELERY_ENABLED=False`), em vez do antigo "rebaixamento para síncrono".
+
+> Reflete código já implementado e testado (36 testes unitários a passar).
+> Sem migração de BD. Frontend já preparado (polling de /tasks).
+
+---
+
 ## 2026-06-11 — Pipeline por cenas (narrativa↔vídeo sincronizados)
 
 - **[Reescrita]** `cap6_implementacao.tex` · §M3 (RAG) — passa a descrever

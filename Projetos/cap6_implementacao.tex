@@ -314,16 +314,33 @@ A documentação interativa (\emph{Swagger UI}) é gerada automaticamente.
 
 \subsection{Fila de tarefas e \emph{sweep} de órfãs}
 
-Gerações longas podem correr em segundo plano via Celery + Redis, com o
-\emph{frontend} a acompanhar o estado por \emph{polling}. Uma decisão de
-robustez relevante é o \textbf{\emph{sweep} de tarefas órfãs} no arranque:
-como um \emph{worker} Celery não sobrevive a um reinício do \emph{backend},
-qualquer tarefa que ficasse \texttt{pending}/\texttt{running} de um
-arranque anterior é, por definição, órfã, sendo marcada como falhada
-(\Cref{lst:sweep}). Em ambientes sem \emph{worker} (como o \emph{deploy}
-na nuvem), a configuração \texttt{CELERY\_ENABLED=False} rebaixa
-transparentemente qualquer chamada \texttt{background} para execução
-síncrona.
+Gerações longas podem correr em segundo plano, com o \emph{frontend} a
+acompanhar o estado por \emph{polling} de \texttt{/api/v1/tasks/\{id\}}.
+A execução é feita por uma de duas vias, transparentes para o cliente:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Celery + Redis} quando existe um \emph{worker} dedicado
+  (ambiente completo).
+  \item \textbf{Executor \emph{in-process}} quando \texttt{CELERY\_ENABLED}
+  é falso (por exemplo, no plano gratuito da nuvem, que não comporta um
+  \emph{worker} pago). Neste modo, a tarefa corre num pequeno
+  \emph{thread pool} limitado dentro do próprio processo do \emph{backend}
+  --- cada \emph{thread} com o seu próprio \emph{event loop}, à imagem de um
+  \emph{worker} Celery, para não bloquear o \emph{loop} principal do
+  FastAPI. O pedido devolve igualmente um \texttt{task\_id} de imediato.
+\end{itemize}
+
+Ambas as vias partilham os mesmos \emph{corpos} de tarefa
+(\texttt{tasks/bodies.py}) e o mesmo mecanismo de transição de estado
+(\texttt{running}\,$\rightarrow$\,\texttt{done}/\texttt{failed}), pelo que
+a experiência do utilizador é idêntica independentemente do ambiente.
+
+Uma decisão de robustez relevante é o \textbf{\emph{sweep} de tarefas
+órfãs} no arranque: como nem um \emph{worker} Celery nem um \emph{thread}
+\emph{in-process} sobrevivem a um reinício do \emph{backend}, qualquer
+tarefa que ficasse \texttt{pending}/\texttt{running} de um arranque
+anterior é, por definição, órfã, sendo marcada como falhada
+(\Cref{lst:sweep}).
 
 \begin{lstlisting}[language=Python,caption={Limpeza de tarefas órfãs no
 arranque da aplicação (\texttt{main.py}).},label={lst:sweep}]
