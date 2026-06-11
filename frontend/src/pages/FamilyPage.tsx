@@ -4,15 +4,19 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { FileUp, Loader2, Search, Trash2, User as UserIcon, Users, X } from "lucide-react";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import PageHeader from "../components/ui/PageHeader";
-import { extractErrorMessage } from "../lib/api";
+import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { useClearFamily, useFamilies, usePersons, useUploadGedcom } from "../lib/hooks";
+import type { Person } from "../lib/types";
 import { cn, initials } from "../lib/utils";
 
 const UNLABELED = "__unlabeled__";
 
 export default function FamilyPage() {
   const { t } = useTranslation();
+  const qc = useQueryClient();
   const { data: persons, isLoading } = usePersons();
   const { data: families } = useFamilies();
   const upload = useUploadGedcom();
@@ -42,6 +46,7 @@ export default function FamilyPage() {
   const handleConfirmUpload = async () => {
     if (!pendingFile) return;
     const label = labelInput.trim();
+    const before = (persons ?? []).length;
     try {
       const r = await upload.mutateAsync({ file: pendingFile, familyLabel: label || undefined });
       const count   = (r.persons_created ?? 0) + (r.persons_updated ?? 0);
@@ -55,6 +60,28 @@ export default function FamilyPage() {
       setPendingFile(null);
       setLabelInput("");
     } catch (err) {
+      // A lost response (no HTTP status) is the classic free-tier symptom:
+      // the backend was asleep, the import still ran and committed, but the
+      // connection dropped before the reply came back. Rather than scaring
+      // the user with "Network Error", give the server a moment, refetch,
+      // and report honestly based on whether the data actually landed. We do
+      // NOT re-POST — that would duplicate events; the import isn't fully
+      // idempotent. The user can simply retry if nothing came through.
+      if (isLostResponse(err)) {
+        await new Promise((r) => setTimeout(r, 2500));
+        await qc.refetchQueries({ queryKey: ["persons"] });
+        await qc.invalidateQueries({ queryKey: ["families"] });
+        await qc.invalidateQueries({ queryKey: ["graph"] });
+        const after = (qc.getQueryData<Person[]>(["persons"]) ?? []).length;
+        if (after > before) {
+          toast.success(t("family.importColdSuccess"));
+          setPendingFile(null);
+          setLabelInput("");
+        } else {
+          toast.error(t("family.importColdRetry"));
+        }
+        return;
+      }
       toast.error(extractErrorMessage(err));
     }
   };
