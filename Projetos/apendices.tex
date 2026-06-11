@@ -1,0 +1,54 @@
+% =====================================================================
+%  APÊNDICES
+%  (Material próprio, demasiado extenso para o corpo do relatório.)
+% =====================================================================
+\chapter{Principais \emph{Endpoints} da API}
+\label{ap:endpoints}
+
+A \Cref{tab:endpoints} resume os principais \emph{endpoints} REST expostos
+pelo \emph{backend} (prefixo \texttt{/api/v1/}).
+
+\begin{longtable}{@{}p{1.4cm}p{6.6cm}p{5.4cm}@{}}
+\caption{Principais \emph{endpoints} da API.}\label{tab:endpoints}\\
+\toprule
+\textbf{Método} & \textbf{Rota} & \textbf{Descrição} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Método} & \textbf{Rota} & \textbf{Descrição} \\
+\midrule
+\endhead
+GET    & \texttt{/healthz}                       & Sonda de saúde profunda. \\
+POST   & \texttt{/upload} · \texttt{/upload/batch} & Carregamento de fotografias. \\
+GET    & \texttt{/media}                         & Listar \emph{media}. \\
+GET    & \texttt{/media/\{id\}/file}             & Servir ficheiro (auth por \emph{header} ou \texttt{?token=}). \\
+POST   & \texttt{/genealogy/upload}              & Importar GEDCOM. \\
+GET    & \texttt{/genealogy/persons}             & Listar pessoas. \\
+GET    & \texttt{/timeline}                      & Linha temporal. \\
+GET    & \texttt{/narrative/templates}           & Listar \emph{templates}. \\
+POST   & \texttt{/narrative/generate}            & Gerar narrativa (\texttt{sync}/\texttt{background}). \\
+GET    & \texttt{/narrative/stories}             & Listar histórias. \\
+POST   & \texttt{/multimedia/generate/\{id\}}    & Gerar vídeo a partir de uma história. \\
+GET    & \texttt{/multimedia/videos}             & Listar vídeos. \\
+GET/POST & \texttt{/projects} · \texttt{/projects/\{id\}} & CRUD de projetos. \\
+GET    & \texttt{/tasks} · \texttt{/tasks/\{id\}} & Estado de tarefas assíncronas. \\
+\bottomrule
+\end{longtable}
+
+\chapter{Configuração de \emph{Deployment}}
+\label{ap:deploy}
+
+Resumo da topologia de \emph{deployment} (ver \Cref{sec:impl_deploy}):
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Vercel} — \emph{frontend} (SPA), \emph{build} Vite,
+  reescrita SPA.
+  \item \textbf{Render} — \emph{backend} via Docker (FFmpeg, libmagic,
+  Tesseract), \texttt{render.yaml}, sonda \texttt{/healthz},
+  \texttt{CELERY\_ENABLED=False} e ChromaDB desativado.
+  \item \textbf{Supabase} — Auth (JWKS), PostgreSQL (asyncpg), Storage.
+\end{itemize}
+
+\noindent\emph{Nota:} as variáveis sensíveis (chaves Supabase, chave
+Gemini) são definidas no painel do Render e nunca versionadas no
+repositório.

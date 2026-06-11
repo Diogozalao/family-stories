@@ -1,0 +1,171 @@
+% =====================================================================
+%  RELATÓRIO DE PROJETO FINAL DE LICENCIATURA
+%  Sistema de Geração Automática de Histórias Familiares com IA
+%  Universidade da Beira Interior — Departamento de Informática
+%
+%  Documento mestre. Compila em Overleaf com pdfLaTeX + BibTeX.
+%  Cada capítulo está num ficheiro próprio (ver \input mais abaixo).
+%
+%  COMO COMPILAR NO OVERLEAF:
+%    1. Carregar TODA a pasta "Projetos" (incluindo a subpasta images/).
+%    2. Definir main.tex como documento principal.
+%    3. Compilador: pdfLaTeX. Premir "Recompile" duas vezes para que
+%       o índice, as referências cruzadas e a bibliografia estabilizem.
+%
+%  IMAGENS: ver o ficheiro IMAGENS_NECESSARIAS.md. Onde falta uma
+%  figura, aparece uma moldura "[Imagem a inserir]". Para inserir a
+%  imagem real, troca o comando \figph{...} por \includegraphics.
+% =====================================================================
+\documentclass[12pt,a4paper,oneside]{report}
+
+% ---- Codificação e língua ------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[portuguese]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ---- Layout e espaçamento ------------------------------------------
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=3cm,right=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{emptypage}
+\usepackage{indentfirst}
+
+% ---- Gráficos, tabelas, listas -------------------------------------
+\usepackage{graphicx}
+\graphicspath{{images/}}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{font=small,labelfont=bf}
+
+% ---- Cor -----------------------------------------------------------
+\usepackage{xcolor}
+\definecolor{ubiblue}{RGB}{0,45,98}
+\definecolor{accent}{RGB}{150,90,20}
+\definecolor{codebg}{RGB}{246,246,246}
+\definecolor{codekw}{RGB}{160,50,40}
+\definecolor{codecm}{RGB}{90,110,90}
+\definecolor{codestr}{RGB}{30,110,70}
+
+% ---- Código (listings) ---------------------------------------------
+\usepackage{listings}
+\renewcommand{\lstlistingname}{Excerto}
+\renewcommand{\lstlistlistingname}{Lista de Excertos de Código}
+\lstdefinestyle{projeto}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecm}\itshape,
+  stringstyle=\color{codestr},
+  breaklines=true,
+  showstringspaces=false,
+  frame=single,
+  rulecolor=\color{gray!35},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  tabsize=2,
+  captionpos=b,
+  columns=fullflexible,
+  xleftmargin=16pt,
+  framexleftmargin=14pt,
+}
+\lstset{style=projeto}
+
+% ---- TikZ (diagramas) ----------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning,fit,backgrounds,calc}
+
+% ---- Cabeçalhos/rodapés --------------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\nouppercase{\leftmark}}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\small\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+% ---- Hiperligações (carregar quase no fim) -------------------------
+\usepackage[hidelinks]{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=ubiblue,
+  citecolor=accent,
+  urlcolor=accent,
+  pdftitle={Geração Automática de Histórias Familiares com IA},
+  pdfauthor={Diogo Dinis},
+}
+\usepackage{cleveref}
+
+% ---- Comandos auxiliares -------------------------------------------
+% Placeholder de figura: desenha uma moldura tracejada com a legenda
+% do que deve ser inserido. Compila sem precisar do ficheiro de imagem.
+\newcommand{\figph}[2][9cm]{%
+  \begin{center}
+  \setlength{\fboxsep}{10pt}%
+  \fcolorbox{gray!50}{gray!8}{\parbox[c][#1][c]{0.86\linewidth}{%
+    \centering\itshape\color{gray!60!black}%
+    [\,IMAGEM A INSERIR\,]\\[6pt]\normalfont\small #2}}%
+  \end{center}}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\rf}[1]{\textbf{RF#1}}
+\newcommand{\rnf}[1]{\textbf{RNF#1}}
+
+% =====================================================================
+\begin{document}
+
+% ----------------------------- CAPA ---------------------------------
+\input{capa}
+
+% ------------------------ ELEMENTOS PRÉ-TEXTUAIS --------------------
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\input{resumo}
+\input{agradecimentos}
+
+\cleardoublepage
+\pdfbookmark[0]{Índice}{toc}
+\tableofcontents
+\cleardoublepage
+\listoffigures
+\cleardoublepage
+\listoftables
+\cleardoublepage
+\lstlistoflistings
+\cleardoublepage
+\input{acronimos}
+
+% --------------------------- CORPO ----------------------------------
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\input{cap1_introducao}
+\input{cap2_estado_da_arte}
+\input{cap3_metodologia_tecnologias}
+\input{cap4_requisitos}
+\input{cap5_arquitetura_design}
+\input{cap6_implementacao}
+\input{cap7_testes_validacao}
+\input{cap8_conclusoes}
+
+% ----------------------- ELEMENTOS PÓS-TEXTUAIS ---------------------
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Referências}
+\bibliographystyle{ieeetr}
+\bibliography{referencias}
+
+\appendix
+\input{apendices}
+
+\end{document}

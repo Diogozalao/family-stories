@@ -1,0 +1,383 @@
+% =====================================================================
+%  CAPÍTULO 6 — IMPLEMENTAÇÃO
+% =====================================================================
+\chapter{Implementação}
+\label{cap:implementacao}
+
+Este capítulo descreve como os requisitos e o \emph{design} foram
+traduzidos em código. Organiza-se pelos quatro módulos do \emph{pipeline}
+(M1--M4), seguidos da infraestrutura do \emph{backend}, do \emph{frontend}
+e das decisões de segurança. Ao longo do texto incluem-se excertos de
+código \emph{críticos} — não a totalidade da implementação, mas os pontos
+que melhor ilustram as decisões técnicas.
+
+\section{Módulo M1 --- Ingestão Multimodal}
+\label{sec:impl_m1}
+
+O M1 é o ponto de entrada de todo o material. Recebe os \emph{bytes} de um
+ficheiro e orquestra uma cadeia de processamento: \emph{security scan}
+$\rightarrow$ \textsc{exif} $\rightarrow$ análise visual $\rightarrow$
+\textsc{ocr} $\rightarrow$ carregamento para o \emph{Storage}, persistindo
+no fim um registo \texttt{MediaFile}.
+
+O processamento decorre sobre um ficheiro temporário (as bibliotecas de
+\textsc{exif}/\textsc{ocr}/visão esperam um caminho de sistema), sempre
+removido no final. Uma decisão de segurança importante: os \emph{bytes} só
+são enviados para o \emph{Storage} \emph{após} um \emph{scan} de segurança
+bem-sucedido — o sistema nunca aloja conteúdo marcado como inseguro. As
+etapas são:
+
+\begin{description}[leftmargin=*]
+  \item[\emph{Security scan}.] Cálculo de \emph{checksum} MD5 e
+  verificação de integridade/segurança; em caso de falha, o registo é
+  marcado \texttt{FAILED} e o \emph{pipeline} interrompe-se.
+  \item[\textsc{exif}.] Data de captura, coordenadas GPS, marca e modelo
+  da câmara (biblioteca \emph{exifread}), preservando o \textsc{exif} em
+  bruto.
+  \item[Análise visual.] O \textbf{Gemini Vision} produz descrição da
+  cena, contagem de pessoas, cenário, emoção dominante, \emph{tags} e uma
+  \emph{sugestão narrativa} — a matéria-prima factual do M3.
+  \item[\textsc{ocr}.] Para documentos, o \textbf{Tesseract} extrai
+  texto, enriquecendo o contexto factual.
+\end{description}
+
+A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}
+dedicado (o maior módulo, $\approx$380 linhas), que converte o ficheiro em
+registos \texttt{Person} e nas respetivas relações, com suporte a
+etiquetagem de famílias (permitindo distinguir várias árvores na mesma
+conta).
+
+\section{Módulo M2 --- Organização Temporal}
+\label{sec:impl_m2}
+
+O M2 transforma factos dispersos numa estrutura temporal e relacional
+coerente, através de dois componentes.
+
+O \textbf{\emph{date resolver}} normaliza datas heterogéneas e
+frequentemente incompletas (apenas o ano, intervalos, formatos ambíguos),
+produzindo uma chave de ordenação consistente — essencial, dado que o
+material de arquivo raramente tem datas exatas.
+
+O coração do M2 é o \textbf{grafo de parentesco} (\texttt{FamilyGraph}),
+construído sobre o \emph{NetworkX}~\cite{networkx} como grafo dirigido: os
+nós são pessoas e as arestas representam relações (\emph{parent},
+\emph{child}, \emph{spouse}, \emph{sibling}). A classe produz
+\emph{resumos narrativos} do parentesco (por exemplo, \emph{``João (pai de
+Maria, marido de Ana)''}), consumidos diretamente pelo M3 para dar ao
+\textsc{llm} o contexto de \emph{quem é quem}. O grafo é serializado
+\emph{por utilizador}, evitando o cruzamento de familiares entre contas.
+
+\section{Módulo M3 --- Geração Narrativa}
+\label{sec:impl_m3}
+
+O M3 é o módulo de IA generativa central. Combina três componentes: um
+\emph{cliente LLM} híbrido, o subsistema \emph{RAG} e um conjunto de
+\emph{templates}.
+
+\subsection{Cliente LLM híbrido e \emph{fallback}}
+
+O \texttt{LLMClient} privilegia a inferência local via \emph{Ollama}
+(Llama~3.2~3B); se este não estiver disponível, recorre ao \emph{Gemini
+1.5~Flash}. O \Cref{lst:llm} mostra o coração desta lógica: se a inferência
+local falhar \emph{durante} a geração, há ainda um \emph{fallback} em
+tempo de execução; se ambos falharem, é lançada uma exceção que faz a
+tarefa ser marcada como falhada — evitando guardar uma narrativa falsa.
+
+\begin{lstlisting}[language=Python,caption={Cliente LLM com dupla via
+local/nuvem e \emph{fallback} em tempo de execução (\texttt{llm\_client.py}).},label={lst:llm}]
+def generate(self, prompt: str, max_tokens: int = 1500) -> str:
+    if self._ollama_ok:
+        return self._ollama_generate(prompt, max_tokens)
+    return self._gemini_generate(prompt, max_tokens)
+
+def _ollama_generate(self, prompt: str, max_tokens: int) -> str:
+    try:
+        response = ollama_client.generate(
+            model=settings.OLLAMA_MODEL, prompt=prompt,
+            options={"num_predict": max_tokens, "temperature": 0.7,
+                     "top_p": 0.9, "repeat_penalty": 1.1})
+        return response.response.strip()
+    except Exception as e:
+        log.error("ollama_error", error=str(e))
+        self._setup_gemini()                       # fallback em runtime
+        return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
+\end{lstlisting}
+
+\subsection{Retrieval-Augmented Generation com degradação graciosa}
+
+O \texttt{RAGSystem} indexa os factos extraídos pelo M1/M2 numa base
+vetorial (ChromaDB~\cite{chromadb}), anexando o \texttt{user\_id} à
+\emph{metadata} de cada documento; a pesquisa filtra sempre por esse
+campo, garantindo o isolamento multi-inquilino. No momento da geração,
+apenas os factos relevantes são injetados no \emph{prompt}, reduzindo a
+alucinação.
+
+A decisão de engenharia mais interessante é a \textbf{degradação
+graciosa}. Quando a biblioteca ChromaDB não está instalada — por exemplo,
+no \emph{deploy} gratuito do Render, onde o custo de \emph{build} é
+incomportável — o \texttt{RAGSystem} converte-se num \emph{stub}: a
+indexação torna-se inócua e a pesquisa devolve listas vazias, passando o
+M3 a usar a totalidade dos factos como contexto. O sistema mantém-se
+\emph{funcional}, perdendo apenas o passo de \emph{retrieval}
+(\Cref{lst:rag}).
+
+\begin{lstlisting}[language=Python,caption={Importação condicional que
+permite ao RAG degradar para um \emph{stub} sem ChromaDB
+(\texttt{rag\_system.py}).},label={lst:rag}]
+try:
+    import chromadb
+    _CHROMA_AVAILABLE = True
+except Exception as _exc:                # wheel indisponivel em deploy
+    chromadb = None
+    _CHROMA_AVAILABLE = False
+    log.info("rag_chromadb_unavailable", reason=str(_exc))
+
+class RAGSystem:
+    def __init__(self):
+        if not _CHROMA_AVAILABLE:
+            self.client = self.collection = None
+            log.info("rag_ready", mode="stub")     # modo degradado
+            return
+        ...
+\end{lstlisting}
+
+\subsection{\emph{Templates} e calibração para português europeu}
+
+Existem \textbf{sete} \emph{templates}: seis temáticos (\emph{Memória
+Familiar}, \emph{Momento Capturado}, \emph{História de Amor},
+\emph{Aventura Familiar}, \emph{Nova Vida}, \emph{Momento de Alegria}) e
+um \emph{livre} (\emph{personalizado}), em que o utilizador define tom e
+estrutura. Cada \emph{template} combina um \emph{prompt} com metadados de
+apresentação.
+
+O desafio linguístico central é que os modelos disponíveis tendem para o
+\textbf{português do Brasil}. A resposta foi a constante
+\texttt{PT\_PT\_RULES}, embutida em todos os \emph{templates}, com regras
+explícitas de léxico, colocação pronominal e proibição de gerúndio
+(\Cref{lst:ptpt}). Cada \emph{template} recebe ainda um bloco
+\texttt{USER\_FOCUS\_BLOCK} de \emph{prioridade máxima}: a intenção
+textual do utilizador determina o \emph{assunto}, enquanto os factos
+servem de matéria-prima. O idioma de saída pode ser comutado para inglês
+através de um sufixo de \emph{prompt}, sem \emph{templates} paralelos.
+
+\begin{lstlisting}[language=Python,caption={Excerto das regras de
+português europeu injetadas em todos os \emph{prompts}
+(\texttt{templates.py}).},label={lst:ptpt}]
+PT_PT_RULES = """REGRAS OBRIGATORIAS DE PORTUGUES EUROPEU (NAO BRASILEIRO):
+- Gerundio proibido em frases simples: usa "a + infinitivo".
+  - "estou a escrever" (NAO "estou escrevendo")
+- Vocabulario europeu: "comboio" (nao "trem"), "telemovel" (nao "celular"),
+  "casa de banho" (nao "banheiro"), "rapariga" (nao "moca")...
+- Colocacao do pronome: "da-me", "faz-me" (NUNCA "me da", "me faz")."""
+\end{lstlisting}
+
+\section{Módulo M4 --- Geração Multimédia}
+\label{sec:impl_m4}
+
+O M4 converte uma narrativa num \textbf{vídeo documental} MP4 (H.264,
+$1280\times720$, 24~fps). O \texttt{M4Processor} orquestra a seleção
+cronológica das fotografias, a síntese de voz da narrativa e a montagem do
+vídeo, mantendo apenas espaço de trabalho temporário no disco (as
+fotografias e o vídeo final vivem no \emph{Storage}).
+
+\subsection{Montagem cinematográfica}
+
+O \texttt{video\_builder} eleva a qualidade percebida acima de um simples
+\emph{slideshow}:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Enquadramento não-destrutivo} (\emph{letterbox}): cada
+  fotografia cabe inteira no quadro, sem cortes nem distorção, sobre um
+  fundo composto pela mesma imagem ampliada, desfocada (\emph{Gaussian
+  blur}) e escurecida — um pano de fundo cinematográfico.
+  \item \textbf{Efeito Ken Burns}: \emph{zoom} subtil
+  ($1.0\!\rightarrow\!1.08$) e \emph{pan} direcional com aceleração suave
+  (\emph{smoothstep}). O ângulo de \emph{pan} é determinístico a partir do
+  \emph{hash} do caminho do ficheiro, garantindo que fotografias
+  consecutivas não se movem na mesma direção (\Cref{lst:kenburns}).
+  \item \textbf{Transições} por \emph{crossfade} e \emph{fade-to-black}
+  final, evitando cortes abruptos.
+  \item \textbf{Cartão de título} de abertura e \textbf{legendas}
+  (\emph{lower thirds}) com data e local de cada fotografia.
+\end{itemize}
+
+\begin{lstlisting}[language=Python,caption={Geração de cada fotograma do
+efeito Ken Burns com \emph{easing smoothstep} e \emph{pan}
+(\texttt{video\_builder.py}).},label={lst:kenburns}]
+def make_frame(t: float) -> np.ndarray:
+    progress = min(max(t / max(duration, 0.001), 0.0), 1.0)
+    eased = progress * progress * (3.0 - 2.0 * progress)   # smoothstep
+    zoom  = start_zoom + (end_zoom - start_zoom) * eased
+    crop_w = int(TARGET_W / zoom); crop_h = int(TARGET_H / zoom)
+    offset_x = int((eased - 0.5) * pan_dx)
+    offset_y = int((eased - 0.5) * pan_dy)
+    x = max(0, min(TARGET_W - crop_w, (TARGET_W - crop_w)//2 + offset_x))
+    y = max(0, min(TARGET_H - crop_h, (TARGET_H - crop_h)//2 + offset_y))
+    window = base[y:y+crop_h, x:x+crop_w]
+    return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H)))
+\end{lstlisting}
+
+\subsection{Narração e sincronização áudio-vídeo}
+
+A narração é gerada por \textbf{síntese de voz} na língua em que a
+história foi escrita (capturada em \texttt{Story.language} no momento da
+geração), garantindo coerência mesmo que o utilizador altere depois o
+idioma da interface. O áudio é cuidadosamente alinhado: silêncio durante o
+cartão de título e, em seguida, a narração; se esta termina antes dos
+visuais, é preenchida com silêncio; se é mais longa, é cortada — mantendo
+a duração A/V consistente. Há ainda suporte opcional para música de fundo
+em volume reduzido. A \Cref{fig:frame_video} mostra um fotograma típico do
+resultado.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.8\linewidth]{frame_video.png}
+\figph[5.5cm]{Fotograma de um vídeo gerado: fotografia em
+\emph{letterbox} sobre fundo desfocado, legenda inferior com data/local e
+título de capítulo. Exportar um \emph{frame} de um MP4 produzido pelo
+sistema.}
+\caption{Exemplo de fotograma de um vídeo documental gerado pelo M4.}
+\label{fig:frame_video}
+\end{figure}
+
+\section{Infraestrutura do \emph{Backend}}
+\label{sec:impl_backend}
+
+\subsection{API e organização}
+
+O \emph{backend} expõe uma API REST versionada (\texttt{/api/v1/})
+organizada em grupos de \emph{routers}: \texttt{auth}, \texttt{upload},
+\texttt{timeline}, \texttt{narrative}, \texttt{projects},
+\texttt{genealogy}, \texttt{multimedia}, \texttt{tasks} e \texttt{health}.
+A documentação interativa (\emph{Swagger UI}) é gerada automaticamente.
+
+\subsection{Fila de tarefas e \emph{sweep} de órfãs}
+
+Gerações longas podem correr em segundo plano via Celery + Redis, com o
+\emph{frontend} a acompanhar o estado por \emph{polling}. Uma decisão de
+robustez relevante é o \textbf{\emph{sweep} de tarefas órfãs} no arranque:
+como um \emph{worker} Celery não sobrevive a um reinício do \emph{backend},
+qualquer tarefa que ficasse \texttt{pending}/\texttt{running} de um
+arranque anterior é, por definição, órfã, sendo marcada como falhada
+(\Cref{lst:sweep}). Em ambientes sem \emph{worker} (como o \emph{deploy}
+na nuvem), a configuração \texttt{CELERY\_ENABLED=False} rebaixa
+transparentemente qualquer chamada \texttt{background} para execução
+síncrona.
+
+\begin{lstlisting}[language=Python,caption={Limpeza de tarefas órfãs no
+arranque da aplicação (\texttt{main.py}).},label={lst:sweep}]
+async def _sweep_orphans() -> None:
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(TaskRecord).where(
+            TaskRecord.state.in_([TaskState.PENDING, TaskState.RUNNING])))
+        orphans = result.scalars().all()
+        for r in orphans:
+            r.state = TaskState.FAILED
+            r.error = "Tarefa abandonada (worker reiniciado antes de terminar)"
+        await db.commit()
+\end{lstlisting}
+
+\subsection{Observabilidade e validação}
+
+O sistema usa \textbf{structlog} para \emph{logging} estruturado (stdout +
+ficheiro rotativo). A sonda profunda \texttt{/healthz} verifica todas as
+dependências (base de dados, Ollama, Gemini, Redis, ChromaDB, disco). Os
+\emph{uploads} são validados por \emph{magic bytes} (libmagic), tipo MIME
+e limites de tamanho (25~MB para fotografias, 100~MB para GEDCOM), e o
+\emph{rate limiting} por IP (slowapi) protege contra abuso, com limites
+diferenciados (\Cref{tab:rate}).
+
+\begin{table}[H]
+\centering
+\caption{Limites de taxa aplicados pelo \emph{middleware} (por IP).}
+\label{tab:rate}
+\small
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Classe de \emph{endpoint}} & \textbf{Limite} \\
+\midrule
+Por omissão & 100/minuto \\
+Carregamento (\emph{upload}) & 20/minuto \\
+Geração (narrativa + vídeo) & 5/minuto \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{\emph{Frontend}}
+\label{sec:impl_frontend}
+
+A \textsc{spa} React/TypeScript distingue rigorosamente \emph{estado de
+servidor} (gerido pelo \textbf{TanStack Query}, com $\approx$30 \emph{hooks}
+que encapsulam pedidos, \emph{cache}, invalidação e \emph{polling}) de
+\emph{estado de cliente} (gerido pelo \textbf{Zustand}: autenticação e
+tema). O cliente HTTP (axios) injeta automaticamente o \emph{token}
+\emph{bearer} e, perante uma resposta \texttt{401}, termina a sessão de
+forma limpa (\Cref{lst:axios}). Um \texttt{SessionLoader} hidrata a sessão
+Supabase no arranque e instala um \emph{listener} que mantém o
+\emph{token} fresco, incluindo renovações silenciosas.
+
+\begin{lstlisting}[caption={Interceptores axios:
+injeção do \emph{token} e \emph{logout} automático no \texttt{401}
+(\texttt{lib/api.ts}).},label={lst:axios}]
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().token;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+api.interceptors.response.use((r) => r, async (err) => {
+  if (err.response?.status === 401) await supabase.auth.signOut();
+  return Promise.reject(err);
+});
+\end{lstlisting}
+
+\section{Segurança}
+\label{sec:impl_seguranca}
+
+\subsection{Autenticação por JWKS e isolamento multi-inquilino}
+
+A autenticação é delegada ao \textbf{Supabase Auth}. Os tokens são
+validados no \emph{backend} contra o \emph{endpoint} JWKS (algoritmo
+ES256, chave ECC P-256), com \emph{cache} do documento de chaves em
+memória (TTL de 10~min, indexada por \texttt{kid} para suportar rotação de
+chaves) e verificação da \emph{audience} (\Cref{lst:jwks}). A identidade
+extraída expõe o \textsc{uuid} do utilizador, que é a chave de isolamento:
+\textbf{todas} as consultas de domínio filtram por \texttt{user\_id}.
+
+\begin{lstlisting}[language=Python,caption={Validação do JWT do Supabase
+contra a chave pública correspondente (\texttt{supabase\_auth.py}).},label={lst:jwks}]
+payload = jwt.decode(
+    token, jwk,
+    algorithms=[jwk.get("alg", "ES256")],
+    audience="authenticated",
+    options={"verify_iss": False})
+\end{lstlisting}
+
+\subsection{Servir ficheiros com autenticação}
+
+Os \emph{endpoints} que servem fotografias e vídeos aceitam o \textsc{jwt}
+no cabeçalho \texttt{Authorization} \emph{ou} num parâmetro
+\texttt{?token=} — necessário porque as \emph{tags} \texttt{<img>} e
+\texttt{<video>} não permitem cabeçalhos personalizados. O \emph{backend}
+responde com um \emph{redirect} para um URL assinado e temporário do
+Supabase Storage, evitando expor as chaves de objeto.
+
+\subsection{Privacidade por inferência local}
+
+A herança \emph{local-first} mantém-se na opção de executar o \textsc{llm}
+localmente (Ollama): nesse modo, os factos do arquivo não são enviados a
+terceiros para a geração de texto. A integração com o Gemini é um
+\emph{fallback} explícito e documentado.
+
+\section{\emph{Deployment}}
+\label{sec:impl_deploy}
+
+A solução é implantada em três serviços geridos: \textbf{Vercel}
+(\emph{frontend} estático, com reescrita de rotas desconhecidas para
+\texttt{index.html}); \textbf{Render} (\emph{backend} FastAPI a partir de
+um contentor \textbf{Docker} próprio, que instala FFmpeg, libmagic e
+Tesseract; configuração declarada em \texttt{render.yaml}, com sonda em
+\texttt{/healthz}); e \textbf{Supabase} (autenticação, PostgreSQL e
+Storage). No ambiente gratuito, o ChromaDB e o \emph{worker} Celery são
+desativados — possível precisamente graças às decisões de degradação
+graciosa descritas acima. A configuração CORS suporta origens exatas e uma
+expressão regular para os \emph{deploys} de pré-visualização do Vercel.

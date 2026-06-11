@@ -1,0 +1,152 @@
+% =====================================================================
+%  CAPÍTULO 4 — LEVANTAMENTO E ANÁLISE DE REQUISITOS
+% =====================================================================
+\chapter{Levantamento e Análise de Requisitos}
+\label{cap:requisitos}
+
+Este capítulo formaliza os requisitos do sistema, distinguindo os
+\emph{funcionais} (o que o sistema deve fazer) dos \emph{não funcionais}
+(restrições de qualidade), e descreve os principais casos de uso através
+de um diagrama e de \emph{user stories}.
+
+\section{Requisitos Funcionais}
+\label{sec:rf}
+
+Os requisitos funcionais derivam diretamente dos objetivos
+(\Cref{sec:objetivos}) e do âmbito definido com a orientação. A
+\Cref{tab:rf} lista-os, atribuindo a cada um uma prioridade
+(\emph{Must}, \emph{Should} ou \emph{Could}, segundo a notação MoSCoW).
+
+\begin{longtable}{@{}p{1.4cm}p{8.8cm}p{2.4cm}@{}}
+\caption{Requisitos funcionais do sistema.}\label{tab:rf}\\
+\toprule
+\textbf{ID} & \textbf{Descrição} & \textbf{Prioridade} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{c}{\tablename\ \thetable\ -- continuação}\\
+\toprule
+\textbf{ID} & \textbf{Descrição} & \textbf{Prioridade} \\
+\midrule
+\endhead
+\rf{1}  & O sistema deve permitir registo, início e fim de sessão, e
+recuperação/alteração de palavra-passe. & Must \\
+\rf{2}  & Cada utilizador deve aceder exclusivamente aos seus próprios
+dados (isolamento multi-inquilino). & Must \\
+\rf{3}  & O sistema deve permitir o carregamento de fotografias,
+individualmente e em lote, com \emph{drag-and-drop}. & Must \\
+\rf{4}  & O sistema deve importar árvores genealógicas em formato GEDCOM e
+construir a estrutura familiar. & Must \\
+\rf{5}  & O sistema deve extrair automaticamente metadados \textsc{exif}
+das fotografias (data, GPS, câmara). & Must \\
+\rf{6}  & O sistema deve descrever o conteúdo visual de cada fotografia
+através de um modelo de IA de visão. & Must \\
+\rf{7}  & O sistema deve extrair texto de documentos digitalizados por
+\textsc{ocr}. & Should \\
+\rf{8}  & O sistema deve construir uma linha temporal cronológica,
+resolvendo datas incompletas. & Should \\
+\rf{9}  & O sistema deve gerar narrativas a partir dos factos, permitindo
+escolher tema, tom e idioma (PT/EN). & Must \\
+\rf{10} & O sistema deve gerar um vídeo documental narrado a partir de uma
+narrativa. & Must \\
+\rf{11} & O sistema deve permitir organizar fotografias, histórias e
+vídeos em projetos (coleções curadas). & Should \\
+\rf{12} & O sistema deve executar gerações longas em segundo plano, com
+acompanhamento de estado e notificações. & Should \\
+\rf{13} & O sistema deve permitir descarregar e reproduzir os vídeos
+gerados. & Must \\
+\rf{14} & A interface deve estar disponível em português europeu
+(omissão) e inglês. & Could \\
+\rf{15} & O sistema deve expor o estado de saúde das suas dependências
+(sondas de \emph{health}). & Could \\
+\bottomrule
+\end{longtable}
+
+\section{Requisitos Não Funcionais}
+\label{sec:rnf}
+
+\begin{longtable}{@{}p{1.6cm}p{3.4cm}p{8.6cm}@{}}
+\caption{Requisitos não funcionais do sistema.}\label{tab:rnf}\\
+\toprule
+\textbf{ID} & \textbf{Atributo} & \textbf{Descrição} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{c}{\tablename\ \thetable\ -- continuação}\\
+\toprule
+\textbf{ID} & \textbf{Atributo} & \textbf{Descrição} \\
+\midrule
+\endhead
+\rnf{1} & Segurança & Validação criptográfica de tokens; isolamento estrito
+entre inquilinos; proteção contra abuso por \emph{rate limiting};
+validação de \emph{uploads}. \\
+\rnf{2} & Privacidade & Possibilidade de inferência local, sem envio de
+dados do arquivo para serviços de terceiros; conformidade com os
+princípios do RGPD. \\
+\rnf{3} & Robustez & Degradação graciosa na ausência de dependências
+opcionais (base vetorial, \textsc{llm} local, fila de tarefas). \\
+\rnf{4} & Observabilidade & \emph{Logging} estruturado e sondas de saúde
+profundas sobre todas as dependências. \\
+\rnf{5} & Desempenho percebido & \emph{Cache} de estado de servidor,
+\emph{polling} controlado e \emph{feedback} imediato ao utilizador. \\
+\rnf{6} & Manutenibilidade & Tipagem estática (Python e TypeScript),
+modularidade e cobertura de testes automatizados. \\
+\rnf{7} & Portabilidade & Empacotamento em contentor Docker com todas as
+dependências de sistema. \\
+\rnf{8} & Usabilidade & Interface intuitiva, responsiva (\emph{desktop} e
+móvel), com tema claro/escuro e suporte a acessibilidade. \\
+\rnf{9} & Custo & Operação assente em ferramentas de código aberto e
+camadas gratuitas (custo $\approx 0$). \\
+\bottomrule
+\end{longtable}
+
+\section{Atores e Casos de Uso}
+\label{sec:casos_uso}
+
+O sistema tem um ator principal — o \textbf{Utilizador autenticado}
+(o ``dono'' de um arquivo familiar) — e dois atores secundários, que são
+sistemas externos: o \textbf{Serviço de IA} (Ollama/Gemini) e o
+\textbf{Supabase} (autenticação, base de dados e armazenamento). A
+\Cref{fig:casos_uso} apresenta o diagrama de casos de uso.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.92\linewidth]{casos_uso.png}
+\figph[7.5cm]{Diagrama UML de casos de uso. Ator ``Utilizador''
+ligado aos casos: Autenticar-se; Carregar fotografias; Importar GEDCOM;
+Gerar narrativa; Gerar vídeo; Gerir projetos; Consultar tarefas; Gerir
+definições. Atores secundários ``Serviço de IA'' e ``Supabase'' ligados
+aos casos de geração e de persistência. Sugestão: desenhar em
+draw.io / PlantUML.}
+\caption{Diagrama de casos de uso do sistema.}
+\label{fig:casos_uso}
+\end{figure}
+
+\section{\emph{User Stories} Principais}
+\label{sec:user_stories}
+
+As \emph{user stories} seguintes capturam a intenção do utilizador e
+ligam-se aos requisitos funcionais correspondentes:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{US1} — \emph{``Como utilizador, quero carregar as
+  fotografias antigas da minha família arrastando-as para o ecrã, para
+  não ter de as enviar uma a uma.''} (\rf{3})
+  \item \textbf{US2} — \emph{``Como utilizador, quero importar a árvore
+  genealógica que já tenho em GEDCOM, para que as narrativas conheçam as
+  relações familiares.''} (\rf{4})
+  \item \textbf{US3} — \emph{``Como utilizador, quero pedir uma história
+  sobre um tema específico (por exemplo, a emigração do meu avô),
+  escolhendo o tom, para obter uma narrativa fiel ao que tenho em
+  mente.''} (\rf{9})
+  \item \textbf{US4} — \emph{``Como utilizador, quero transformar uma
+  história num vídeo documental narrado, para a poder partilhar e
+  preservar.''} (\rf{10})
+  \item \textbf{US5} — \emph{``Como utilizador, quero organizar o meu
+  material em projetos temáticos, para separar diferentes ramos ou
+  ocasiões da família.''} (\rf{11})
+  \item \textbf{US6} — \emph{``Como utilizador, quero que as gerações
+  longas corram em segundo plano e me avisem quando terminam, para não
+  ficar à espera.''} (\rf{12})
+  \item \textbf{US7} — \emph{``Como utilizador preocupado com a
+  privacidade, quero que os meus dados não saiam da máquina sempre que
+  possível.''} (\rnf{2})
+\end{itemize}

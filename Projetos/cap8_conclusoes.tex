@@ -1,0 +1,103 @@
+% =====================================================================
+%  CAPÍTULO 8 — CONCLUSÕES E TRABALHO FUTURO
+% =====================================================================
+\chapter{Conclusões e Trabalho Futuro}
+\label{cap:conclusoes}
+
+\section{Síntese e Cumprimento dos Objetivos}
+\label{sec:sintese}
+
+Este projeto demonstrou a viabilidade de um sistema completo que
+transforma um arquivo familiar heterogéneo e desorganizado em narrativas
+escritas e vídeos documentais coerentes, através de um \emph{pipeline}
+modular de quatro estágios assente em inteligência artificial generativa.
+
+Revendo os objetivos definidos no \Cref{sec:objetivos}: a ingestão
+multimodal (O1), a organização temporal (O2), a geração narrativa (O3) e
+a produção de vídeo (O4) foram \textbf{implementadas e validadas}; a
+disponibilização através de uma aplicação Web moderna e implantada na
+nuvem (O5) foi \textbf{concretizada} (FastAPI + React + Supabase + Render +
+Vercel); e a premissa de privacidade e baixo custo (O6) foi
+\textbf{assegurada} pela estratégia de IA híbrida e pelo uso de
+ferramentas de código aberto. Em suma, os objetivos centrais do projeto
+foram alcançados.
+
+Mais do que a integração de modelos, o trabalho destacou-se pela
+\textbf{engenharia de robustez}: a degradação graciosa do RAG, os
+\emph{fallbacks} de IA, o \emph{sweep} de tarefas órfãs e o rebaixamento
+síncrono permitem ao sistema operar de forma fiável quer numa máquina
+local com todas as dependências, quer num ambiente de nuvem restrito. A
+migração de um protótipo \emph{local-first} para uma arquitetura
+\emph{multi-tenant}, preservando a opção de inferência local, ilustra um
+compromisso maduro entre acessibilidade, privacidade e escalabilidade.
+
+\section{Limitações}
+\label{sec:limitacoes}
+
+Em honestidade técnica, reconhecem-se as seguintes limitações da versão
+atual:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Avaliação quantitativa incompleta.} Embora os dados de
+  base sejam persistidos, falta ainda um painel consolidado de métricas
+  (tempos de geração, taxa de sucesso por \emph{template}, qualidade do
+  RAG) e um protocolo de avaliação humana sistemático.
+  \item \textbf{RAG inativo em produção.} No \emph{deploy} gratuito, a
+  ausência de ChromaDB faz o RAG operar em modo \emph{stub}; o passo de
+  \emph{retrieval} só está plenamente ativo em ambiente local.
+  \item \textbf{Sem identificação de pessoas.} O reconhecimento facial
+  (que tornaria as narrativas menos genéricas) não foi implementado.
+  \item \textbf{Cobertura de testes do \emph{frontend}.} A automação de
+  testes incide sobre o \emph{backend}; faltam testes ponta-a-ponta
+  (E2E) da interface.
+  \item \textbf{Acessibilidade não auditada formalmente.} Existem boas
+  práticas, mas falta uma auditoria \textsc{wcag}~AA.
+  \item \textbf{Geração de vídeo intensiva.} A montagem com MoviePy/FFmpeg
+  é exigente em CPU/memória, podendo ser limitante no plano gratuito do
+  Render para acervos grandes.
+\end{itemize}
+
+\section{Trabalho Futuro}
+\label{sec:trabalho_futuro}
+
+Numa eventual versão 2.0, propõem-se as seguintes evoluções, ordenadas por
+impacto esperado:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Reativar o RAG na nuvem via \emph{pgvector}.} Migrar a
+  base vetorial do ChromaDB para a extensão \emph{pgvector} do PostgreSQL
+  (Supabase) eliminaria a dependência pesada e manteria o
+  \emph{retrieval} ativo em produção — provavelmente a melhoria de maior
+  valor, inclusive para um estudo ablativo do impacto do RAG.
+  \item \textbf{Painel de métricas e avaliação.} Construir o painel
+  proposto no \Cref{sec:qualidade}, incluindo o \emph{script} de aderência
+  ao PT-PT e um estudo comparativo Ollama vs.\ Gemini.
+  \item \textbf{Identificação de pessoas.} Integrar reconhecimento facial
+  (e.g.\ \emph{DeepFace}) com confirmação manual, enriquecendo a
+  especificidade das narrativas.
+  \item \textbf{Visualização interativa do grafo familiar.} Tirar partido
+  do \emph{React Flow} (já presente nas dependências) para uma vista
+  navegável da árvore.
+  \item \textbf{Voz personalizada (\emph{voice cloning}).} Explorar o
+  \emph{Coqui TTS} para narrar com a voz de um familiar a partir de uma
+  amostra — funcionalidade tecnicamente e eticamente rica.
+  \item \textbf{Abordagem B de vídeo (IA generativa).} Integrar,
+  opcionalmente, APIs como o \emph{Runway} para animar fotografias-chave.
+  \item \textbf{Colaboração familiar.} Evoluir o modelo multi-inquilino
+  para permitir partilha de arquivos e colaboração entre membros de uma
+  família.
+  \item \textbf{Testes E2E e auditoria de acessibilidade.}
+\end{enumerate}
+
+\section{Considerações Finais}
+\label{sec:final}
+
+O resultado deste projeto é uma plataforma funcional, segura e
+estendível, que materializa uma ideia com valor humano evidente:
+preservar e dar voz à memória familiar. Demonstra, em concreto, que é
+hoje possível construir — com ferramentas de código aberto e a custo
+essencialmente nulo — um sistema de IA generativa multimodal que
+transforma um acervo passivo num documentário narrado. O caminho de
+evolução traçado, rumo a uma avaliação quantitativa rigorosa e a
+funcionalidades de colaboração, confirma o potencial do trabalho para além
+do âmbito desta licenciatura.

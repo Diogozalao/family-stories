@@ -1,0 +1,152 @@
+% =====================================================================
+%  CAPÍTULO 7 — TESTES E VALIDAÇÃO
+% =====================================================================
+\chapter{Testes e Validação}
+\label{cap:testes}
+
+A validação do sistema combina três níveis: testes automatizados do
+\emph{backend}, verificação estática por tipagem, e validação funcional do
+\emph{pipeline} completo. Discutem-se ainda as métricas relevantes para
+uma avaliação académica da qualidade dos resultados.
+
+\section{Plano de Testes}
+\label{sec:plano_testes}
+
+A estratégia de testes assentou em três pilares complementares:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Testes unitários} — verificam, isoladamente, a lógica de
+  componentes críticos e determinísticos.
+  \item \textbf{Testes de integração} — verificam o comportamento de
+  \emph{endpoints} da API, incluindo autenticação e sondas de saúde.
+  \item \textbf{Verificação estática} — a tipagem (Python \emph{type
+  hints} e TypeScript estrito) atua como uma camada de validação contínua,
+  capturando incompatibilidades de esquema entre \emph{frontend} e
+  \emph{backend} em tempo de compilação.
+\end{enumerate}
+
+\section{Testes Automatizados (pytest)}
+\label{sec:pytest}
+
+A suíte de testes do \emph{backend} foi implementada com \textbf{pytest}
+(com \texttt{pytest-asyncio} e \texttt{pytest-cov}) e conta atualmente com
+\textbf{37 testes a passar}. A \Cref{tab:testes} resume a sua distribuição.
+
+\begin{table}[H]
+\centering
+\caption{Distribuição da suíte de testes automatizados.}
+\label{tab:testes}
+\small
+\begin{tabularx}{\linewidth}{@{}llp{6.6cm}@{}}
+\toprule
+\textbf{Tipo} & \textbf{Módulo de teste} & \textbf{Âmbito} \\
+\midrule
+Unitário    & \texttt{test\_security}        & \emph{Security scanner}: \emph{checksum} e deteção de ficheiros inseguros. \\
+Unitário    & \texttt{test\_upload\_validator} & Validação de tipo, \emph{magic bytes} e limites de tamanho. \\
+Unitário    & \texttt{test\_date\_resolver}  & Resolução de datas incompletas e ambíguas (M2). \\
+Unitário    & \texttt{test\_family\_graph}   & Construção do grafo e resumos de parentesco (M2). \\
+Unitário    & \texttt{test\_templates}       & Integridade e formatação dos \emph{templates} narrativos (M3). \\
+Unitário    & \texttt{test\_video\_builder}  & Funções de enquadramento e montagem de vídeo (M4). \\
+Integração  & \texttt{test\_auth\_routes}    & Fluxo de autenticação na API. \\
+Integração  & \texttt{test\_health\_route}   & Sondas de \emph{liveness} e \emph{deep health}. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A \Cref{fig:pytest} apresenta a execução da suíte. Os testes incidem
+deliberadamente sobre a lógica \emph{determinística} (resolução de datas,
+grafo, validação, \emph{templates}): a saída dos \textsc{llm} é
+não-determinística e, por isso, validada por outras vias
+(\Cref{sec:qualidade}).
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.9\linewidth]{pytest.png}
+\figph[4.5cm]{Captura de ecrã da execução \texttt{pytest -v} mostrando
+os 37 testes a passar (idealmente com o sumário de cobertura
+\texttt{--cov}).}
+\caption{Resultado da execução da suíte de testes automatizados.}
+\label{fig:pytest}
+\end{figure}
+
+\section{Validação Funcional do \emph{Pipeline}}
+\label{sec:validacao_funcional}
+
+Para além dos testes automatizados, validou-se o \emph{pipeline} completo
+ponta-a-ponta com material de teste — incluindo ficheiros GEDCOM de
+exemplo de várias famílias. O percurso \emph{happy path} validado foi:
+
+\begin{enumerate}[leftmargin=*]
+  \item Registo e autenticação de um utilizador.
+  \item Carregamento de um conjunto de fotografias (M1: \textsc{exif} +
+  análise visual + \emph{Storage}).
+  \item Importação de uma árvore GEDCOM (M1/M2: pessoas + grafo).
+  \item Geração de uma narrativa com tema, tom e idioma escolhidos (M3).
+  \item Geração do vídeo documental a partir da narrativa (M4).
+  \item Reprodução e descarregamento do vídeo final.
+\end{enumerate}
+
+Em cada etapa verificaram-se o estado das tarefas, as notificações ao
+utilizador e a coerência dos artefactos produzidos.
+
+\section{Métricas de Qualidade Narrativa}
+\label{sec:qualidade}
+
+A avaliação da qualidade da narrativa — intrinsecamente subjetiva — é um
+desafio reconhecido (\Cref{sub:desafios}). Definem-se duas vias
+complementares, em parte já instrumentáveis com os dados que o sistema
+persiste (\texttt{task\_records}, \texttt{stories.facts\_used}):
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Métricas objetivas.}
+  \begin{itemize}
+    \item \emph{Aderência ao PT-PT}: contagem automática de
+    ``brasileirismos'' proibidos (a lista existe em \texttt{PT\_PT\_RULES})
+    no texto gerado, produzindo uma percentagem de violações.
+    \item \emph{Desempenho}: tempo médio de geração de narrativa e de
+    vídeo, e taxa de sucesso/falha por \emph{template} e por \emph{backend}
+    de \textsc{llm} (Ollama vs.\ Gemini).
+  \end{itemize}
+  \item \textbf{Métricas subjetivas.} Avaliação por um painel humano
+  (escala 1--5) das dimensões \emph{coerência}, \emph{fidelidade factual}
+  e \emph{qualidade literária}, sobre uma amostra de narrativas geradas.
+\end{itemize}
+
+A \Cref{tab:metricas} propõe a grelha de avaliação. A recolha sistemática
+destes dados e a sua apresentação num painel constituem trabalho em curso,
+discutido no \Cref{cap:conclusoes}.
+
+\begin{table}[H]
+\centering
+\caption{Grelha proposta para avaliação da qualidade das narrativas
+geradas.}
+\label{tab:metricas}
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.6cm}Yc@{}}
+\toprule
+\textbf{Métrica} & \textbf{Como medir} & \textbf{Tipo} \\
+\midrule
+Aderência PT-PT       & \% de violações às regras \texttt{PT\_PT\_RULES} & Objetiva \\
+Fidelidade factual    & \% de factos da narrativa presentes no material   & Mista \\
+Coerência             & Pontuação humana 1--5                              & Subjetiva \\
+Qualidade literária   & Pontuação humana 1--5                              & Subjetiva \\
+Tempo de geração      & Segundos (narrativa / vídeo)                       & Objetiva \\
+Taxa de sucesso       & \% de gerações concluídas por \emph{template}      & Objetiva \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Resultados e Bugs Resolvidos}
+\label{sec:resultados_testes}
+
+Durante o desenvolvimento foram identificados e corrigidos diversos
+defeitos relevantes, dos quais se destacam: a desalinhamento de nomes de
+campos entre \emph{frontend} e \emph{backend} (por exemplo,
+\texttt{narrative} vs.\ \texttt{content}, e \texttt{completed} vs.\
+\texttt{ready} no estado dos vídeos), captado e resolvido graças à tipagem
+estrita; a questão das tarefas eternamente ``em execução'', resolvida com
+o \emph{sweep} de órfãs (\Cref{lst:sweep}); e a migração de
+\texttt{datetime.utcnow()} para \texttt{datetime.now(UTC)} em conformidade
+com as versões recentes do Python. Globalmente, o sistema cumpre os
+requisitos funcionais essenciais (\rf{1}--\rf{13}), produzindo
+narrativas e vídeos coerentes a partir de arquivos familiares reais.

@@ -1,0 +1,91 @@
+% =====================================================================
+%  RESUMO + ABSTRACT
+% =====================================================================
+\chapter*{Resumo}
+\addcontentsline{toc}{chapter}{Resumo}
+\markboth{Resumo}{Resumo}
+
+O arquivo familiar — fotografias, documentos e árvores genealógicas
+acumulados ao longo de gerações — encerra um enorme valor afetivo e
+histórico, mas permanece tipicamente disperso, desorganizado e, acima de
+tudo, \emph{não narrado}. Este projeto propõe e implementa um sistema que
+transforma automaticamente esse material num produto narrativo
+multimédia, sem exigir que o utilizador escreva textos ou descreva o
+conteúdo manualmente.
+
+O sistema organiza-se num \emph{pipeline} de quatro módulos sequenciais:
+\textbf{(M1)} ingestão multimodal, que extrai metadados \textsc{exif},
+reconhece texto em documentos por \textsc{ocr} e descreve o conteúdo
+visual das fotografias com um modelo de visão; \textbf{(M2)} organização
+temporal, que resolve datas incompletas e constrói um grafo de
+parentesco; \textbf{(M3)} geração narrativa, assente em modelos de
+linguagem de grande escala (\textsc{llm}) orientados por
+\emph{Retrieval-Augmented Generation} (\textsc{rag}) e por um conjunto de
+\emph{templates} calibrados para português europeu; e \textbf{(M4)}
+geração multimédia, que converte a narrativa num vídeo documental com
+efeito \emph{Ken~Burns}, narração por síntese de voz e legendas.
+
+A solução foi desenvolvida como uma aplicação Web completa, com um
+\emph{backend} assíncrono em \textsc{FastAPI} e um \emph{frontend} em
+\textsc{React}/\textsc{TypeScript}, e evoluiu de um protótipo
+\emph{local-first} para uma arquitetura cliente-servidor multi-inquilino
+implantada na nuvem (\textsc{Render}, \textsc{Vercel} e \textsc{Supabase}
+para autenticação, base de dados e armazenamento). Adota uma estratégia
+de inteligência artificial híbrida — inferência local privilegiada via
+\emph{Ollama} (Llama~3.2) com recurso automático ao \emph{Google~Gemini} —
+e técnicas de engenharia de robustez (degradação graciosa do \textsc{rag},
+\emph{fallbacks} de modelo e rebaixamento síncrono) que mantêm o sistema
+operacional mesmo em ambientes com dependências reduzidas. Os resultados
+demonstram a viabilidade de gerar, de forma autónoma e a custo
+essencialmente nulo, narrativas factualmente ancoradas e vídeos
+documentais coerentes a partir de um acervo familiar heterogéneo.
+
+\vspace{0.8cm}
+\noindent\textbf{Palavras-chave}\\[0.2cm]
+Inteligência Artificial Generativa; Modelos de Linguagem de Grande
+Escala; Retrieval-Augmented Generation; Processamento Multimodal;
+Genealogia Computacional; Geração Automática de Vídeo; Narrativa Digital;
+FastAPI; React.
+
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+\markboth{Abstract}{Abstract}
+
+The family archive — photographs, documents and genealogical trees
+accumulated across generations — holds enormous emotional and historical
+value, yet it typically remains scattered, disorganised and, above all,
+\emph{untold}. This project proposes and implements a system that
+automatically turns such material into a multimedia narrative product,
+without requiring the user to write any text or describe the content
+manually.
+
+The system is organised as a pipeline of four sequential modules:
+\textbf{(M1)} multimodal ingestion, extracting \textsc{exif} metadata,
+running \textsc{ocr} on documents and describing the visual content of
+photographs with a vision model; \textbf{(M2)} temporal organisation,
+resolving incomplete dates and building a kinship graph; \textbf{(M3)}
+narrative generation, based on Large Language Models steered by
+Retrieval-Augmented Generation and a set of European-Portuguese prompt
+templates; and \textbf{(M4)} multimedia generation, turning the narrative
+into a documentary video with a Ken~Burns effect, text-to-speech
+narration and captions.
+
+The solution was built as a complete web application, with an
+asynchronous \textsc{FastAPI} backend and a \textsc{React}/\textsc{TypeScript}
+frontend, evolving from a local-first prototype into a cloud-deployed,
+multi-tenant client–server architecture (Render, Vercel and Supabase for
+authentication, database and storage). It adopts a hybrid AI strategy —
+local-first inference via Ollama (Llama~3.2) with automatic fallback to
+Google~Gemini — and robustness engineering techniques (graceful RAG
+degradation, model fallbacks and synchronous downgrade) that keep the
+system operational even in dependency-constrained environments. The
+results demonstrate the feasibility of autonomously generating, at
+essentially zero cost, factually grounded narratives and coherent
+documentary videos from a heterogeneous family archive.
+
+\vspace{0.8cm}
+\noindent\textbf{Keywords}\\[0.2cm]
+Generative Artificial Intelligence; Large Language Models;
+Retrieval-Augmented Generation; Multimodal Processing; Computational
+Genealogy; Automatic Video Generation; Digital Storytelling; FastAPI;
+React.

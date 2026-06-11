@@ -1,0 +1,160 @@
+% =====================================================================
+%  CAPÍTULO 3 — METODOLOGIA E TECNOLOGIAS
+% =====================================================================
+\chapter{Metodologia e Tecnologias}
+\label{cap:metodologia}
+
+\section{Metodologia de Desenvolvimento}
+\label{sec:metodologia}
+
+O desenvolvimento seguiu uma abordagem \textbf{ágil e incremental},
+adaptada às características de um projeto académico individual. Em vez de
+um modelo em cascata rígido, adotou-se um ciclo iterativo inspirado em
+\emph{Kanban}: o trabalho foi organizado em incrementos verticais, cada
+um entregando uma fatia funcional ponta-a-ponta (da ingestão à geração),
+o que permitiu validar continuamente o \emph{pipeline} completo em vez de
+esperar pela conclusão de todos os módulos.
+
+\subsection{Fases do projeto}
+
+O projeto desenrolou-se em fases sobrepostas:
+
+\begin{enumerate}[label=\textbf{F\arabic*.},leftmargin=*]
+  \item \textbf{Investigação e estado da arte} — levantamento das
+  soluções existentes (\Cref{cap:estado_arte}), das tecnologias de IA
+  generativa e das ferramentas de código aberto por módulo.
+  \item \textbf{Prototipagem do \emph{pipeline}} — implementação inicial
+  dos quatro módulos (M1--M4) em modo \emph{local-first}, com SQLite e
+  ficheiros locais, validando a viabilidade técnica end-to-end.
+  \item \textbf{Consolidação do \emph{backend}} — introdução de
+  autenticação, fila de tarefas assíncronas, validação de \emph{uploads},
+  \emph{rate limiting}, \emph{logging} estruturado e testes automatizados.
+  \item \textbf{Construção do \emph{frontend}} — desenvolvimento da
+  aplicação React completa (páginas, gestão de estado,
+  internacionalização, tema).
+  \item \textbf{Migração para a nuvem} — evolução para uma arquitetura
+  multi-inquilino com Supabase (autenticação, base de dados e
+  armazenamento) e \emph{deployment} em Render e Vercel.
+  \item \textbf{Validação e documentação} — testes, recolha de resultados
+  e redação do presente relatório.
+\end{enumerate}
+
+\subsection{Gestão e controlo de versões}
+
+Todo o código foi versionado com \textbf{Git}, com \emph{commits}
+descritivos a marcar cada incremento funcional e cada correção. O
+histórico de versões serviu simultaneamente de registo de progresso e de
+mecanismo de segurança (possibilidade de reverter alterações). A
+\Cref{fig:metodologia} ilustra o cronograma das fases.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\linewidth]{cronograma.png}
+\figph[5.5cm]{Cronograma do projeto (diagrama de Gantt) com as fases
+F1--F6 ao longo do tempo. Sugestão: criar em ferramenta de gestão de
+projeto ou em TikZ.}
+\caption{Cronograma das fases de desenvolvimento.}
+\label{fig:metodologia}
+\end{figure}
+
+\section{\emph{Stack} Tecnológica e Justificação}
+\label{sec:stack}
+
+A seleção tecnológica obedeceu a três critérios: \emph{(i)} maturidade e
+adequação técnica; \emph{(ii)} custo nulo ou camada gratuita; e
+\emph{(iii)} possibilidade de execução local para garantir privacidade.
+A \Cref{tab:stack} resume a \emph{stack}; as subsecções seguintes
+justificam as escolhas principais.
+
+\begin{table}[H]
+\centering
+\caption{\emph{Stack} tecnológica por camada.}
+\label{tab:stack}
+\small
+\begin{tabularx}{\linewidth}{@{}p{3cm}Y@{}}
+\toprule
+\textbf{Camada} & \textbf{Tecnologias} \\
+\midrule
+\emph{Frontend} & React~18, TypeScript (modo estrito), Vite~5, Tailwind
+CSS~3, TanStack Query, Zustand, React Router~6, react-i18next, Framer
+Motion, React Flow, Sonner, Lucide. \\
+\emph{Backend} & Python~3, FastAPI (assíncrono), SQLAlchemy~2 (async),
+Pydantic~v2, slowapi, structlog, Celery + Redis (opcional). \\
+IA / ML & Ollama (Llama~3.2~3B, local); Google Gemini~1.5~Flash (nuvem);
+ChromaDB + \emph{sentence-transformers} (RAG, opcional); Tesseract
+(\textsc{ocr}); NetworkX (grafo). \\
+Multimédia & MoviePy + FFmpeg; Pillow (Ken Burns / \emph{letterbox});
+edge-tts / gTTS (\textsc{tts}). \\
+Dados & Supabase Auth (JWT/JWKS), PostgreSQL (asyncpg), Supabase Storage;
+SQLite (desenvolvimento local). \\
+Operação & Docker; Render (\emph{backend}); Vercel (\emph{frontend});
+Supabase (dados); Git. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{\emph{Backend}: FastAPI}
+
+Escolheu-se o \textbf{FastAPI} pela sua natureza \emph{assíncrona}
+(essencial para um sistema com operações de I/O e de IA potencialmente
+longas), pela validação automática de dados via \textbf{Pydantic} (que
+elimina uma classe inteira de erros de \emph{input}) e pela geração
+automática de documentação interativa (\emph{Swagger UI}). A combinação
+com \textbf{SQLAlchemy} assíncrono e \textbf{Pydantic~v2} oferece tipagem
+forte de ponta a ponta no servidor.
+
+\subsection{IA: estratégia híbrida local/nuvem}
+
+A decisão mais estruturante foi a \textbf{estratégia de IA híbrida}.
+Privilegia-se a inferência \textbf{local} via \textbf{Ollama} (executando
+o \emph{Llama~3.2~3B}) por três razões: \emph{privacidade} (os factos do
+arquivo não saem da máquina), \emph{custo} (nulo) e \emph{autonomia} (não
+depende de conectividade). Como \emph{fallback}, recorre-se ao
+\textbf{Google Gemini~1.5~Flash}, cuja camada gratuita é suficiente para
+um protótipo académico e cuja maior capacidade é útil para narrativas
+mais exigentes ou quando não há \textsc{gpu} local. Para a análise visual
+das fotografias (M1) usa-se o \textbf{Gemini Vision}. Esta arquitetura
+de dupla via é detalhada no \Cref{cap:implementacao}.
+
+\subsection{RAG: ChromaDB}
+
+Para o subsistema \textbf{RAG} adotou-se o \textbf{ChromaDB} como base
+vetorial, com \emph{embeddings} de \emph{sentence-transformers}. A
+escolha recaiu sobre o ChromaDB pela simplicidade de integração
+(persistência local em ficheiro, sem servidor dedicado). Como se verá, o
+subsistema foi desenhado para \emph{degradar graciosamente} na ausência
+desta dependência, uma decisão motivada pelas restrições de
+\emph{deployment} discutidas no \Cref{cap:implementacao}.
+
+\subsection{Multimédia: MoviePy, FFmpeg e Pillow}
+
+Para a Abordagem A (\Cref{sub:geracao_video}) usaram-se o \textbf{MoviePy}
+(composição programática de vídeo), o \textbf{FFmpeg} (codificação e
+mistura de áudio) e o \textbf{Pillow} (processamento de imagem para o
+efeito \emph{Ken~Burns} e para o enquadramento \emph{letterbox}). Para a
+narração, optou-se pelas vozes neuronais europeias do \textbf{edge-tts},
+com o \textbf{gTTS} como alternativa.
+
+\subsection{\emph{Frontend}: React, TypeScript e TanStack Query}
+
+No \emph{frontend} escolheu-se o \textbf{React} com \textbf{TypeScript em
+modo estrito} para capturar, em tempo de compilação, incompatibilidades
+de esquema com o \emph{backend}. O \textbf{Vite} foi preferido como
+\emph{bundler} pela velocidade do \emph{Hot Module Replacement}. Para a
+gestão de estado, distinguiu-se rigorosamente o \emph{estado de servidor}
+— gerido pelo \textbf{TanStack Query} (cache, invalidação,
+\emph{polling}) — do \emph{estado de cliente} — gerido pelo
+\textbf{Zustand} (autenticação e tema). Esta separação, hoje considerada
+boa prática, evita a complexidade de soluções como o Redux para dados que
+são, na sua maioria, \emph{server-state}.
+
+\subsection{Dados e operação: Supabase, Docker, Render e Vercel}
+
+A camada de dados foi externalizada para o \textbf{Supabase}, que fornece
+de forma integrada autenticação (com tokens JWT validados por JWKS),
+base de dados \textbf{PostgreSQL} e armazenamento de objetos
+(\emph{Storage}). O \emph{backend} é empacotado em \textbf{Docker} (para
+incluir dependências de sistema como FFmpeg, Tesseract e libmagic) e
+implantado no \textbf{Render}; o \emph{frontend} é servido pela
+\textbf{Vercel}. Esta combinação assenta integralmente em camadas
+gratuitas, mantendo o custo operacional próximo de zero.

@@ -1,0 +1,327 @@
+% =====================================================================
+%  CAPÍTULO 2 — ESTADO DA ARTE / REVISÃO BIBLIOGRÁFICA
+% =====================================================================
+\chapter{Estado da Arte e Enquadramento Teórico}
+\label{cap:estado_arte}
+
+Este capítulo divide-se em duas partes. A primeira (\Cref{sec:solucoes})
+analisa as soluções existentes no mercado que se aproximam, total ou
+parcialmente, dos objetivos deste projeto, identificando o que fazem bem
+e o que lhes falta. A segunda (\Cref{sec:enquadramento}) introduz os
+conceitos teóricos fundamentais — modelos de linguagem, multimodalidade,
+geração de narrativa e geração de vídeo — necessários para compreender as
+opções técnicas tomadas nos capítulos seguintes.
+
+\section{Análise de Soluções Existentes}
+\label{sec:solucoes}
+
+\subsection{Os ``Big Four'' da genealogia digital}
+\label{sub:bigfour}
+
+O mercado da genealogia digital é dominado por quatro grandes plataformas
+que se distinguem pela escala dos seus acervos de registos históricos,
+pela extensão das árvores genealógicas colaborativas e pelas ligações
+genéticas que oferecem~\cite{familytreemag}:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Ancestry.com} — dominante no mercado norte-americano,
+  forte integração com testes de \textsc{dna}, particularmente eficaz na
+  investigação de ascendência nos EUA.
+  \item \textbf{MyHeritage} — mais vocacionada para famílias
+  internacionais, reconhecida pelas suas ferramentas de fotografia e
+  \textsc{dna}.
+  \item \textbf{FamilySearch} — completamente gratuita, mantida pela
+  Igreja SUD, com um alcance verdadeiramente global.
+  \item \textbf{Findmypast} — especializada em registos do Reino Unido e
+  da Irlanda.
+\end{itemize}
+
+Estas plataformas são exemplares na agregação e indexação de registos,
+mas o seu foco é a \emph{descoberta} de factos genealógicos, não a
+\emph{construção de narrativa}.
+
+\subsection{MyHeritage — o caso de estudo mais relevante}
+\label{sub:myheritage}
+
+De entre as quatro, a \textbf{MyHeritage} é a plataforma mais próxima
+daquilo que este projeto pretende construir, sobretudo pelo seu
+investimento em funcionalidades de IA generativa aplicada à memória
+familiar~\cite{myheritage_rootstech}:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Deep Nostalgia} (2020) — anima fotografias antigas,
+  conferindo movimento facial realista a retratos estáticos.
+  \item \textbf{DeepStory} (2022) — permite que os antepassados
+  ``contem'' as suas próprias histórias de vida, gerando vídeo a partir
+  de retratos e de texto.
+  \item \textbf{AI Biographer} (2024) — gera, para qualquer antepassado,
+  uma entrada de estilo enciclopédico, com contexto histórico,
+  fotografias e notas de rodapé que citam a origem dos factos
+  genealógicos. Nos dois primeiros meses após o lançamento foram geradas
+  cerca de 100.000 biografias~\cite{myheritage_rootstech}.
+\end{itemize}
+
+O \emph{AI Biographer} é particularmente relevante por demonstrar a
+viabilidade comercial da geração automática de texto biográfico
+\emph{ancorado em factos}. Distingue-se, contudo, do presente projeto em
+dois aspetos: foca-se em texto (e não em vídeo documental narrado a
+partir do acervo do utilizador) e opera dentro de um ecossistema fechado.
+
+\subsection{Google Photos e Apple Memories — o outro lado}
+\label{sub:googlephotos}
+
+Do lado das aplicações de consumo, a IA integrada em serviços como o
+\emph{Google~Photos} reanima automaticamente o passado, selecionando
+algoritmicamente fotografias que evocam pessoas, locais e momentos. A
+funcionalidade \emph{Cinematic Photos and Memories} recorre a
+\emph{machine learning} para gerar pequenos clipes animados com um efeito
+de profundidade 3D; segundo a Google, o envolvimento dos utilizadores com
+a funcionalidade \emph{Memories} cresceu 40\% num ano. Estas soluções são
+tecnicamente sofisticadas e visualmente agradáveis, mas o seu resultado é
+um \emph{slideshow} estético, não uma \emph{história}.
+
+\subsection{Síntese comparativa e lacuna identificada}
+\label{sub:lacuna}
+
+A \Cref{tab:comparativo} sintetiza a análise. O denominador comum às
+soluções existentes é a ausência de \textbf{profundidade narrativa} e de
+\textbf{integração multifonte}: nenhuma cruza simultaneamente
+fotografias, documentos digitalizados, árvores genealógicas e metadados
+para construir uma narrativa coerente e factualmente ancorada. É
+precisamente essa lacuna que este projeto se propõe preencher.
+
+\begin{table}[H]
+\centering
+\caption{Análise comparativa das soluções existentes face aos objetivos
+do projeto.}
+\label{tab:comparativo}
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.1cm}YYcc@{}}
+\toprule
+\textbf{Solução} & \textbf{Foco principal} & \textbf{Integra
+multifonte?} & \textbf{Narrativa} & \textbf{Vídeo} \\
+\midrule
+Ancestry / FamilySearch / Findmypast & Registos e árvores genealógicas &
+Parcial & Não & Não \\
+MyHeritage (AI Biographer) & Biografia textual ancorada & Sim
+(genealogia) & Sim (texto) & Parcial \\
+Google Photos / Apple Memories & \emph{Slideshows} automáticos & Não &
+Não & Sim (estético) \\
+\textbf{Este projeto} & Narrativa multimédia do arquivo & \textbf{Sim} &
+\textbf{Sim} & \textbf{Sim (documental)} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Enquadramento Teórico}
+\label{sec:enquadramento}
+
+\subsection{Modelos de Linguagem de Grande Escala (LLM)}
+\label{sub:llm}
+
+Um \emph{Large Language Model} (\textsc{llm}) é, na sua essência, um
+modelo treinado para prever a palavra (ou \emph{token}) seguinte numa
+sequência de texto. Treinado sobre quantidades massivas de texto —
+páginas da internet, livros, artigos científicos — o modelo aprende
+padrões estatísticos da linguagem ao ponto de conseguir gerar texto novo,
+coerente e contextualmente adequado~\cite{brown2020gpt3}. O mecanismo
+central que tornou estes modelos viáveis é a \emph{self-attention},
+introduzida na arquitetura \emph{Transformer}~\cite{vaswani2017attention},
+que permite ao modelo ponderar simultaneamente as relações entre todas as
+palavras de uma sequência, atribuindo pesos diferentes a cada par.
+
+A forma de comunicar com um \textsc{llm} é o \emph{prompt} — a instrução
+fornecida ao modelo. A qualidade do resultado depende fortemente da
+qualidade do \emph{prompt}, uma constatação que deu origem a uma área de
+investigação própria, o \textbf{\emph{prompt engineering}}. A diferença é
+ilustrativa: um \emph{prompt} fraco como \emph{``escreve sobre uma
+família''} produz texto genérico; um \emph{prompt} bem construído, que
+forneça factos concretos, defina a perspetiva, o tom, o formato e a
+estrutura, produz resultados radicalmente superiores. Esta observação é
+central para o \Cref{cap:implementacao}, onde se descreve o sistema de
+\emph{templates} do módulo de geração narrativa.
+
+\subsection{Modelos multimodais — ver além do texto}
+\label{sub:multimodal}
+
+Os modelos modernos já não processam apenas texto. Os \emph{Multimodal
+Large Language Models} (\textsc{mllm}) recebem como entrada texto, imagem
+e até áudio e vídeo em simultâneo. Quando uma fotografia é apresentada a
+um modelo como o \emph{GPT-4V} ou o \emph{Gemini}, ocorre, em termos
+simplificados, o seguinte~\cite{yin2023mllmsurvey}:
+
+\begin{enumerate}[leftmargin=*]
+  \item A imagem é dividida em pequenos blocos (\emph{patches}).
+  \item Cada \emph{patch} é convertido numa representação numérica
+  (\emph{embedding} visual).
+  \item Esses \emph{embeddings} visuais são projetados para o mesmo
+  espaço dos \emph{embeddings} de texto.
+  \item O modelo processa texto e imagem conjuntamente, como se fossem a
+  mesma modalidade.
+\end{enumerate}
+
+Representado por modelos como o \emph{GPT-4V}, o paradigma \textsc{mllm}
+tornou-se um foco crescente de investigação, usando \textsc{llm}
+poderosos como ``cérebro'' para executar tarefas multimodais. Capacidades
+emergentes surpreendentes — como \emph{escrever histórias a partir de
+imagens} — sugerem um caminho promissor~\cite{yin2023mllmsurvey}. É
+exatamente esta capacidade que o módulo de ingestão (M1) explora: um
+modelo de visão descreve cada fotografia, gerando matéria-prima factual
+para a posterior geração narrativa.
+
+\subsection{Geração automática de narrativas}
+\label{sub:geracao_narrativa}
+
+Uma narrativa não é uma mera sequência de factos. Uma boa história possui
+\emph{estrutura} (início, desenvolvimento, clímax, conclusão),
+\emph{perspetiva} (quem narra e de que ponto de vista), \emph{coerência}
+(os factos não se contradizem), \emph{arco emocional} (tensão e resolução)
+e \emph{contexto} (os eventos ligam-se a um mundo mais amplo). O desafio
+da geração automática consiste em obter tudo isto a partir de dados
+brutos e desorganizados.
+
+Identificam-se três paradigmas principais de geração de narrativas:
+
+\begin{description}[leftmargin=*]
+  \item[Paradigma 1 — \emph{Template-Based}.] O sistema mais simples:
+  definem-se modelos fixos e preenchem-se os espaços com dados. Para este
+  projeto, os \emph{templates} são o ponto de partida da arquitetura —
+  definem a estrutura narrativa (cronológica, por personagem, temática) e
+  o \textsc{llm} preenche-a com linguagem natural rica.
+  \item[Paradigma 2 — \emph{Retrieval-Augmented Generation} (RAG).]
+  Combina uma fase de \emph{retrieval} (busca de informação relevante numa
+  base de dados de factos) com uma fase de \emph{generation} (o
+  \textsc{llm} usa essa informação para gerar texto)~\cite{lewis2020rag}.
+  \item[Paradigma 3 — \emph{Fine-tuning} e modelos especializados.]
+  Parte-se de um modelo base (por exemplo o LLaMA~\cite{touvron2023llama})
+  e treina-se especificamente em histórias familiares, para que ``fale''
+  com o estilo de um biógrafo. É a abordagem mais poderosa, mas também a
+  mais exigente em dados e computação.
+\end{description}
+
+Para o âmbito deste projeto, o \textbf{RAG é a abordagem mais
+pragmática}: não exige treino de modelos próprios, funciona bem tanto com
+modelos locais como com APIs existentes, e — crucialmente — ancora a
+geração em factos verificados, mitigando a alucinação. O
+\Cref{sub:desafios} aprofunda esta justificação.
+
+\subsection{Desafios técnicos da geração narrativa}
+\label{sub:desafios}
+
+\begin{description}[leftmargin=*]
+  \item[Alucinação.] Os \textsc{llm} podem inventar factos inexistentes;
+  na ausência de informação sobre um período, tendem a ``preencher'' com
+  eventos plausíveis mas falsos. \emph{Mitigação:} RAG com factos
+  verificados — instruir o modelo a usar \emph{apenas} a informação
+  fornecida e a admitir a ausência de registo.
+  \item[Coerência temporal.] Dados de décadas podem conter
+  inconsistências (uma pessoa que aparece numa fotografia datada antes do
+  seu nascimento). \emph{Mitigação:} um módulo de validação que verifica
+  a consistência da linha temporal antes da geração (papel do M2).
+  \item[Identificação de pessoas.] Sem saber quem é quem nas fotografias,
+  a narrativa torna-se genérica. \emph{Mitigação:} reconhecimento facial
+  (e.g.\ \emph{DeepFace}) combinado com confirmação manual do utilizador.
+  Esta funcionalidade situa-se fora do âmbito da versão atual e é
+  discutida como trabalho futuro (\Cref{cap:conclusoes}).
+  \item[Avaliação de qualidade.] Determinar se uma narrativa gerada é
+  ``boa'' exige métricas de avaliação — objetivas (e.g.\ aderência
+  linguística) e subjetivas (painéis humanos) — discutidas no
+  \Cref{cap:testes}.
+\end{description}
+
+\subsection{Geração de vídeo: pipeline programático vs.\ IA de vídeo}
+\label{sub:geracao_video}
+
+Existem duas abordagens fundamentalmente distintas para transformar
+fotografias num vídeo:
+
+\begin{description}[leftmargin=*]
+  \item[Abordagem A — \emph{pipeline} programático.] Monta-se o vídeo
+  como faria um editor: define-se a duração de cada fotografia,
+  adiciona-se narração por \textsc{tts}, música de fundo e o efeito
+  \emph{Ken~Burns} (zoom/panorâmica lentos que dão vida a imagens
+  estáticas), exportando um ficheiro \textsc{mp4}. É o caminho com
+  bibliotecas de código aberto como o \emph{MoviePy}~\cite{moviepy} e o
+  \emph{FFmpeg}~\cite{ffmpeg}, de custo nulo e plenamente controlável.
+  \item[Abordagem B — geração de vídeo por IA.] Recorre a APIs como o
+  \emph{Runway}, \emph{Pika}, \emph{Luma} ou \emph{Kling} para, a partir
+  de uma fotografia estática, gerar segundos de vídeo animado com
+  movimento realista. É mais impressionante, mas também mais cara e
+  complexa, e levanta questões de consistência e de custo por geração.
+\end{description}
+
+Para um projeto académico, um \emph{slideshow} narrado de qualidade
+construído pela Abordagem A é \textbf{suficiente e academicamente
+defensável}, cumprindo os objetivos sem dependência de APIs dispendiosas.
+Foi essa a opção adotada, conforme detalhado no \Cref{cap:implementacao}.
+A \Cref{tab:videoapis} resume, para referência, as principais APIs de
+geração de vídeo da Abordagem B.
+
+\begin{table}[H]
+\centering
+\caption{Principais APIs de geração de vídeo por IA (Abordagem B), para
+referência. Não utilizadas na versão atual por motivos de custo.}
+\label{tab:videoapis}
+\small
+\begin{tabularx}{\linewidth}{@{}lYl@{}}
+\toprule
+\textbf{Ferramenta} & \textbf{Ideal para} & \textbf{API} \\
+\midrule
+Pika Labs            & Prototipagem rápida                  & Sim \\
+Runway Gen-4         & Qualidade profissional               & Sim \\
+Luma (Dream Machine) & Conversão foto $\rightarrow$ vídeo realista & Sim \\
+Kling AI             & Alternativa de boa qualidade         & Sim \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Síntese de voz (Text-to-Speech)}
+\label{sub:tts}
+
+A síntese de voz (\textsc{tts}) converte o texto narrativo em fala,
+dando ``voz'' à história. A qualidade da voz afeta diretamente o impacto
+emocional do vídeo: uma narração natural e expressiva tem um efeito
+completamente distinto de uma voz robótica. Entre as opções de código
+aberto/gratuitas consideradas: o \emph{gTTS} (simples, dependente de
+internet, qualidade razoável mas pouco expressiva), as vozes neuronais do
+\emph{edge-tts} (qualidade elevada, vozes europeias) e o \emph{Coqui~TTS}
+(local, com a possibilidade de \emph{voice cloning} a partir de uma
+amostra real — funcionalidade tecnicamente e eticamente rica, mas
+exigente em recursos). As opções efetivamente integradas no projeto
+discutem-se no \Cref{cap:implementacao}.
+
+\subsection{Ferramentas de código aberto por módulo}
+\label{sub:ferramentas}
+
+Um princípio orientador do projeto é o custo essencialmente nulo, através
+de ferramentas de código aberto e camadas gratuitas. A
+\Cref{tab:ferramentas} resume, por módulo, as tecnologias consideradas no
+estudo inicial — várias delas efetivamente adotadas.
+
+\begin{table}[H]
+\centering
+\caption{Ferramentas de código aberto / gratuitas consideradas, por
+módulo.}
+\label{tab:ferramentas}
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.4cm}Y@{}}
+\toprule
+\textbf{Módulo} & \textbf{Ferramentas} \\
+\midrule
+M1 — Ingestão & Google Gemini (visão, camada gratuita); Llama 3.2 Vision
+via Ollama (local); extração \textsc{exif}; Tesseract \textsc{ocr};
+\emph{parser} GEDCOM. \\
+M2 — Temporal & Lógica própria em Python; NetworkX para o grafo de
+parentesco. \\
+M3 — Narrativa & Ollama + Llama 3 / Mistral / Gemma (local); Google
+Gemini Flash (camada gratuita); Hugging Face Inference (com limites). \\
+M4 — Multimédia & MoviePy; gTTS / edge-tts / Coqui TTS; FFmpeg. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent Onde poderiam surgir custos — APIs comerciais de \textsc{llm}
+(GPT-4, Claude) em produção, ou APIs de geração de vídeo (Runway, Pika) —
+o projeto evita-os deliberadamente: inferência local com \emph{Ollama}
+durante o desenvolvimento e um \emph{slideshow} programático com MoviePy
+no lugar da geração de vídeo por IA.

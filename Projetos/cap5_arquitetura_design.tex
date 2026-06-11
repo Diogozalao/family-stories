@@ -1,0 +1,259 @@
+% =====================================================================
+%  CAPÍTULO 5 — ARQUITETURA E DESIGN DA SOLUÇÃO
+% =====================================================================
+\chapter{Arquitetura e Design da Solução}
+\label{cap:arquitetura}
+
+\section{Visão Global da Arquitetura}
+\label{sec:visao_global}
+
+O sistema segue uma arquitetura \textbf{cliente-servidor} de três camadas
+com um \emph{pipeline} de processamento de quatro estágios no núcleo do
+servidor. O cliente é uma \emph{Single-Page Application} (\textsc{spa})
+React; o servidor é uma API \textsc{rest} assíncrona em FastAPI; e a
+camada de dados é externalizada para serviços geridos do Supabase
+(autenticação, base de dados relacional e armazenamento de objetos). A
+\Cref{fig:arquitetura} representa a organização global e os fluxos
+principais.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  box/.style={rectangle,draw,rounded corners,align=center,
+              minimum height=0.95cm,minimum width=2.7cm,fill=white},
+  svc/.style={box,fill=ubiblue!10,draw=ubiblue},
+  mod/.style={box,fill=accent!16,draw=accent,minimum width=2.1cm,
+              minimum height=0.75cm},
+  arrow/.style={-{Latex[length=2.2mm]},thick},
+  dash/.style={-{Latex[length=2.2mm]},thick,dashed},
+]
+% Camadas principais
+\node[svc] (front) {\textbf{Frontend}\\React + TS\\(Vercel)};
+\node[svc,right=2.6cm of front] (api) {\textbf{Backend}\\FastAPI\\(Render/Docker)};
+
+% Pipeline
+\node[mod,above right=0.05cm and 2.1cm of api] (m1) {M1 · Ingestão};
+\node[mod,below=0.3cm of m1] (m2) {M2 · Temporal};
+\node[mod,below=0.3cm of m2] (m3) {M3 · Narrativa};
+\node[mod,below=0.3cm of m3] (m4) {M4 · Multimédia};
+
+% Dados e IA
+\node[svc,below=1.8cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
+\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Ollama (local)\\Gemini (nuvem)};
+
+\draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
+\draw[arrow] (api.east) -- (m1.west);
+\draw[arrow] (api.east) -- (m2.west);
+\draw[arrow] (api.east) -- (m3.west);
+\draw[arrow] (api.east) -- (m4.west);
+\draw[arrow] (api) -- node[right,font=\scriptsize]{ORM / Storage} (supa);
+\draw[dash] (front) to[bend right=12] node[below,font=\scriptsize,sloped]{auth} (supa);
+\draw[arrow] (m3.south) to[bend left=10] (ia.east);
+\draw[arrow] (m1.south) to[bend left=22] (ia.east);
+
+\begin{scope}[on background layer]
+  \node[draw=accent,dashed,rounded corners,inner sep=5pt,fit=(m1)(m4),
+        label={[font=\scriptsize\itshape,accent]above:Pipeline M1--M4}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{Arquitetura global: \emph{frontend} React, \emph{backend}
+FastAPI com \emph{pipeline} M1--M4, serviços geridos Supabase e camada de
+IA híbrida local/nuvem.}
+\label{fig:arquitetura}
+\end{figure}
+
+Uma característica determinante da arquitetura é que os módulos M1--M4
+\emph{não} são invocados diretamente no ciclo pedido-resposta da API:
+operações como o \textsc{ocr}, a inferência do \textsc{llm} e a montagem
+de vídeo podem demorar minutos. Por isso, intercala-se opcionalmente uma
+\textbf{fila de tarefas assíncrona} (Celery + Redis): o utilizador
+submete o pedido, a API coloca a tarefa na fila, e um \emph{worker}
+executa os módulos em segundo plano enquanto o \emph{frontend} mostra o
+progresso. A \Cref{fig:fullstack} apresenta uma vista detalhada,
+camada a camada, de toda a \emph{stack}.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\linewidth]{fullstack.png}
+\figph[8cm]{Diagrama vertical \emph{full-stack} (camada a camada):
+Frontend (React/Tailwind) $\rightarrow$ Segurança de rede (CORS, rate
+limiting) $\rightarrow$ Autenticação (JWT/Supabase) $\rightarrow$ API
+Gateway (FastAPI/Pydantic, validação) $\rightarrow$ Fila assíncrona
+(Celery+Redis) $\rightarrow$ Módulos M1, M2, M3, M4 $\rightarrow$ Camada
+de dados (Supabase Postgres + Storage). Existe um esboço deste diagrama
+no documento de estudo inicial que pode ser redesenhado.}
+\caption{Vista \emph{full-stack} detalhada das camadas do sistema.}
+\label{fig:fullstack}
+\end{figure}
+
+\section{Evolução Arquitetural: de \emph{local-first} a multi-inquilino}
+\label{sec:evolucao}
+
+O projeto nasceu com uma filosofia \textbf{\emph{local-first}}: toda a
+computação e persistência ocorriam na máquina do utilizador, com
+autenticação \textsc{jwt} \textsc{hs256} própria, base de dados SQLite e
+ficheiros guardados localmente. Este desenho cumpria o princípio de que
+\emph{nenhum dado saísse da máquina}, e corresponde ao que foi inicialmente
+planeado: SQLite como base de dados estruturada e o sistema de ficheiros
+para os \emph{media} originais.
+
+A necessidade de disponibilizar o sistema publicamente motivou uma
+\textbf{migração para uma arquitetura de nuvem multi-inquilino}:
+
+\begin{itemize}[leftmargin=*]
+  \item A \textbf{autenticação} passou de um fluxo HS256 próprio para o
+  \textbf{Supabase Auth}, com tokens assinados por chave ECC P-256 e
+  validados contra o \emph{endpoint} JWKS público.
+  \item O \textbf{modelo de domínio} deixou de ser \emph{single-owner}
+  para \emph{multi-tenant}: todas as entidades referenciam um
+  \texttt{user\_id} (\textsc{uuid}) e todas as consultas filtram por esse
+  campo.
+  \item O \textbf{armazenamento} migrou do disco local para o
+  \textbf{Supabase Storage}, passando a referência de cada ficheiro a ser
+  uma chave de objeto em vez de um caminho de disco.
+\end{itemize}
+
+A capacidade de inferência local (Ollama) manteve-se como modo
+privilegiado para privacidade, sendo a nuvem (Gemini) um recurso de
+\emph{fallback}. Esta evolução é um exemplo concreto de compromisso
+maduro entre acessibilidade, privacidade e escalabilidade.
+
+\section{Modelo de Dados}
+\label{sec:modelo_dados}
+
+A camada de persistência relacional é modelada com SQLAlchemy e materializada
+em PostgreSQL (Supabase). As entidades principais são:
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{MediaFile} — cada ficheiro carregado (fotografia,
+  documento, vídeo). Guarda o nome original, a chave de objeto no Storage,
+  os metadados \textsc{exif} (data, GPS, câmara), os campos de análise de
+  IA (\texttt{ai\_description}, \texttt{ai\_setting}, \texttt{ai\_emotion},
+  \texttt{ai\_tags}, \texttt{ai\_narrative\_hint}), o texto de \textsc{ocr}
+  e o estado de processamento.
+  \item \texttt{Person} — cada pessoa importada do GEDCOM (nome, datas,
+  locais, identificador GEDCOM, etiqueta de família).
+  \item \texttt{TimelineEvent} — eventos da linha temporal (título,
+  descrição, tipo, local, data resolvida).
+  \item \texttt{Story} — narrativa gerada (título, texto, tipo de evento,
+  \emph{template} usado, \emph{backend} de \textsc{llm}, número de factos
+  usados, \emph{prompt}, idioma, projeto associado).
+  \item \texttt{VideoOutput} — vídeo gerado (nome, chave de objeto,
+  tamanho, fotografias usadas, estado, história e projeto associados).
+  \item \texttt{Project} e \texttt{ProjectMedia} — projetos (coleções) e
+  a relação muitos-para-muitos com as fotografias.
+  \item \texttt{TaskRecord} — registo de tarefas assíncronas (estado,
+  \emph{payload}, carimbos temporais, erro).
+\end{itemize}
+
+Uma fronteira de tipos relevante: o \texttt{user\_id} é um \textsc{uuid}
+(proveniente do Supabase Auth), ao passo que as chaves primárias das
+entidades de domínio são inteiros sequenciais do PostgreSQL. A
+\Cref{fig:er} apresenta o diagrama entidade-relação.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\linewidth]{modelo_er.png}
+\figph[7.5cm]{Diagrama Entidade-Relação (ER). Entidades:
+MediaFile, Person, TimelineEvent, Story, VideoOutput, Project,
+ProjectMedia, TaskRecord — todas com \texttt{user\_id} (UUID). Relações:
+Project~1--N~ProjectMedia~N--1~MediaFile; Story~1--N~VideoOutput;
+Story~N--1~Project. Sugestão: gerar a partir dos modelos SQLAlchemy
+(e.g.\ com \texttt{eralchemy} ou draw.io).}
+\caption{Modelo de dados (diagrama entidade-relação).}
+\label{fig:er}
+\end{figure}
+
+\section{Design de Interface (UI/UX)}
+\label{sec:uiux}
+
+\subsection{Princípios e sistema de design}
+
+O \emph{design} visual procura evocar o \textbf{calor do arquivo
+familiar}. Assenta numa paleta \emph{amber}/\emph{stone} (tons quentes
+que remetem para fotografias antigas e luz de candeeiro), com acentos
+secundários sóbrios. A tipografia é dupla: \emph{Inter} para a interface
+(legibilidade) e \emph{Fraunces} (serifada) para títulos e para a prosa
+do leitor de histórias, conferindo um registo literário. As animações são
+discretas (\emph{fade-in}, \emph{slide-up}, \emph{skeletons} de
+carregamento), com recurso ao \emph{Framer Motion}.
+
+Um detalhe de implementação relevante para a experiência é o
+\textbf{tema} (claro/escuro/sistema): um \emph{script} embutido no
+cabeçalho lê a preferência guardada \emph{antes} do primeiro
+\emph{paint}, evitando o desagradável ``flash'' de tema errado ao
+carregar a página.
+
+\subsection{Estrutura de navegação}
+
+A aplicação organiza-se em rotas \textbf{públicas} (\emph{landing}/login,
+registo, recuperação de palavra-passe, ``sobre'') e \textbf{protegidas},
+acessíveis após autenticação através de uma barra lateral
+(\emph{sidebar}) responsiva. As secções principais são: \emph{Dashboard},
+\emph{Biblioteca}, \emph{Projetos}, \emph{Família}, \emph{Linha
+temporal}, \emph{Histórias}, \emph{Vídeos}, \emph{Gerar}, \emph{Tarefas} e
+\emph{Definições}.
+
+\subsection{Ecrãs principais}
+
+As figuras seguintes documentam os ecrãs centrais da aplicação. Devem ser
+substituídas por capturas de ecrã reais do sistema em funcionamento.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\linewidth]{ui_dashboard.png}
+\figph[6cm]{Captura de ecrã: \emph{Dashboard} — estatísticas (fotos,
+histórias, vídeos, pessoas), ações rápidas e itens recentes.}
+\caption{Página inicial (\emph{Dashboard}).}
+\label{fig:ui_dashboard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Biblioteca} — galeria com
+  \emph{drag-and-drop} e \emph{lightbox}.}
+  \caption{Biblioteca de fotografias.}
+  \label{fig:ui_library}
+\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: assistente \emph{Gerar} — passos de seleção de
+  tema, tom e idioma.}
+  \caption{Assistente de geração.}
+  \label{fig:ui_generate}
+\end{subfigure}
+\caption{Ecrãs de biblioteca e de geração de narrativa.}
+\label{fig:ui_pair}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Leitor de histórias} — tipografia
+  serifada com \emph{drop-cap}.}
+  \caption{Leitor de histórias.}
+  \label{fig:ui_reader}
+\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Vídeos} — cartões com \emph{player}
+  modal e estado de geração.}
+  \caption{Galeria de vídeos.}
+  \label{fig:ui_videos}
+\end{subfigure}
+\caption{Ecrãs de leitura de histórias e de reprodução de vídeos.}
+\label{fig:ui_pair2}
+\end{figure}
+
+\subsection{Internacionalização e acessibilidade}
+
+Toda a interface está disponível em \textbf{português europeu} (omissão)
+e \textbf{inglês}, com a preferência persistida e o atributo
+\texttt{<html lang>} sincronizado. Ao nível da acessibilidade, existem
+rótulos \textsc{aria} e navegação por teclado (por exemplo, no
+\emph{lightbox} da biblioteca); uma auditoria formal de conformidade
+\textsc{wcag} é apontada como trabalho futuro (\Cref{cap:conclusoes}).

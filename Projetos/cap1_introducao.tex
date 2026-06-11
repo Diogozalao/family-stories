@@ -1,0 +1,153 @@
+% =====================================================================
+%  CAPÍTULO 1 — INTRODUÇÃO
+% =====================================================================
+\chapter{Introdução}
+\label{cap:introducao}
+
+\section{Contextualização}
+\label{sec:contextualizacao}
+
+O interesse global pela genealogia e pela história familiar cresceu de
+forma acentuada nas últimas décadas. A digitalização massiva de registos
+históricos e a democratização do acesso à internet permitiram que
+praticamente qualquer pessoa pudesse investigar as suas origens; em
+paralelo, os testes de \textsc{dna} de ascendência abriram caminho para
+que muitos, com origens até então desconhecidas, encontrassem finalmente
+respostas. Plataformas como a \emph{Ancestry}, a \emph{MyHeritage}, a
+\emph{FamilySearch} e a \emph{Findmypast} agregam hoje milhares de milhões
+de registos e sustentam uma verdadeira era moderna de descoberta
+familiar~\cite{familytreemag}.
+
+Paralelamente a este movimento, a esmagadora maioria das memórias
+familiares contemporâneas existe já em formato digital — fotografias no
+telemóvel, vídeos no computador, documentos digitalizados. Contudo, esse
+material encontra-se tipicamente \emph{disperso}, \emph{desorganizado} e
+\emph{vulnerável}: vive espalhado por dispositivos, serviços de nuvem e
+álbuns esquecidos, sem datação coerente, sem identificação das pessoas e,
+sobretudo, sem qualquer fio narrativo que lhe dê sentido. À medida que os
+membros mais velhos de uma família desaparecem, perde-se com eles o
+contexto que tornava aquelas imagens significativas.
+
+Os avanços recentes em \textbf{inteligência artificial generativa} — em
+particular os \emph{Large Language Models} (\textsc{llm}) e os modelos
+multimodais capazes de interpretar imagens — criam, pela primeira vez, a
+possibilidade técnica de transformar este acervo passivo num produto
+narrativo vivo. É neste cruzamento entre preservação da memória familiar
+e IA generativa que se enquadra o presente projeto.
+
+\section{Definição do Problema}
+\label{sec:problema}
+
+As soluções existentes no mercado endereçam apenas parcialmente o
+problema. As grandes plataformas de genealogia são excelentes a
+\emph{agregar registos} e a \emph{construir árvores}, mas não produzem
+narrativa. Ferramentas de consumo como o \emph{Google~Photos} ou o
+\emph{Apple~Memories} geram \emph{slideshows} automáticos visualmente
+agradáveis, mas limitam-se a selecionar fotografias por critérios
+algorítmicos, sem construir uma história coerente nem integrar dados de
+múltiplas fontes (fotografias, documentos, árvores genealógicas). O que
+falta — e que constitui o problema central deste trabalho — é a
+\textbf{profundidade narrativa}: a capacidade de cruzar material
+heterogéneo e dele extrair, de forma automática, uma história
+factualmente ancorada, emocionalmente significativa e linguisticamente
+correta.
+
+Formalmente, o problema pode enunciar-se assim: \emph{dado um conjunto
+heterogéneo e não estruturado de material de arquivo familiar
+(fotografias com metadados, documentos digitalizados e uma árvore
+genealógica), como produzir automaticamente — sem intervenção manual de
+escrita — uma narrativa textual coerente e um vídeo documental narrado,
+factualmente fiéis ao material fornecido e expressos em português
+europeu?}
+
+Este problema levanta vários desafios técnicos não triviais, que se
+discutem em detalhe no \Cref{cap:estado_arte}: a \emph{alucinação} dos
+modelos generativos (invenção de factos), a \emph{coerência temporal}
+entre fontes com datas conflituosas, a \emph{identificação de pessoas} no
+material e a própria \emph{avaliação da qualidade} narrativa.
+
+\section{Objetivos}
+\label{sec:objetivos}
+
+\subsection{Objetivo geral}
+
+Conceber, desenvolver e validar um sistema que receba material familiar
+já existente e o transforme automaticamente numa narrativa multimédia —
+concretamente, num vídeo documental narrado — recorrendo a inteligência
+artificial generativa, com uma interface acessível e intuitiva.
+
+\subsection{Objetivos específicos}
+
+\begin{enumerate}[label=\textbf{O\arabic*.},leftmargin=*]
+  \item \textbf{Ingerir e compreender material multimodal}: processar
+  fotografias (metadados \textsc{exif} e conteúdo visual), documentos
+  digitalizados (\textsc{ocr}) e árvores genealógicas (\textsc{gedcom}).
+  \item \textbf{Estruturar temporalmente} os factos extraídos, resolvendo
+  datas incompletas ou conflituosas e modelando explicitamente as
+  relações de parentesco num grafo familiar.
+  \item \textbf{Gerar narrativas} fluidas e factualmente ancoradas, em
+  português europeu, controlando o tom e a estrutura através de
+  \emph{templates} temáticos e de técnicas de \emph{prompt engineering}.
+  \item \textbf{Produzir vídeos documentais} que combinem as fotografias
+  animadas (efeito \emph{Ken~Burns}), a narração por síntese de voz e
+  elementos cinematográficos (títulos, legendas, transições).
+  \item \textbf{Disponibilizar} estas capacidades através de uma aplicação
+  Web moderna, segura, multilingue e implantada na nuvem.
+  \item \textbf{Garantir privacidade e baixo custo}, privilegiando
+  inferência local e ferramentas de código aberto, com recurso a serviços
+  de nuvem apenas como complemento.
+\end{enumerate}
+
+\section{Resultados Desejados e Âmbito}
+\label{sec:ambito}
+
+O âmbito do projeto, definido em articulação com a orientação, fixa
+quatro tipos de \emph{input} — fotografias, vídeos, documentos e
+informação genealógica — e um \emph{output} principal: um pequeno vídeo
+documental ou \emph{slideshow} narrado, gerado automaticamente a partir
+desse material. Dadas as limitações tecnológicas (e de custo) da geração
+de vídeo longo por IA, o projeto concentra-se deliberadamente em
+\emph{incrementos narrativos curtos} — segmentos de história que podem,
+eventualmente, ser combinados numa narrativa mais longa. Esta opção é
+academicamente defensável: um \emph{slideshow} narrado de alta qualidade,
+construído programaticamente, cumpre integralmente os objetivos sem
+depender de APIs de geração de vídeo dispendiosas.
+
+\section{Contribuições}
+\label{sec:contribuicoes}
+
+As principais contribuições deste trabalho são:
+
+\begin{itemize}[leftmargin=*]
+  \item Uma \textbf{arquitetura modular em \emph{pipeline}} (M1--M4) que
+  separa claramente ingestão, organização temporal, geração textual e
+  produção multimédia.
+  \item Um \textbf{subsistema RAG multi-inquilino com degradação
+  graciosa}, que mantém o sistema funcional mesmo sem base vetorial.
+  \item Um conjunto de \textbf{\emph{templates} de geração calibrados para
+  português europeu}, que mitigam a tendência dos modelos para o
+  português do Brasil.
+  \item Uma \textbf{estratégia de IA híbrida local/nuvem}, conciliando
+  privacidade (inferência local) e robustez (\emph{fallback} remoto).
+  \item Uma \textbf{aplicação Web completa e implantada}, do
+  \emph{frontend} ao \emph{deployment} na nuvem.
+\end{itemize}
+
+\section{Estrutura do Documento}
+\label{sec:estrutura}
+
+O presente relatório encontra-se organizado em oito capítulos. O
+\textbf{\Cref{cap:introducao}} (este) apresenta o contexto, o problema e
+os objetivos. O \textbf{\Cref{cap:estado_arte}} analisa as soluções
+existentes e enquadra teoricamente os conceitos fundamentais (LLM,
+multimodalidade, RAG, geração de narrativa e de vídeo). O
+\textbf{\Cref{cap:metodologia}} descreve a metodologia de desenvolvimento
+e justifica a \emph{stack} tecnológica. O \textbf{\Cref{cap:requisitos}}
+formaliza os requisitos funcionais e não funcionais e os casos de uso. O
+\textbf{\Cref{cap:arquitetura}} apresenta a arquitetura do sistema, o
+modelo de dados e o \emph{design} de interface. O
+\textbf{\Cref{cap:implementacao}} detalha a implementação dos quatro
+módulos e as decisões técnicas, com excertos de código críticos. O
+\textbf{\Cref{cap:testes}} cobre a validação e os testes. Por fim, o
+\textbf{\Cref{cap:conclusoes}} sintetiza os resultados, discute as
+limitações e aponta o trabalho futuro.
