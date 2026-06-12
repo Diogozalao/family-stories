@@ -10,6 +10,18 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-11 — M1: análise de IA diferida (upload não bloqueia)
+
+- **[Reescrita]** `cap6_implementacao.tex` · §M1 — nova ordem do pipeline
+  (security → EXIF → Storage → IA) e novo parágrafo *"Análise diferida"*:
+  a parte lenta (Gemini/OCR) passa para segundo plano via executor
+  in-process; a foto fica logo visível e a descrição preenche-se depois.
+
+> Reflete código já implementado e testado (36 testes unitários a passar).
+> Sem migração de BD. Frontend: polling da biblioteca + indicador "a analisar".
+
+---
+
 ## 2026-06-11 — Geração assíncrona in-process (sem Celery na nuvem)
 
 - **[Reescrita]** `cap6_implementacao.tex` · §"Fila de tarefas e sweep de

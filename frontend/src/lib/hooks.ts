@@ -108,6 +108,16 @@ export function useMedia() {
   return useQuery<MediaFile[]>({
     queryKey: ["media"],
     queryFn: async () => (await api.get("/api/v1/media")).data,
+    // While any photo is still being analysed in the background (M1 defers
+    // the slow Gemini/OCR step), poll so the description/status fill in on
+    // their own. Stops polling once everything is settled.
+    refetchInterval: (query) => {
+      const data = query.state.data as MediaFile[] | undefined;
+      const pending = data?.some(
+        (m) => m.status === "processing" || m.status === "pending",
+      );
+      return pending ? 4000 : false;
+    },
   });
 }
 

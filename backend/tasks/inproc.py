@@ -55,3 +55,20 @@ def run_in_background(
     _EXECUTOR.submit(_runner)
     log.info("inproc_task_scheduled", task_record_id=task_record_id, id=synthetic_id)
     return synthetic_id
+
+
+def submit(body_factory: Callable[[], Awaitable[dict]], *, label: str = "task") -> None:
+    """Fire-and-forget a coroutine on the background pool, without a TaskRecord.
+
+    Used for work that already has its own status column to poll (e.g. M1
+    media analysis updates ``media_files.status``), so a separate
+    ``task_records`` row — and its toast — would only be noise.
+    """
+    def _runner() -> None:
+        try:
+            run_async(body_factory())
+        except Exception:
+            log.warning("inproc_submit_errored", label=label)
+
+    _EXECUTOR.submit(_runner)
+    log.info("inproc_submit_scheduled", label=label)

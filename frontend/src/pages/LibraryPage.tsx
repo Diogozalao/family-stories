@@ -133,6 +133,12 @@ export default function LibraryPage() {
                   onClick={() => setViewerIndex(idx)}
                   className="h-full w-full cursor-zoom-in object-cover transition duration-500 group-hover:scale-105"
                 />
+                {(m.status === "processing" || m.status === "pending") && (
+                  <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {t("library.analyzing")}
+                  </span>
+                )}
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/40 to-transparent p-3">
                   <p className="truncate text-xs font-medium text-white/95">{m.original_filename}</p>
                   <div className="flex items-center gap-2 text-[10px] text-white/60">

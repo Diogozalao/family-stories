@@ -33,7 +33,7 @@ from backend.core.supabase_storage import (
     invalidate_signed_url,
 )
 from backend.core.upload_validator import validate_photo
-from backend.models.media import MediaFile
+from backend.models.media import MediaFile, ProcessingStatus
 from backend.modules.m1_ingestion.processor import M1Processor
 from backend.schemas.media import MediaFileResponse, UploadResponse
 
@@ -46,13 +46,28 @@ MAX_BATCH_FILES  = 50
 
 
 async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id) -> MediaFile:
-    """Hand validated bytes off to M1 — no disk persistence at this layer."""
-    return await processor.process(
+    """Hand validated bytes off to M1.
+
+    Runs only the fast part in-request (security scan, EXIF, Storage upload)
+    and schedules the slow AI analysis (Gemini Vision / OCR) to run in the
+    background, so the upload returns quickly and the photo is immediately
+    viewable. The row stays ``PROCESSING`` until the analysis completes.
+    """
+    record = await processor.process(
         content           = content,
         original_filename = file.filename,
         db                = db,
         user_id           = user_id,
+        defer_ai          = True,
     )
+    # Only schedule analysis when the fast part left the row PROCESSING —
+    # a row that failed the security scan has nothing left to analyse.
+    if record.status == ProcessingStatus.PROCESSING:
+        from backend.tasks.bodies import analyze_media_body
+        from backend.tasks.inproc import submit
+        media_id = record.id
+        submit(lambda: analyze_media_body(media_id, user_id), label=f"analyze-media-{media_id}")
+    return record
 
 
 @router.post("/upload", response_model=UploadResponse)

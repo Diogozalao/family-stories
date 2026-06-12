@@ -217,6 +217,7 @@ export default {
     dropzone: "Drag photos here or",
     browseFiles: "browse files",
     uploading: "Uploading {{current}} of {{total}}…",
+    analyzing: "analysing…",
     empty: "No photos yet. Start by uploading a few.",
     photoCount: "{{count}} photo",
     photoCount_plural: "{{count}} photos",

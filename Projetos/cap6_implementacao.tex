@@ -16,9 +16,9 @@ que melhor ilustram as decisões técnicas.
 
 O M1 é o ponto de entrada de todo o material. Recebe os \emph{bytes} de um
 ficheiro e orquestra uma cadeia de processamento: \emph{security scan}
-$\rightarrow$ \textsc{exif} $\rightarrow$ análise visual $\rightarrow$
-\textsc{ocr} $\rightarrow$ carregamento para o \emph{Storage}, persistindo
-no fim um registo \texttt{MediaFile}.
+$\rightarrow$ \textsc{exif} $\rightarrow$ carregamento para o \emph{Storage}
+$\rightarrow$ análise visual $\rightarrow$ \textsc{ocr}, persistindo um
+registo \texttt{MediaFile}.
 
 O processamento decorre sobre um ficheiro temporário (as bibliotecas de
 \textsc{exif}/\textsc{ocr}/visão esperam um caminho de sistema), sempre
@@ -40,6 +40,18 @@ etapas são:
   \item[\textsc{ocr}.] Para documentos, o \textbf{Tesseract} extrai
   texto, enriquecendo o contexto factual.
 \end{description}
+
+\textbf{Análise diferida.} O passo mais lento do M1 é a análise visual
+(uma chamada de rede ao Gemini, da ordem dos segundos). Para que o
+carregamento não bloqueie — sobretudo em lotes de muitas fotografias — o
+M1 executa apenas a parte rápida no próprio pedido HTTP (\emph{security
+scan}, \textsc{exif} e o carregamento para o \emph{Storage}) e \emph{difere}
+a análise de IA (Gemini / \textsc{ocr}) para segundo plano, através do
+executor \emph{in-process} (\Cref{sec:impl_backend}). A fotografia fica
+imediatamente visível (já está no \emph{Storage}); o registo permanece em
+\texttt{PROCESSING} e a descrição preenche-se quando a análise termina,
+sinalizada na interface por um indicador ``a analisar''. O \emph{frontend}
+faz \emph{polling} da biblioteca enquanto houver registos por concluir.
 
 A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}
 dedicado (o maior módulo, $\approx$380 linhas), que converte o ficheiro em

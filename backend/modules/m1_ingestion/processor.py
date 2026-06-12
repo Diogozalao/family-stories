@@ -16,9 +16,10 @@ import uuid
 from pathlib import Path
 
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.supabase_storage import object_key_for, upload_bytes
+from backend.core.supabase_storage import download_to_disk, object_key_for, upload_bytes
 from backend.models.media import MediaFile, MediaType, ProcessingStatus
 from backend.modules.m1_ingestion.exif_extractor import ExifExtractor
 from backend.modules.m1_ingestion.gemini_analyzer import GeminiAnalyzer
@@ -57,8 +58,15 @@ class M1Processor:
         db:                AsyncSession,
         user_id,
         ai_override:       dict | None = None,
+        defer_ai:          bool = False,
     ) -> MediaFile:
         """Ingest ``content`` for ``user_id`` and persist a ``MediaFile`` row.
+
+        With ``defer_ai=True`` only the fast, in-request work runs — security
+        scan, EXIF and the Storage upload — leaving the row in
+        ``PROCESSING`` so the slow AI analysis (Gemini Vision / OCR) can run
+        later via :meth:`analyze`. The photo is already in Storage, so it is
+        immediately viewable; only its description fills in afterwards.
 
         Returns the committed (and refreshed) ORM record.
         """
@@ -116,27 +124,26 @@ class M1Processor:
                 record.camera_model = exif_data.get("camera_model")
                 record.raw_exif     = exif_data.get("raw_exif")
 
-            if media_type == MediaType.PHOTO:
-                log.info("m1_gemini", file=original_filename)
-                ai_data = ai_override if ai_override else self.gemini.analyze(tmp_path)
-                record.ai_description    = ai_data.get("ai_description")
-                record.ai_people_count   = ai_data.get("ai_people_count")
-                record.ai_setting        = ai_data.get("ai_setting")
-                record.ai_emotion        = ai_data.get("ai_emotion")
-                record.ai_tags           = ai_data.get("ai_tags")
-                record.ai_narrative_hint = ai_data.get("ai_narrative_hint")
-
-            if media_type == MediaType.DOCUMENT:
-                log.info("m1_ocr", file=original_filename)
-                record.ocr_text = self.ocr.extract(tmp_path)
-
-            # Only push to Storage after a clean security scan — we never
-            # want to host bytes the scanner flagged unsafe.
+            # Push to Storage right after a clean security scan — we never
+            # host bytes the scanner flagged unsafe, but we DO want the photo
+            # available before the (slow) AI analysis so it shows up at once.
             log.info("m1_storage_upload", key=object_key)
             await upload_bytes(object_key, content, content_type=mime)
 
-            record.status = ProcessingStatus.COMPLETED
-            log.info("m1_complete", file=original_filename, id=record.id, key=object_key)
+            # Slow AI work. When deferred, leave the row PROCESSING and let
+            # ``analyze`` (run in the background) fill these fields in later.
+            if ai_override:
+                self._apply_ai(record, ai_override)
+                record.status = ProcessingStatus.COMPLETED
+            elif defer_ai:
+                log.info("m1_ai_deferred", file=original_filename, id=record.id)
+                # status stays PROCESSING; analysis happens out of band.
+            else:
+                self._run_ai(record, tmp_path, media_type, original_filename)
+                record.status = ProcessingStatus.COMPLETED
+
+            log.info("m1_ingested", file=original_filename, id=record.id,
+                     key=object_key, status=record.status.value)
 
         except Exception as exc:
             log.error("m1_failed", file=original_filename, error=str(exc))
@@ -150,6 +157,68 @@ class M1Processor:
                 tmp_dir.rmdir()
             except OSError as exc:
                 log.warning("m1_tmp_cleanup_failed", path=str(tmp_dir), error=str(exc))
+
+        await db.commit()
+        await db.refresh(record)
+        return record
+
+    # ── AI analysis helpers ──────────────────────────────────────────────
+
+    @staticmethod
+    def _apply_ai(record: MediaFile, ai_data: dict) -> None:
+        """Copy Gemini Vision fields onto the record."""
+        record.ai_description    = ai_data.get("ai_description")
+        record.ai_people_count   = ai_data.get("ai_people_count")
+        record.ai_setting        = ai_data.get("ai_setting")
+        record.ai_emotion        = ai_data.get("ai_emotion")
+        record.ai_tags           = ai_data.get("ai_tags")
+        record.ai_narrative_hint = ai_data.get("ai_narrative_hint")
+
+    def _run_ai(self, record: MediaFile, path: Path, media_type: MediaType,
+                filename: str) -> None:
+        """Run the slow AI analysis (Gemini for photos, OCR for documents)."""
+        if media_type == MediaType.PHOTO:
+            log.info("m1_gemini", file=filename)
+            self._apply_ai(record, self.gemini.analyze(path))
+        if media_type == MediaType.DOCUMENT:
+            log.info("m1_ocr", file=filename)
+            record.ocr_text = self.ocr.extract(path)
+
+    async def analyze(self, media_id: int, db: AsyncSession, user_id) -> MediaFile | None:
+        """Run the deferred AI analysis for an already-uploaded media row.
+
+        Downloads the file back from Storage into a temp dir, runs Gemini /
+        OCR, and flips the row to ``COMPLETED`` (or ``FAILED``). Idempotent:
+        a row that's already completed is returned untouched.
+        """
+        record = (await db.execute(
+            select(MediaFile).where(MediaFile.id == media_id, MediaFile.user_id == user_id)
+        )).scalar_one_or_none()
+        if record is None:
+            log.warning("m1_analyze_missing", media_id=media_id)
+            return None
+        if record.status == ProcessingStatus.COMPLETED:
+            return record
+        if not record.file_path:
+            return record
+
+        tmp_dir  = Path(tempfile.mkdtemp(prefix="m1_analyze_"))
+        tmp_path = tmp_dir / (record.stored_filename or f"{media_id}")
+        try:
+            await download_to_disk(record.file_path, tmp_path)
+            self._run_ai(record, tmp_path, record.media_type, record.original_filename)
+            record.status = ProcessingStatus.COMPLETED
+            log.info("m1_analyze_complete", media_id=media_id)
+        except Exception as exc:
+            log.error("m1_analyze_failed", media_id=media_id, error=str(exc))
+            record.status        = ProcessingStatus.FAILED
+            record.error_message = str(exc)
+        finally:
+            try:
+                tmp_path.unlink(missing_ok=True)
+                tmp_dir.rmdir()
+            except OSError:
+                pass
 
         await db.commit()
         await db.refresh(record)
