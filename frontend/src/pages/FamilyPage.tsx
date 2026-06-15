@@ -62,6 +62,7 @@ export default function FamilyPage() {
         skipped > 0
           ? t("family.importedSummaryWithSkipped", { created: count, skipped, label: lbl })
           : t("family.importedSummary", { count, label: lbl }),
+        { description: `${r.families_processed ?? 0} famílias · ${r.relations_added ?? 0} ligações` },
       );
       setPendingFile(null);
       setLabelInput("");
