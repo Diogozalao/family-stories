@@ -380,6 +380,24 @@ export function useDeleteRelationship() {
   });
 }
 
+export interface BulkPersonInput {
+  ref: string;
+  name: string;
+  sex?: string | null;
+  birth_date?: string | null;
+  family_label?: string | null;
+}
+export interface BulkRelInput { from_ref: string; to_ref: string; kind: string }
+
+export function useBulkTree() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (input: { persons: BulkPersonInput[]; relationships: BulkRelInput[] }) =>
+      (await api.post("/api/v1/genealogy/tree/bulk", input)).data,
+    onSuccess: invalidate,
+  });
+}
+
 // ── Timeline ────────────────────────────────────────────────────────────
 export function useTimeline() {
   return useQuery<TimelineEvent[]>({

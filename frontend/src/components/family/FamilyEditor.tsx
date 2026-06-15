@@ -3,10 +3,11 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Check, Loader2, Pencil, Plus, Trash2, Users, X } from "lucide-react";
 
-import { extractErrorMessage } from "../../lib/api";
+import { extractErrorMessage, isLostResponse } from "../../lib/api";
 import {
-  useCreatePerson, useCreateRelationship, useDeletePerson,
+  useBulkTree, useCreatePerson, useCreateRelationship, useDeletePerson,
   useDeleteRelationship, useFamilyTree, useUpdatePerson,
+  type BulkPersonInput, type BulkRelInput,
 } from "../../lib/hooks";
 import type { Person } from "../../lib/types";
 
@@ -127,6 +128,10 @@ const PEDIGREE_FIELDS: { key: string; label: string; sex: string | null }[] = [
   { key: "avoMaterno", label: "Avô materno",   sex: "M" },
   { key: "avoMaterna", label: "Avó materna",   sex: "F" },
 ];
+const SEX_OF_ROLE: Record<string, string | null> =
+  Object.fromEntries(PEDIGREE_FIELDS.map((f) => [f.key, f.sex]));
+
+type Extra = { name: string; rel: "conjuge" | "filho"; target: string };
 
 function PedigreeWizard({
   familyLabel, onClose,
@@ -135,53 +140,93 @@ function PedigreeWizard({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
-  const create = useCreatePerson();
-  const createRel = useCreateRelationship();
+  const bulk = useBulkTree();
   const [vals, setVals] = useState<Record<string, string>>({});
   const [siblings, setSiblings] = useState("");
+  const [extras, setExtras] = useState<Extra[]>([]);
   const [busy, setBusy] = useState(false);
 
-  const dirty = Object.values(vals).some((x) => x?.trim()) || siblings.trim().length > 0;
+  const dirty =
+    Object.values(vals).some((x) => x?.trim()) ||
+    siblings.trim().length > 0 ||
+    extras.some((e) => e.name.trim());
+
+  // Roles that actually have a name — valid targets to link extra people to.
+  const namedRoles = PEDIGREE_FIELDS.filter((f) => (vals[f.key] ?? "").trim());
 
   const close = () => {
     if (dirty && !window.confirm(t("family.editor.confirmLeave"))) return;
     onClose();
   };
 
+  const buildPayload = (): { persons: BulkPersonInput[]; relationships: BulkRelInput[] } => {
+    const persons: BulkPersonInput[] = [];
+    const rel: BulkRelInput[] = [];
+    const fl = familyLabel ?? null;
+
+    for (const f of PEDIGREE_FIELDS) {
+      persons.push({ ref: f.key, name: (vals[f.key] ?? "").trim(), sex: f.sex, family_label: fl });
+    }
+    // Core pedigree links (backend drops any whose person wasn't created).
+    rel.push(
+      { from_ref: "pai", to_ref: "eu", kind: "pai" },
+      { from_ref: "mae", to_ref: "eu", kind: "mãe" },
+      { from_ref: "avoPaterno", to_ref: "pai", kind: "pai" },
+      { from_ref: "avoPaterna", to_ref: "pai", kind: "mãe" },
+      { from_ref: "avoMaterno", to_ref: "mae", kind: "pai" },
+      { from_ref: "avoMaterna", to_ref: "mae", kind: "mãe" },
+      { from_ref: "pai", to_ref: "mae", kind: "cônjuge" },
+      { from_ref: "avoPaterno", to_ref: "avoPaterna", kind: "cônjuge" },
+      { from_ref: "avoMaterno", to_ref: "avoMaterna", kind: "cônjuge" },
+    );
+
+    siblings.split(",").map((s) => s.trim()).filter(Boolean).forEach((nm, i) => {
+      const ref = `sib${i}`;
+      persons.push({ ref, name: nm, sex: null, family_label: fl });
+      rel.push({ from_ref: "pai", to_ref: ref, kind: "pai" });
+      rel.push({ from_ref: "mae", to_ref: ref, kind: "mãe" });
+    });
+
+    extras.forEach((ex, i) => {
+      if (!ex.name.trim() || !ex.target) return;
+      const ref = `extra${i}`;
+      persons.push({ ref, name: ex.name.trim(), sex: null, family_label: fl });
+      if (ex.rel === "conjuge") {
+        rel.push({ from_ref: ref, to_ref: ex.target, kind: "cônjuge" });
+      } else {
+        // "filho(a) de target": target is the parent of this new person.
+        const kind = SEX_OF_ROLE[ex.target] === "F" ? "mãe" : "pai";
+        rel.push({ from_ref: ex.target, to_ref: ref, kind });
+      }
+    });
+
+    return { persons, relationships: rel };
+  };
+
   const build = async () => {
     setBusy(true);
+    const payload = buildPayload();
     try {
-      const mk = async (name: string, sex: string | null): Promise<number | null> => {
-        if (!name?.trim()) return null;
-        const p = await create.mutateAsync({ name: name.trim(), sex, family_label: familyLabel ?? null });
-        return p.id;
-      };
-      const rel = async (from: number | null, to: number | null, kind: string) => {
-        if (from && to) await createRel.mutateAsync({ from_person_id: from, to_person_id: to, kind });
-      };
-
-      const id: Record<string, number | null> = {};
-      for (const f of PEDIGREE_FIELDS) id[f.key] = await mk(vals[f.key] ?? "", f.sex);
-
-      await rel(id.pai, id.eu, "pai");
-      await rel(id.mae, id.eu, "mãe");
-      await rel(id.avoPaterno, id.pai, "pai");
-      await rel(id.avoPaterna, id.pai, "mãe");
-      await rel(id.avoMaterno, id.mae, "pai");
-      await rel(id.avoMaterna, id.mae, "mãe");
-      await rel(id.pai, id.mae, "cônjuge");
-      await rel(id.avoPaterno, id.avoPaterna, "cônjuge");
-      await rel(id.avoMaterno, id.avoMaterna, "cônjuge");
-
-      for (const nm of siblings.split(",").map((s) => s.trim()).filter(Boolean)) {
-        const sib = await mk(nm, null);
-        await rel(id.pai, sib, "pai");
-        await rel(id.mae, sib, "mãe");
-      }
-
+      await bulk.mutateAsync(payload);
       toast.success(t("common.success"));
       onClose();
     } catch (err) {
+      // One atomic request: a cold-start drop usually means it never landed,
+      // so a single retry after a beat is safe.
+      if (isLostResponse(err)) {
+        try {
+          await new Promise((r) => setTimeout(r, 2500));
+          await bulk.mutateAsync(payload);
+          toast.success(t("common.success"));
+          onClose();
+          return;
+        } catch (err2) {
+          toast.error(extractErrorMessage(err2));
+          return;
+        } finally {
+          setBusy(false);
+        }
+      }
       toast.error(extractErrorMessage(err));
     } finally {
       setBusy(false);
@@ -219,6 +264,55 @@ function PedigreeWizard({
           <label className="label">{t("family.editor.siblings")}</label>
           <input className="input" value={siblings} onChange={(e) => setSiblings(e.target.value)} placeholder="ex.: Ana, João" />
           <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">{t("family.editor.siblingsHint")}</p>
+        </div>
+
+        {/* Outros familiares — adicionar mais pessoas ligadas a quem já existe */}
+        <div className="mt-4">
+          <div className="mb-2 flex items-center justify-between">
+            <label className="label !mb-0">Outros familiares</label>
+            <button
+              type="button"
+              onClick={() => setExtras((x) => [...x, { name: "", rel: "filho", target: namedRoles[0]?.key ?? "eu" }])}
+              className="btn btn-ghost !py-1 !text-xs"
+            >
+              <Plus className="h-3.5 w-3.5" /> Adicionar pessoa
+            </button>
+          </div>
+          {extras.length === 0 && (
+            <p className="text-xs text-stone-500 dark:text-stone-500">
+              Acrescenta cônjuges, filhos ou outros — ligados a alguém já preenchido acima.
+            </p>
+          )}
+          <div className="space-y-2">
+            {extras.map((ex, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-2">
+                <input
+                  className="input flex-1 min-w-[120px]"
+                  placeholder={t("family.editor.namePlaceholder")}
+                  value={ex.name}
+                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
+                />
+                <select
+                  className="input w-auto"
+                  value={ex.rel}
+                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, rel: e.target.value as Extra["rel"] } : r))}
+                >
+                  <option value="filho">filho(a) de</option>
+                  <option value="conjuge">cônjuge de</option>
+                </select>
+                <select
+                  className="input w-auto"
+                  value={ex.target}
+                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, target: e.target.value } : r))}
+                >
+                  {namedRoles.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
+                </select>
+                <button type="button" onClick={() => setExtras((x) => x.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-stone-500 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/40">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="mt-5 flex justify-end gap-2">

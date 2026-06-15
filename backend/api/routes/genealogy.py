@@ -60,6 +60,27 @@ class RelationshipCreate(BaseModel):
     kind:           str
 
 
+class BulkPerson(BaseModel):
+    ref:          str               # client-side temporary id
+    name:         str
+    sex:          Optional[str] = None
+    birth_date:   Optional[str] = None
+    death_date:   Optional[str] = None
+    birth_place:  Optional[str] = None
+    family_label: Optional[str] = None
+
+
+class BulkRelationship(BaseModel):
+    from_ref: str
+    to_ref:   str
+    kind:     str
+
+
+class BulkTreeRequest(BaseModel):
+    persons:       list[BulkPerson]       = []
+    relationships: list[BulkRelationship] = []
+
+
 def _person_dict(p: Person) -> dict:
     return {
         "id":           p.id,
@@ -79,20 +100,30 @@ async def _rebuild_graph_from_db(db: AsyncSession, user_id) -> None:
 
     Called after any manual edit so the M3 narrative context stays in sync
     with what the user sees in the tree (the DB is the source of truth).
+
+    Defensive on purpose: the graph is a *secondary* artefact (only the M3
+    narrative reads it), so a failure to write it must never bubble up and
+    fail the person/relationship edit the user actually asked for.
     """
-    from backend.modules.m2_temporal.family_graph import FamilyGraph
+    try:
+        from backend.modules.m2_temporal.family_graph import FamilyGraph
 
-    persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
-    rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
+        persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
+        rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
 
-    graph = FamilyGraph()
-    for p in persons:
-        graph.add_person(p)
-    for r in rels:
-        graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
-        if r.kind in ("pai", "mãe"):
-            graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
-    graph.save(_user_graph_path(user_id))
+        graph = FamilyGraph()
+        for p in persons:
+            graph.add_person(p)
+        for r in rels:
+            graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
+            if r.kind in ("pai", "mãe"):
+                graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
+
+        path = _user_graph_path(user_id)
+        path.parent.mkdir(parents=True, exist_ok=True)   # ephemeral disk may be empty
+        graph.save(path)
+    except Exception as exc:                              # never fail the edit
+        log.warning("graph_rebuild_failed", error=str(exc))
 
 router = APIRouter(prefix="/api/v1", tags=["genealogy"])
 log    = structlog.get_logger()
@@ -374,6 +405,58 @@ async def get_tree(
         if r.from_person_id in person_ids and r.to_person_id in person_ids
     ]
     return {"persons": [_person_dict(p) for p in persons], "relationships": relationships}
+
+
+@router.post("/genealogy/tree/bulk", status_code=201)
+async def bulk_tree(
+    payload: BulkTreeRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Create several persons and relationships in a single transaction.
+
+    Used by the pedigree wizard so building a whole family is one atomic,
+    retry-safe request (instead of dozens of calls that a cold start could
+    drop mid-way). Relationships reference persons by their client-side
+    ``ref``; only links between two created persons are kept.
+    """
+    ref_to_id: dict[str, int] = {}
+    for bp in payload.persons:
+        if not bp.name.strip():
+            continue
+        person = Person(
+            user_id      = user.id,
+            name         = bp.name.strip(),
+            sex          = (bp.sex or None),
+            birth_date   = _parse_date(bp.birth_date),
+            death_date   = _parse_date(bp.death_date),
+            birth_place  = (bp.birth_place or "").strip() or None,
+            family_label = (bp.family_label or "").strip() or None,
+        )
+        db.add(person)
+        await db.flush()                 # assigns person.id
+        ref_to_id[bp.ref] = person.id
+
+    seen: set[tuple[int, int, str]] = set()
+    relations_created = 0
+    for br in payload.relationships:
+        if br.kind not in ALLOWED_KINDS:
+            continue
+        frm = ref_to_id.get(br.from_ref)
+        to  = ref_to_id.get(br.to_ref)
+        if not frm or not to or frm == to:
+            continue
+        key = (frm, to, br.kind)
+        if key in seen:
+            continue
+        seen.add(key)
+        db.add(Relationship(user_id=user.id, from_person_id=frm, to_person_id=to, kind=br.kind))
+        relations_created += 1
+
+    await db.commit()
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("bulk_tree", persons=len(ref_to_id), relations=relations_created)
+    return {"persons_created": len(ref_to_id), "relations_created": relations_created}
 
 
 @router.post("/genealogy/relationships", status_code=201)
