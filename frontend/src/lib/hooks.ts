@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, API_BASE } from "./api";
+import { api, API_BASE, isLostResponse } from "./api";
 import { supabase } from "./supabase";
 import type {
   HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
@@ -316,6 +316,8 @@ export function useStories() {
   return useQuery<Story[]>({
     queryKey: ["stories"],
     queryFn: async () => (await api.get("/api/v1/narrative/stories")).data,
+    retry: (count, err) => isLostResponse(err) && count < 4,
+    retryDelay: (count) => Math.min(2000 * (count + 1), 8000),
   });
 }
 
@@ -324,6 +326,10 @@ export function useStory(id: number | null) {
     queryKey: ["stories", id],
     queryFn: async () => (await api.get(`/api/v1/narrative/stories/${id}`)).data,
     enabled: id !== null,
+    // A lost response (cold start) is worth retrying a few times with a
+    // growing delay, so the page recovers on its own instead of dead-ending.
+    retry: (count, err) => isLostResponse(err) && count < 4,
+    retryDelay: (count) => Math.min(2000 * (count + 1), 8000),
   });
 }
 

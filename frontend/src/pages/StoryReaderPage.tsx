@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Film, Loader2, Pencil, X } from "lucide-react";
+import { ArrowLeft, Check, Film, Loader2, Pencil, RefreshCw, X } from "lucide-react";
 import { useGenerateVideo, useStory, useUpdateStory } from "../lib/hooks";
-import { extractErrorMessage } from "../lib/api";
+import { extractErrorMessage, isLostResponse } from "../lib/api";
 
 export default function StoryReaderPage() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const storyId = id ? Number(id) : null;
-  const { data: story, isLoading, error } = useStory(storyId);
+  const { data: story, isLoading, isFetching, error, refetch } = useStory(storyId);
   const genVideo = useGenerateVideo();
   const update = useUpdateStory();
 
@@ -32,9 +32,28 @@ export default function StoryReaderPage() {
     return <div className="skeleton h-96 rounded-2xl" />;
   }
   if (error || !story) {
+    const lost = isLostResponse(error);
     return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
-        {extractErrorMessage(error, t("common.error"))}
+      <div className="mx-auto max-w-3xl">
+        <Link to="/stories" className="mb-6 inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100">
+          <ArrowLeft className="h-4 w-4" />
+          {t("common.back")}
+        </Link>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
+          <p>
+            {lost
+              ? "Não foi possível carregar a história — o servidor pode estar a acordar. Tenta novamente dentro de alguns segundos."
+              : extractErrorMessage(error, t("common.error"))}
+          </p>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="btn btn-ghost mt-4"
+          >
+            {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span>Tentar novamente</span>
+          </button>
+        </div>
       </div>
     );
   }
