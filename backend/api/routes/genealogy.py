@@ -1,11 +1,14 @@
 """Genealogy routes — GEDCOM upload + per-user family graph access."""
 
 import uuid
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import aiofiles
 import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, distinct, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +17,82 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
 from backend.core.upload_validator import validate_gedcom
-from backend.models.timeline import Person
+from backend.models.timeline import Person, Relationship
 from backend.modules.m1_ingestion.gedcom_parser import gedcom_to_database
+
+ALLOWED_KINDS = {"pai", "mãe", "cônjuge"}
+
+
+def _parse_date(raw: Optional[str]) -> Optional[datetime]:
+    """Parse an ISO date string (``YYYY-MM-DD``) or return None."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Data inválida: {raw} (usa AAAA-MM-DD).")
+
+
+class PersonCreate(BaseModel):
+    name:         str = Field(min_length=1, max_length=255)
+    sex:          Optional[str] = None
+    birth_date:   Optional[str] = None
+    death_date:   Optional[str] = None
+    birth_place:  Optional[str] = None
+    notes:        Optional[str] = None
+    family_label: Optional[str] = None
+
+
+class PersonUpdate(BaseModel):
+    name:         Optional[str] = None
+    sex:          Optional[str] = None
+    birth_date:   Optional[str] = None
+    death_date:   Optional[str] = None
+    birth_place:  Optional[str] = None
+    notes:        Optional[str] = None
+    family_label: Optional[str] = None
+
+
+class RelationshipCreate(BaseModel):
+    from_person_id: int
+    to_person_id:   int
+    kind:           str
+
+
+def _person_dict(p: Person) -> dict:
+    return {
+        "id":           p.id,
+        "name":         p.name,
+        "sex":          p.sex,
+        "birth_date":   str(p.birth_date.date()) if p.birth_date else None,
+        "death_date":   str(p.death_date.date()) if p.death_date else None,
+        "birth_place":  p.birth_place,
+        "notes":        p.notes,
+        "gedcom_id":    p.gedcom_id,
+        "family_label": p.family_label,
+    }
+
+
+async def _rebuild_graph_from_db(db: AsyncSession, user_id) -> None:
+    """Rewrite the on-disk narrative graph from the DB persons + relations.
+
+    Called after any manual edit so the M3 narrative context stays in sync
+    with what the user sees in the tree (the DB is the source of truth).
+    """
+    from backend.modules.m2_temporal.family_graph import FamilyGraph
+
+    persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
+    rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
+
+    graph = FamilyGraph()
+    for p in persons:
+        graph.add_person(p)
+    for r in rels:
+        graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
+        if r.kind in ("pai", "mãe"):
+            graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
+    graph.save(_user_graph_path(user_id))
 
 router = APIRouter(prefix="/api/v1", tags=["genealogy"])
 log    = structlog.get_logger()
@@ -191,3 +268,175 @@ async def clear_persons(
             graph_path.unlink()
 
     return {"message": "Removed", "family_label": family_label}
+
+
+# ── Manual person + relationship editing (tree builder) ─────────────────────
+
+@router.post("/genealogy/persons", status_code=201)
+async def create_person(
+    payload: PersonCreate,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Create a person by hand (no GEDCOM needed)."""
+    person = Person(
+        user_id      = user.id,
+        name         = payload.name.strip(),
+        sex          = (payload.sex or None),
+        birth_date   = _parse_date(payload.birth_date),
+        death_date   = _parse_date(payload.death_date),
+        birth_place  = (payload.birth_place or "").strip() or None,
+        notes        = (payload.notes or "").strip() or None,
+        family_label = (payload.family_label or "").strip() or None,
+    )
+    db.add(person)
+    await db.commit()
+    await db.refresh(person)
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("person_created", id=person.id)
+    return _person_dict(person)
+
+
+@router.patch("/genealogy/persons/{person_id}")
+async def update_person(
+    person_id: int,
+    payload:   PersonUpdate,
+    db:        AsyncSession = Depends(get_db),
+    user:      User         = Depends(get_current_user),
+):
+    """Edit a person's details — owner only."""
+    person = (await db.execute(
+        select(Person).where(Person.id == person_id, Person.user_id == user.id)
+    )).scalar_one_or_none()
+    if not person:
+        raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+
+    fields = payload.model_dump(exclude_unset=True)
+    if "name" in fields and (fields["name"] or "").strip():
+        person.name = fields["name"].strip()
+    if "sex" in fields:
+        person.sex = (fields["sex"] or None)
+    if "birth_date" in fields:
+        person.birth_date = _parse_date(fields["birth_date"])
+    if "death_date" in fields:
+        person.death_date = _parse_date(fields["death_date"])
+    if "birth_place" in fields:
+        person.birth_place = (fields["birth_place"] or "").strip() or None
+    if "notes" in fields:
+        person.notes = (fields["notes"] or "").strip() or None
+    if "family_label" in fields:
+        person.family_label = (fields["family_label"] or "").strip() or None
+
+    await db.commit()
+    await db.refresh(person)
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("person_updated", id=person.id)
+    return _person_dict(person)
+
+
+@router.delete("/genealogy/persons/{person_id}", status_code=204)
+async def delete_person(
+    person_id: int,
+    db:        AsyncSession = Depends(get_db),
+    user:      User         = Depends(get_current_user),
+):
+    """Delete a person (their relationships cascade) — owner only."""
+    person = (await db.execute(
+        select(Person).where(Person.id == person_id, Person.user_id == user.id)
+    )).scalar_one_or_none()
+    if not person:
+        raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+    await db.delete(person)
+    await db.commit()
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("person_deleted", id=person_id)
+
+
+@router.get("/genealogy/tree")
+async def get_tree(
+    family_label: Optional[str] = Query(default=None),
+    db:           AsyncSession  = Depends(get_db),
+    user:         User          = Depends(get_current_user),
+):
+    """Return persons + relationships for the interactive tree / editor."""
+    pstmt = select(Person).where(Person.user_id == user.id)
+    if family_label:
+        pstmt = pstmt.where(Person.family_label == family_label)
+    persons = (await db.execute(pstmt.order_by(Person.name))).scalars().all()
+    person_ids = {p.id for p in persons}
+
+    rels = (await db.execute(
+        select(Relationship).where(Relationship.user_id == user.id)
+    )).scalars().all()
+    relationships = [
+        {"id": r.id, "from": r.from_person_id, "to": r.to_person_id, "kind": r.kind}
+        for r in rels
+        if r.from_person_id in person_ids and r.to_person_id in person_ids
+    ]
+    return {"persons": [_person_dict(p) for p in persons], "relationships": relationships}
+
+
+@router.post("/genealogy/relationships", status_code=201)
+async def create_relationship(
+    payload: RelationshipCreate,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Link two persons (``pai`` / ``mãe`` / ``cônjuge``) — owner only."""
+    if payload.kind not in ALLOWED_KINDS:
+        raise HTTPException(status_code=400, detail=f"Tipo inválido. Permitidos: {sorted(ALLOWED_KINDS)}")
+    if payload.from_person_id == payload.to_person_id:
+        raise HTTPException(status_code=400, detail="Uma pessoa não pode relacionar-se consigo própria.")
+
+    owned = (await db.execute(
+        select(Person.id).where(
+            Person.id.in_([payload.from_person_id, payload.to_person_id]),
+            Person.user_id == user.id,
+        )
+    )).scalars().all()
+    if set(owned) != {payload.from_person_id, payload.to_person_id}:
+        raise HTTPException(status_code=404, detail="Pessoa não encontrada")
+
+    existing = (await db.execute(
+        select(Relationship).where(
+            Relationship.user_id        == user.id,
+            Relationship.from_person_id == payload.from_person_id,
+            Relationship.to_person_id   == payload.to_person_id,
+            Relationship.kind           == payload.kind,
+        )
+    )).scalar_one_or_none()
+    if existing:
+        return {"id": existing.id, "from": existing.from_person_id, "to": existing.to_person_id, "kind": existing.kind}
+
+    rel = Relationship(
+        user_id        = user.id,
+        from_person_id = payload.from_person_id,
+        to_person_id   = payload.to_person_id,
+        kind           = payload.kind,
+    )
+    db.add(rel)
+    await db.commit()
+    await db.refresh(rel)
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("relationship_created", id=rel.id, kind=rel.kind)
+    return {"id": rel.id, "from": rel.from_person_id, "to": rel.to_person_id, "kind": rel.kind}
+
+
+@router.delete("/genealogy/relationships/{relationship_id}", status_code=204)
+async def delete_relationship(
+    relationship_id: int,
+    db:              AsyncSession = Depends(get_db),
+    user:            User         = Depends(get_current_user),
+):
+    """Remove a relationship — owner only."""
+    rel = (await db.execute(
+        select(Relationship).where(
+            Relationship.id == relationship_id, Relationship.user_id == user.id
+        )
+    )).scalar_one_or_none()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Relação não encontrada")
+    await db.delete(rel)
+    await db.commit()
+    await _rebuild_graph_from_db(db, user.id)
+    log.info("relationship_deleted", id=relationship_id)
