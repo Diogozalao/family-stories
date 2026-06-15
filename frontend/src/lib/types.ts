@@ -21,10 +21,25 @@ export interface MediaFile {
 export interface Person {
   id: number;
   name: string;
+  sex?: string | null;
   birth_date?: string | null;
+  death_date?: string | null;
   birth_place?: string | null;
+  notes?: string | null;
   gedcom_id?: string | null;
   family_label?: string | null;
+}
+
+export interface TreeRelationship {
+  id: number;
+  from: number;
+  to: number;
+  kind: string; // 'pai' | 'mãe' | 'cônjuge'
+}
+
+export interface FamilyTreeData {
+  persons: Person[];
+  relationships: TreeRelationship[];
 }
 
 export interface TimelineEvent {

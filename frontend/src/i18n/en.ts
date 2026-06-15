@@ -251,6 +251,8 @@ export default {
     importedSummaryWithSkipped: "{{created}} people imported into \"{{label}}\" ({{skipped}} skipped — no name).",
     importColdSuccess: "Import finished. The server was waking up, so it took a little longer.",
     importColdRetry: "The server was waking up and the request didn't complete. Wait a few seconds and try importing again.",
+    viewList: "List",
+    viewTree: "Tree",
   },
   timeline: {
     title: "Timeline",

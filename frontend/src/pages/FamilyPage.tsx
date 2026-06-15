@@ -7,6 +7,7 @@ import { FileUp, Loader2, Search, Trash2, User as UserIcon, Users, X } from "luc
 import { useQueryClient } from "@tanstack/react-query";
 
 import PageHeader from "../components/ui/PageHeader";
+import FamilyTree from "../components/family/FamilyTree";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { useClearFamily, useFamilies, usePersons, useUploadGedcom } from "../lib/hooks";
 import type { Person } from "../lib/types";
@@ -28,6 +29,8 @@ export default function FamilyPage() {
   /** Holds the file selected by drag/click until the user confirms a label. */
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [labelInput, setLabelInput]   = useState("");
+  /** Family page view: flat list of people or the interactive tree. */
+  const [view, setView] = useState<"list" | "tree">("list");
 
   const onDrop = useCallback((files: File[]) => {
     if (!files.length) return;
@@ -98,6 +101,8 @@ export default function FamilyPage() {
   };
 
   const items = persons ?? [];
+  // The tree endpoint filters by a concrete label only (not the "unlabeled" bucket).
+  const treeLabel = activeLabel && activeLabel !== UNLABELED ? activeLabel : undefined;
   const filtered = useMemo(() => {
     let list = items;
     if (activeLabel) {
@@ -174,6 +179,31 @@ export default function FamilyPage() {
       )}
 
       {items.length > 0 && (
+        <div className="mb-4 flex w-fit gap-1 rounded-xl border border-stone-200 p-1 text-sm dark:border-stone-800">
+          <button
+            onClick={() => setView("list")}
+            className={cn("rounded-lg px-3 py-1.5", view === "list"
+              ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+              : "text-stone-600 dark:text-stone-400")}
+          >
+            {t("family.viewList")}
+          </button>
+          <button
+            onClick={() => setView("tree")}
+            className={cn("rounded-lg px-3 py-1.5", view === "tree"
+              ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900"
+              : "text-stone-600 dark:text-stone-400")}
+          >
+            {t("family.viewTree")}
+          </button>
+        </div>
+      )}
+
+      {view === "tree" ? (
+        <FamilyTree familyLabel={treeLabel} />
+      ) : (
+      <>
+      {items.length > 0 && (
         <div className="mb-5 relative max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
           <input
@@ -228,6 +258,8 @@ export default function FamilyPage() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* ── Family-label dialog ─────────────────────────────── */}

@@ -259,6 +259,8 @@ export default {
     importedSummaryWithSkipped: "{{created}} pessoas importadas para \"{{label}}\" ({{skipped}} ignoradas por não terem nome).",
     importColdSuccess: "Importação concluída. O servidor estava a acordar, por isso demorou um pouco mais.",
     importColdRetry: "O servidor estava a acordar e o pedido não chegou a concluir. Espera uns segundos e tenta importar novamente.",
+    viewList: "Lista",
+    viewTree: "Árvore",
   },
   timeline: {
     title: "Linha Temporal",

@@ -2,9 +2,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, API_BASE, isLostResponse } from "./api";
 import { supabase } from "./supabase";
 import type {
-  HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
+  FamilyTreeData, HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
   TaskRecord, TimelineEvent, Video,
 } from "./types";
+
+interface PersonInput {
+  name: string;
+  sex?: string | null;
+  birth_date?: string | null;
+  death_date?: string | null;
+  birth_place?: string | null;
+  notes?: string | null;
+  family_label?: string | null;
+}
 import { useAuthStore } from "../store/auth";
 
 // ── Auth ────────────────────────────────────────────────────────────────
@@ -299,7 +309,74 @@ export function useClearFamily() {
       qc.invalidateQueries({ queryKey: ["persons"] });
       qc.invalidateQueries({ queryKey: ["families"] });
       qc.invalidateQueries({ queryKey: ["graph"] });
+      qc.invalidateQueries({ queryKey: ["tree"] });
     },
+  });
+}
+
+// ── Family tree (DB-backed persons + relationships) ───────────────────────
+export function useFamilyTree(familyLabel?: string | null) {
+  return useQuery<FamilyTreeData>({
+    queryKey: ["tree", familyLabel ?? null],
+    queryFn: async () => {
+      const params = familyLabel ? { params: { family_label: familyLabel } } : {};
+      return (await api.get("/api/v1/genealogy/tree", params)).data;
+    },
+  });
+}
+
+function useTreeInvalidator() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: ["tree"] });
+    qc.invalidateQueries({ queryKey: ["persons"] });
+    qc.invalidateQueries({ queryKey: ["families"] });
+    qc.invalidateQueries({ queryKey: ["graph"] });
+  };
+}
+
+export function useCreatePerson() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (input: PersonInput) =>
+      (await api.post("/api/v1/genealogy/persons", input)).data as Person,
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdatePerson() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (input: { id: number } & Partial<PersonInput>) => {
+      const { id, ...body } = input;
+      return (await api.patch(`/api/v1/genealogy/persons/${id}`, body)).data as Person;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePerson() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.delete(`/api/v1/genealogy/persons/${id}`)).data,
+    onSuccess: invalidate,
+  });
+}
+
+export function useCreateRelationship() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (input: { from_person_id: number; to_person_id: number; kind: string }) =>
+      (await api.post("/api/v1/genealogy/relationships", input)).data,
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteRelationship() {
+  const invalidate = useTreeInvalidator();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.delete(`/api/v1/genealogy/relationships/${id}`)).data,
+    onSuccess: invalidate,
   });
 }
 
