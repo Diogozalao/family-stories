@@ -24,6 +24,7 @@ class Person(Base):
     id           = Column(BigInteger, primary_key=True, index=True)
     user_id      = Column(UUID(as_uuid=True), nullable=False, index=True)
     name         = Column(String(255), nullable=False)
+    sex          = Column(String(1), nullable=True)   # 'M' | 'F' | None
     birth_date   = Column(DateTime(timezone=True), nullable=True)
     death_date   = Column(DateTime(timezone=True), nullable=True)
     birth_place  = Column(String(255), nullable=True)
@@ -34,6 +35,23 @@ class Person(Base):
     # imports without forcing them into the same soup.
     family_label = Column(String(120), nullable=True)
     created_at   = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class Relationship(Base):
+    """A kinship edge between two persons, owned by ``user_id``.
+
+    ``kind`` is one of ``pai`` / ``mãe`` (from_person is the parent of
+    to_person) or ``cônjuge`` (spouses, stored once). Replaces the old
+    on-disk JSON graph as the source of truth for relations.
+    """
+    __tablename__ = "relationships"
+
+    id             = Column(BigInteger, primary_key=True, index=True)
+    user_id        = Column(UUID(as_uuid=True), nullable=False, index=True)
+    from_person_id = Column(BigInteger, ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+    to_person_id   = Column(BigInteger, ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind           = Column(String(16), nullable=False)
+    created_at     = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class TimelineEvent(Base):

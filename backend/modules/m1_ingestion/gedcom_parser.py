@@ -17,7 +17,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from backend.models.timeline import Person
+from backend.models.timeline import Person, Relationship
 
 log = structlog.get_logger()
 
@@ -281,6 +281,7 @@ async def gedcom_to_database(
 
         if person:
             person.name         = indi["name"]
+            person.sex          = indi.get("sex") or person.sex
             person.birth_date   = indi.get("birth_date")
             person.death_date   = indi.get("death_date")
             person.birth_place  = indi.get("birth_place")
@@ -294,6 +295,7 @@ async def gedcom_to_database(
             person = Person(
                 user_id      = user_id,
                 name         = indi["name"],
+                sex          = indi.get("sex"),
                 birth_date   = indi.get("birth_date"),
                 death_date   = indi.get("death_date"),
                 birth_place  = indi.get("birth_place"),
@@ -317,6 +319,22 @@ async def gedcom_to_database(
 
     await db.commit()
 
+    # Persist relations in the DB too (idempotent). The on-disk graph
+    # stays for the narrative summaries, but the database is now the
+    # durable source of truth used by the tree view and the editor.
+    existing_rel_rows = (await db.execute(
+        select(Relationship.from_person_id, Relationship.to_person_id, Relationship.kind)
+        .where(Relationship.user_id == user_id)
+    )).all()
+    existing_rel = {(r[0], r[1], r[2]) for r in existing_rel_rows}
+
+    def add_rel(frm: int, to: int, kind: str) -> None:
+        key = (frm, to, kind)
+        if key in existing_rel:
+            return
+        db.add(Relationship(user_id=user_id, from_person_id=frm, to_person_id=to, kind=kind))
+        existing_rel.add(key)
+
     relations_added = 0
     for fam_id, fam in data["families"].items():
         husband_id = person_id_map.get(fam.get("husband"))
@@ -325,6 +343,7 @@ async def gedcom_to_database(
         if husband_id and wife_id:
             graph.add_relation(husband_id, wife_id, "cônjuge")
             graph.add_relation(wife_id, husband_id, "cônjuge")
+            add_rel(husband_id, wife_id, "cônjuge")
             relations_added += 2
 
             if fam.get("marr_date"):
@@ -348,10 +367,12 @@ async def gedcom_to_database(
                 if husband_id:
                     graph.add_relation(husband_id, child_id, "pai")
                     graph.add_relation(child_id, husband_id, "filho de")
+                    add_rel(husband_id, child_id, "pai")
                     relations_added += 2
                 if wife_id:
                     graph.add_relation(wife_id, child_id, "mãe")
                     graph.add_relation(child_id, wife_id, "filho de")
+                    add_rel(wife_id, child_id, "mãe")
                     relations_added += 2
 
     await db.commit()
