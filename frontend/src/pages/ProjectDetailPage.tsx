@@ -5,16 +5,19 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, Check, FileUp, Film, Images, Loader2, Network,
-  Plus, ScrollText, Search, Sparkles, Timer, User as UserIcon, X,
+  Pencil, Plus, ScrollText, Sparkles, Timer, UploadCloud,
+  User as UserIcon, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useMedia, usePersons, useProject, useProjectMedia,
-  useProjectStories, useProjectVideos, useRemoveMediaFromProject, useTimeline,
-  useUploadGedcom,
+  useAddMediaToProject, useFamilyTree, useMedia, useProject, useProjectMedia,
+  useProjectStories, useProjectVideos, useRemoveMediaFromProject,
+  useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
+import FamilyTree from "../components/family/FamilyTree";
+import FamilyEditor from "../components/family/FamilyEditor";
 import { cn, initials } from "../lib/utils";
 import type { MediaFile, TimelineEvent } from "../lib/types";
 
@@ -67,8 +70,8 @@ export default function ProjectDetailPage() {
       </div>
 
       {tab === "photos"   && <PhotosTab   projectId={project.id} />}
-      {tab === "timeline" && <TimelineTab />}
-      {tab === "family"   && <FamilyTab />}
+      {tab === "timeline" && <TimelineTab projectId={project.id} />}
+      {tab === "family"   && <FamilyTab   familyLabel={project.name} />}
       {tab === "stories"  && <StoriesTab  projectId={project.id} />}
       {tab === "videos"   && <VideosTab   projectId={project.id} />}
     </>
@@ -178,7 +181,35 @@ function PhotoPickerModal({
 }: { projectId: number; alreadyIn: number[]; onClose: () => void }) {
   const { data: all, isLoading } = useMedia();
   const add = useAddMediaToProject();
+  const uploadPhoto = useUploadPhoto();
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [uploading, setUploading] = useState(false);
+
+  // Upload brand-new photos straight into the project. They also land in
+  // the global Library (so they can be reused elsewhere) and are added to
+  // this project in one step.
+  const onDropNew = useCallback(async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    let ok = 0;
+    for (const f of files) {
+      try {
+        const res: { file_id?: number } = await uploadPhoto.mutateAsync(f);
+        if (res?.file_id) { await add.mutateAsync({ projectId, mediaIds: [res.file_id] }); ok++; }
+      } catch (err) {
+        toast.error(extractErrorMessage(err));
+      }
+    }
+    setUploading(false);
+    if (ok > 0) { toast.success(`${ok} foto(s) carregada(s) para o projeto`); onClose(); }
+  }, [uploadPhoto, add, projectId, onClose]);
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop: onDropNew,
+    accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp", ".heic"] },
+    noClick: true,
+    noKeyboard: true,
+  });
 
   const candidates = useMemo(
     () => (all ?? []).filter((m) => !alreadyIn.includes(m.id)),
@@ -229,6 +260,32 @@ function PhotoPickerModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Option A: upload new photos straight into the project. */}
+          <div
+            {...getRootProps()}
+            className={
+              "mb-5 rounded-xl border-2 border-dashed p-4 text-center transition " +
+              (isDragActive
+                ? "border-brand-400 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-950/30"
+                : "border-stone-300 bg-white/60 dark:border-stone-700 dark:bg-stone-900/40")
+            }
+          >
+            <input {...getInputProps()} />
+            <UploadCloud className="mx-auto h-6 w-6 text-stone-400" />
+            <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+              Arrasta fotos novas ou{" "}
+              <button type="button" onClick={open} className="font-medium text-brand-600 hover:underline dark:text-brand-400">escolhe ficheiros</button>{" "}
+              para carregar diretamente para o projeto.
+            </p>
+            {uploading && (
+              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-stone-500">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> A carregar…
+              </p>
+            )}
+          </div>
+
+          {/* Option B: pick from the existing Library. */}
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-400">Ou escolhe da Biblioteca</p>
           {isLoading ? (
             <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
               {Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton aspect-square rounded-xl" />)}
@@ -287,11 +344,24 @@ function PhotoPickerModal({
 
 // ── Timeline Tab ───────────────────────────────────────────────────────────
 
-function TimelineTab() {
-  const { t } = useTranslation();
-  const { data, isLoading } = useTimeline();
+function TimelineTab({ projectId }: { projectId: number }) {
+  const { data: media, isLoading } = useProjectMedia(projectId);
 
-  const grouped = useMemo(() => groupByYear(data ?? []), [data]);
+  // The project timeline is built ONLY from the project's own photos —
+  // each photo becomes a dated event. This keeps it scoped to the project
+  // instead of mixing in the user's whole (global) timeline.
+  const events: TimelineEvent[] = useMemo(
+    () => (media ?? []).map((m) => ({
+      id: m.id,
+      event_date: m.date_taken ?? m.created_at ?? null,
+      title: m.ai_setting || m.original_filename,
+      description: m.ai_description ?? null,
+      media_file_id: m.id,
+    })),
+    [media],
+  );
+
+  const grouped = useMemo(() => groupByYear(events), [events]);
   const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
   if (isLoading) {
@@ -304,14 +374,10 @@ function TimelineTab() {
     );
   }
 
-  if ((data ?? []).length === 0) {
+  if (events.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-        {t("timeline.empty")}{" "}
-        <Link to="/library" className="font-medium text-brand-600 hover:underline dark:text-brand-400">
-          {t("nav.library")}
-        </Link>
-        .
+        Adiciona fotografias a este projeto (separador «Fotografias») para construir a linha temporal.
       </div>
     );
   }
@@ -394,24 +460,26 @@ function groupByYear(events: TimelineEvent[]): Record<string, TimelineEvent[]> {
 
 // ── Family Tab ─────────────────────────────────────────────────────────────
 
-function FamilyTab() {
+function FamilyTab({ familyLabel }: { familyLabel: string }) {
   const { t } = useTranslation();
-  const { data: persons, isLoading } = usePersons();
+  const { data: tree, isLoading } = useFamilyTree(familyLabel);
   const upload = useUploadGedcom();
-  const [query, setQuery] = useState("");
+  const [view, setView] = useState<"list" | "tree">("tree");
+  const [editorOpen, setEditorOpen] = useState(false);
 
+  const persons = tree?.persons ?? [];
+
+  // Any GEDCOM imported here is tagged with this project's label, so it
+  // stays isolated from the global library and from other projects.
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
     try {
-      // ``useUploadGedcom`` expects ``{file, familyLabel?}`` since the
-      // multi-family-label refactor — passing the bare File here is what
-      // broke the production build.
-      const r = await upload.mutateAsync({ file: files[0] });
+      const r = await upload.mutateAsync({ file: files[0], familyLabel });
       toast.success(`${r.message ?? t("common.success")}`);
     } catch (err) {
       toast.error(extractErrorMessage(err));
     }
-  }, [upload, t]);
+  }, [upload, familyLabel, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -421,25 +489,29 @@ function FamilyTab() {
     noKeyboard: true,
   });
 
-  const items = persons ?? [];
-  const filtered = query
-    ? items.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()))
-    : items;
-
   return (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <span className="chip">{t("family.persons")}: {items.length}</span>
-        <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
-          {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-          <span>{t("family.importGedcom")}</span>
-        </button>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span className="chip">{t("family.persons")}: {persons.length}</span>
+        <div className="flex gap-2">
+          <button className="btn btn-ghost" onClick={() => setEditorOpen(true)}>
+            <Pencil className="h-4 w-4" /><span>{t("family.editTree")}</span>
+          </button>
+          <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
+            {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+            <span>{t("family.importGedcom")}</span>
+          </button>
+        </div>
       </div>
+
+      <p className="mb-4 text-xs text-stone-500 dark:text-stone-500">
+        A família deste projeto («{familyLabel}») é independente da Biblioteca e dos outros projetos.
+      </p>
 
       <div
         {...getRootProps()}
         className={
-          "mb-6 rounded-2xl border-2 border-dashed p-6 text-center transition " +
+          "mb-4 rounded-2xl border-2 border-dashed p-5 text-center transition " +
           (isDragActive
             ? "border-brand-400 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-950/30"
             : "border-stone-300 bg-white/60 dark:border-stone-700 dark:bg-stone-900/40")
@@ -454,31 +526,24 @@ function FamilyTab() {
         </p>
       </div>
 
-      {items.length > 0 && (
-        <div className="mb-5 relative max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t("common.search")}
-            className="input pl-9"
-          />
-        </div>
-      )}
+      <div className="mb-4 flex w-fit gap-1 rounded-xl border border-stone-200 p-1 text-sm dark:border-stone-800">
+        <button onClick={() => setView("list")} className={cn("rounded-lg px-3 py-1.5", view === "list" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-600 dark:text-stone-400")}>{t("family.viewList")}</button>
+        <button onClick={() => setView("tree")} className={cn("rounded-lg px-3 py-1.5", view === "tree" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-600 dark:text-stone-400")}>{t("family.viewTree")}</button>
+      </div>
 
-      {isLoading ? (
+      {view === "tree" ? (
+        <FamilyTree familyLabel={familyLabel} />
+      ) : isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="skeleton h-24 rounded-2xl" />
-          ))}
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
         </div>
-      ) : items.length === 0 ? (
+      ) : persons.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-          {t("family.noTree")}
+          {t("family.noTree")} Usa «{t("family.editTree")}» para criar a árvore deste projeto.
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((p) => (
+          {persons.map((p) => (
             <div key={p.id} className="card-soft p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-semibold text-white">
@@ -492,14 +557,15 @@ function FamilyTab() {
                       {p.birth_place && " " + t("family.bornAt", { place: p.birth_place })}
                     </p>
                   )}
-                  {p.gedcom_id && (
-                    <p className="mt-1 font-mono text-[10px] text-stone-400">{p.gedcom_id}</p>
-                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {editorOpen && (
+        <FamilyEditor familyLabel={familyLabel} onClose={() => setEditorOpen(false)} />
       )}
     </>
   );

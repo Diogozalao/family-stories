@@ -206,7 +206,11 @@ em PostgreSQL (Supabase). As entidades principais são:
   \item \texttt{VideoOutput} — vídeo gerado (nome, chave de objeto,
   tamanho, fotografias usadas, estado, história e projeto associados).
   \item \texttt{Project} e \texttt{ProjectMedia} — projetos (coleções) e
-  a relação muitos-para-muitos com as fotografias.
+  a relação muitos-para-muitos com as fotografias. Cada projeto é um
+  espaço de trabalho \emph{isolado}: as suas fotografias, a sua linha
+  temporal (derivada apenas dessas fotografias), a sua família/árvore
+  (identificada pela etiqueta do projeto), as suas histórias e vídeos não
+  se misturam com os de outros projetos nem com a Biblioteca global.
   \item \texttt{TaskRecord} — registo de tarefas assíncronas (estado,
   \emph{payload}, carimbos temporais, erro).
 \end{itemize}

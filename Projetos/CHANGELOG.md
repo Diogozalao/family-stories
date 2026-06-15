@@ -10,6 +10,20 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-15 — Projetos isolados (timeline/família por projeto + upload)
+
+- **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — nota de
+  que cada `Project` é um espaço isolado (fotos, timeline derivada das suas
+  fotos, família por etiqueta do projeto, histórias e vídeos próprios).
+
+> Frontend: a Linha Temporal do projeto passa a ser construída só a partir
+> das fotos do projeto; a Família do projeto fica isolada (etiqueta = nome
+> do projeto) com toggle árvore/lista + editor + import GEDCOM; e o
+> "Adicionar fotos" passa a permitir carregar foto nova OU escolher da
+> Biblioteca. Sem migração de BD. tsc OK.
+
+---
+
 ## 2026-06-15 — Árvore familiar: relações na BD, vista interativa e editor
 
 - **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — nova
