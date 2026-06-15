@@ -82,8 +82,19 @@ nós são pessoas e as arestas representam relações (\emph{parent},
 \emph{child}, \emph{spouse}, \emph{sibling}). A classe produz
 \emph{resumos narrativos} do parentesco (por exemplo, \emph{``João (pai de
 Maria, marido de Ana)''}), consumidos diretamente pelo M3 para dar ao
-\textsc{llm} o contexto de \emph{quem é quem}. O grafo é serializado
-\emph{por utilizador}, evitando o cruzamento de familiares entre contas.
+\textsc{llm} o contexto de \emph{quem é quem}.
+
+\textbf{Relações na base de dados e edição manual.} As relações passaram
+a ser persistidas numa tabela \texttt{relationships} (em vez de um grafo
+JSON em disco, efémero na nuvem), tornando-se a fonte de verdade durável.
+Isto sustenta duas funcionalidades novas na página \emph{Família}: uma
+\textbf{vista interativa da árvore} (\emph{React~Flow}, com \emph{layout}
+por gerações e nós coloridos por sexo) alternável com a lista, e um
+\textbf{editor manual} que permite criar/editar pessoas e ligações à mão —
+incluindo um assistente de \emph{pedigree} pré-estruturado (eu, pais,
+avós, irmãos) — sem depender de um GEDCOM. Após cada edição, o grafo
+\texttt{FamilyGraph} é reconstruído a partir da base de dados, mantendo o
+M3 sincronizado. O grafo continua isolado \emph{por utilizador}.
 
 \section{Módulo M3 --- Geração Narrativa}
 \label{sec:impl_m3}

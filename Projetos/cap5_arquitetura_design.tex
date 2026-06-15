@@ -186,8 +186,14 @@ em PostgreSQL (Supabase). As entidades principais são:
   IA (\texttt{ai\_description}, \texttt{ai\_setting}, \texttt{ai\_emotion},
   \texttt{ai\_tags}, \texttt{ai\_narrative\_hint}), o texto de \textsc{ocr}
   e o estado de processamento.
-  \item \texttt{Person} — cada pessoa importada do GEDCOM (nome, datas,
-  locais, identificador GEDCOM, etiqueta de família).
+  \item \texttt{Person} — cada pessoa, importada do GEDCOM \emph{ou criada
+  manualmente} (nome, sexo, datas, locais, identificador GEDCOM, etiqueta
+  de família).
+  \item \texttt{Relationship} — uma aresta de parentesco entre duas
+  pessoas (\texttt{pai}/\texttt{mãe}/\texttt{cônjuge}). As relações deixaram
+  de viver apenas num grafo JSON em disco (efémero) e passaram a ser
+  persistidas na base de dados, sustentando o editor manual e a vista
+  interativa da árvore.
   \item \texttt{TimelineEvent} — eventos da linha temporal (título,
   descrição, tipo, local, data resolvida).
   \item \texttt{Story} — narrativa gerada (título, texto, tipo de evento,

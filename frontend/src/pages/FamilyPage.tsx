@@ -2,12 +2,13 @@ import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { FileUp, Loader2, Search, Trash2, User as UserIcon, Users, X } from "lucide-react";
+import { FileUp, Loader2, Pencil, Search, Trash2, User as UserIcon, Users, X } from "lucide-react";
 
 import { useQueryClient } from "@tanstack/react-query";
 
 import PageHeader from "../components/ui/PageHeader";
 import FamilyTree from "../components/family/FamilyTree";
+import FamilyEditor from "../components/family/FamilyEditor";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { useClearFamily, useFamilies, usePersons, useUploadGedcom } from "../lib/hooks";
 import type { Person } from "../lib/types";
@@ -31,6 +32,8 @@ export default function FamilyPage() {
   const [labelInput, setLabelInput]   = useState("");
   /** Family page view: flat list of people or the interactive tree. */
   const [view, setView] = useState<"list" | "tree">("list");
+  /** Full-screen manual tree editor overlay. */
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const onDrop = useCallback((files: File[]) => {
     if (!files.length) return;
@@ -126,6 +129,10 @@ export default function FamilyPage() {
         actions={
           <>
             <span className="chip">{t("family.persons")}: {items.length}</span>
+            <button className="btn btn-ghost" onClick={() => setEditorOpen(true)}>
+              <Pencil className="h-4 w-4" />
+              <span>{t("family.editTree")}</span>
+            </button>
             <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
               {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
               <span>{t("family.importGedcom")}</span>
@@ -260,6 +267,10 @@ export default function FamilyPage() {
         </div>
       )}
       </>
+      )}
+
+      {editorOpen && (
+        <FamilyEditor familyLabel={treeLabel} onClose={() => setEditorOpen(false)} />
       )}
 
       {/* ── Family-label dialog ─────────────────────────────── */}

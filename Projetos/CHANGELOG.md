@@ -10,6 +10,21 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-15 — Árvore familiar: relações na BD, vista interativa e editor
+
+- **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — nova
+  entidade `Relationship` (relações na BD, já não em JSON efémero) e
+  campo `sexo` em `Person`.
+- **[Reescrita]** `cap6_implementacao.tex` · §M2 — relações persistidas na
+  tabela `relationships`; nova vista interativa da árvore (React Flow) e
+  editor manual (pessoas/relações + assistente de pedigree), com o grafo
+  do M3 reconstruído a partir da BD após cada edição.
+
+> Reflete código já implementado e testado (backend: 36 testes; frontend:
+> tsc OK). Migração de BD necessária: `0005_relationships.sql` (+ `0004`).
+
+---
+
 ## 2026-06-13 — Verificação geral + aprofundamento (Cap. 3, 5, 6)
 
 **Correções factuais (todos os capítulos):**
