@@ -56,13 +56,18 @@ class TimelineBuilder:
 
         events = []
         for mf in media_files:
-            existing = await db.execute(
+            existing = (await db.execute(
                 select(TimelineEvent).where(
                     TimelineEvent.media_file_id == mf.id,
                     TimelineEvent.user_id       == user_id,
                 )
-            )
-            if existing.scalar_one_or_none():
+            )).scalar_one_or_none()
+
+            if existing:
+                # Re-sync date/title/etc. from the media. This is what makes
+                # the build idempotent and lets a later date fallback (or a
+                # date the user edited) propagate to events created earlier.
+                self._refresh_event(existing, mf)
                 continue
 
             event = self._create_event(mf, user_id)
@@ -70,8 +75,20 @@ class TimelineBuilder:
             events.append(event)
 
         await db.commit()
-        log.info("timeline_build_done", events_created=len(events))
+        log.info("timeline_build_done", events_created=len(events), total=len(media_files))
         return events
+
+    def _refresh_event(self, event: TimelineEvent, mf: MediaFile) -> None:
+        """Update a previously-built event with the media's current data."""
+        date, confidence = self._resolve_date(mf)
+        event.event_date      = date
+        event.date_confidence = confidence
+        event.date_label      = self._date_label(date, confidence)
+        event.event_type      = self._classify_event(mf)
+        event.title           = self._generate_title(mf, date)
+        event.description     = mf.ai_description
+        event.location        = mf.location_name or mf.ai_setting
+        event.sort_order      = int(date.timestamp()) if date else 0
 
     def _create_event(self, mf: MediaFile, user_id) -> TimelineEvent:
         date, confidence = self._resolve_date(mf)

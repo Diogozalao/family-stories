@@ -218,6 +218,8 @@ export default {
     browseFiles: "browse files",
     uploading: "Uploading {{current}} of {{total}}…",
     analyzing: "analysing…",
+    dateLabel: "Date:",
+    saveDate: "Save date",
     empty: "No photos yet. Start by uploading a few.",
     photoCount: "{{count}} photo",
     photoCount_plural: "{{count}} photos",

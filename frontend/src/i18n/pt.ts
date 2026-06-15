@@ -226,6 +226,8 @@ export default {
     browseFiles: "escolhe ficheiros",
     uploading: "A carregar {{current}} de {{total}}…",
     analyzing: "a analisar…",
+    dateLabel: "Data:",
+    saveDate: "Guardar data",
     empty: "Ainda não tens fotografias. Começa por carregar algumas.",
     photoCount: "{{count}} fotografia",
     photoCount_plural: "{{count}} fotografias",

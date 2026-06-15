@@ -14,11 +14,14 @@ every query and the ``user_id = ...`` assignment on every insert IS the
 isolation layer.
 """
 
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -158,6 +161,55 @@ async def get_media(
     record = result.scalar_one_or_none()
     if not record:
         raise HTTPException(status_code=404, detail="File not found")
+    return record
+
+
+class MediaUpdateRequest(BaseModel):
+    """Partial update of a media's user-editable metadata.
+
+    ``date_taken`` accepts an ISO date (``YYYY-MM-DD``) to set the photo's
+    date — essential for scans/screenshots that carry no EXIF date — or an
+    empty value to clear it. Absent fields are left untouched.
+    """
+    date_taken:    Optional[str] = None
+    location_name: Optional[str] = None
+
+
+@router.patch("/media/{file_id}", response_model=MediaFileResponse)
+async def update_media(
+    file_id: int,
+    payload: MediaUpdateRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Edit a photo's date and/or location — owned rows only.
+
+    Lets the user supply a real date for material without EXIF. The linked
+    timeline event is re-synced on the next ``/timeline/build`` (which the
+    frontend triggers right after).
+    """
+    record = (await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )).scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    fields = payload.model_dump(exclude_unset=True)
+    if "date_taken" in fields:
+        raw = (fields["date_taken"] or "").strip()
+        if raw:
+            try:
+                record.date_taken = datetime.fromisoformat(raw)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Formato de data inválido (usa AAAA-MM-DD).")
+        else:
+            record.date_taken = None
+    if "location_name" in fields:
+        record.location_name = (fields["location_name"] or "").strip() or None
+
+    await db.commit()
+    await db.refresh(record)
+    log.info("media_updated", id=record.id, date_taken=str(record.date_taken))
     return record
 
 

@@ -129,6 +129,20 @@ export function useDeletePhoto() {
   });
 }
 
+export function useUpdateMedia() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; date_taken?: string | null; location_name?: string }) => {
+      const { id, ...body } = input;
+      return (await api.patch(`/api/v1/media/${id}`, body)).data as MediaFile;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["timeline"] });
+    },
+  });
+}
+
 export function useUploadPhoto() {
   const qc = useQueryClient();
   return useMutation({

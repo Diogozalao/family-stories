@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import Photo from "../components/media/Photo";
-import { useBuildTimeline, useDeletePhoto, useMedia, useUploadPhoto } from "../lib/hooks";
+import { useBuildTimeline, useDeletePhoto, useMedia, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
 import { photoUrl } from "../lib/photo";
 import { extractErrorMessage } from "../lib/api";
 import { formatBytes } from "../lib/utils";
@@ -188,9 +188,31 @@ function Viewer({
   onChange: (i: number) => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const cur = items[index];
   const prev = () => onChange((index - 1 + items.length) % items.length);
   const next = () => onChange((index + 1) % items.length);
+
+  const updateMedia = useUpdateMedia();
+  const buildTimeline = useBuildTimeline();
+  const [dateInput, setDateInput] = useState<string>(cur.date_taken?.slice(0, 10) ?? "");
+
+  // Reset the date field whenever the viewer moves to another photo.
+  useEffect(() => {
+    setDateInput(cur.date_taken?.slice(0, 10) ?? "");
+  }, [cur.id, cur.date_taken]);
+
+  const saveDate = async () => {
+    try {
+      await updateMedia.mutateAsync({ id: cur.id, date_taken: dateInput || "" });
+      // Re-sync the timeline so the new date shows up there too (best-effort).
+      await buildTimeline.mutateAsync().catch(() => {});
+      toast.success(t("common.success"));
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
+  const dateChanged = (cur.date_taken?.slice(0, 10) ?? "") !== dateInput;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -249,6 +271,28 @@ function Viewer({
                 {cur.ai_description}
               </p>
             )}
+            <div className="mt-3 flex items-center gap-2">
+              <label className="text-[11px] text-white/60">{t("library.dateLabel")}</label>
+              <input
+                type="date"
+                value={dateInput}
+                onChange={(e) => setDateInput(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+                className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-xs text-white [color-scheme:dark]"
+              />
+              {dateChanged && (
+                <button
+                  onClick={saveDate}
+                  disabled={updateMedia.isPending || buildTimeline.isPending}
+                  className="inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 text-xs text-white hover:bg-white/25"
+                >
+                  {(updateMedia.isPending || buildTimeline.isPending)
+                    ? <Loader2 className="h-3 w-3 animate-spin" />
+                    : null}
+                  {t("library.saveDate")}
+                </button>
+              )}
+            </div>
           </div>
           <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1">{index + 1} / {items.length}</span>
         </div>
