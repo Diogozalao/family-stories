@@ -66,9 +66,15 @@ O M2 transforma factos dispersos numa estrutura temporal e relacional
 coerente, através de dois componentes.
 
 O \textbf{\emph{date resolver}} normaliza datas heterogéneas e
-frequentemente incompletas (apenas o ano, intervalos, formatos ambíguos),
-produzindo uma chave de ordenação consistente — essencial, dado que o
-material de arquivo raramente tem datas exatas.
+frequentemente incompletas, produzindo uma chave de ordenação consistente
+— essencial, dado que o material de arquivo raramente tem datas exatas.
+Trata os qualificadores do formato GEDCOM (\texttt{ABT} ``cerca de'',
+\texttt{BEF} ``antes de'', \texttt{AFT} ``depois de'') e os casos de apenas
+mês/ano ou só ano, e rejeita datas implausíveis (anteriores a 1800, o
+\emph{epoch} Unix de 1970 ou no futuro), evitando que ruído contamine a
+linha temporal. Os casamentos importados do GEDCOM geram automaticamente
+\texttt{TimelineEvent}s datados, que passam a fazer parte do contexto
+factual disponível ao M3.
 
 O coração do M2 é o \textbf{grafo de parentesco} (\texttt{FamilyGraph}),
 construído sobre o \emph{NetworkX}~\cite{networkx} como grafo dirigido: os
@@ -345,7 +351,24 @@ A execução é feita por uma de duas vias, transparentes para o cliente:
 Ambas as vias partilham os mesmos \emph{corpos} de tarefa
 (\texttt{tasks/bodies.py}) e o mesmo mecanismo de transição de estado
 (\texttt{running}\,$\rightarrow$\,\texttt{done}/\texttt{failed}), pelo que
-a experiência do utilizador é idêntica independentemente do ambiente.
+a experiência do utilizador é idêntica independentemente do ambiente. O
+executor \emph{in-process} (\Cref{lst:inproc}) usa um \emph{thread pool}
+limitado a um trabalhador — suficiente para um sistema single-tenant e
+prudente face aos $\approx$512~MB de memória do plano gratuito.
+
+\begin{lstlisting}[language=Python,caption={Despacho de uma tarefa para o
+executor \emph{in-process}, com o mesmo seguimento de estado do Celery
+(\texttt{tasks/inproc.py}).},label={lst:inproc}]
+_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inproc-task")
+
+def run_in_background(task_record_id, body_factory):
+    synthetic_id = f"inproc-{uuid4().hex}"
+    def _runner():
+        # asyncio.run num thread proprio -> nao bloqueia o loop do FastAPI
+        run_async(run_with_tracking(task_record_id, synthetic_id, body_factory))
+    _EXECUTOR.submit(_runner)
+    return synthetic_id
+\end{lstlisting}
 
 Uma decisão de robustez relevante é o \textbf{\emph{sweep} de tarefas
 órfãs} no arranque: como nem um \emph{worker} Celery nem um \emph{thread}
@@ -420,7 +443,20 @@ api.interceptors.response.use((r) => r, async (err) => {
 });
 \end{lstlisting}
 
-\section{Segurança}
+\subsection{Resiliência a \emph{cold starts}}
+\label{sub:coldstart}
+
+O plano gratuito do Render suspende o \emph{backend} ao fim de alguns
+minutos de inatividade; o primeiro pedido após a suspensão acorda-o, mas
+pode demorar o suficiente para a ligação cair antes de a resposta chegar
+ao \emph{browser} — mesmo tendo a operação sido concluída e persistida no
+servidor. O \emph{frontend} distingue este caso (resposta perdida, sem
+código HTTP) de um erro real e, em vez de mostrar um ``Network Error''
+bruto, \emph{reverifica}: aguarda alguns segundos, refaz a consulta
+relevante e, se os dados apareceram (uma nova história, novas pessoas
+importadas), trata a operação como bem-sucedida. Nunca reenvia o pedido,
+para não duplicar dados. Como mitigação de raiz, um \emph{ping} periódico
+externo ao \texttt{/healthz} mantém o serviço acordado.
 \label{sec:impl_seguranca}
 
 \subsection{Autenticação por JWKS e isolamento multi-inquilino}

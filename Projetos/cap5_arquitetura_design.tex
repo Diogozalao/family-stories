@@ -66,11 +66,14 @@ IA híbrida local/nuvem.}
 Uma característica determinante da arquitetura é que os módulos M1--M4
 \emph{não} são invocados diretamente no ciclo pedido-resposta da API:
 operações como o \textsc{ocr}, a inferência do \textsc{llm} e a montagem
-de vídeo podem demorar minutos. Por isso, intercala-se opcionalmente uma
-\textbf{fila de tarefas assíncrona} (Celery + Redis): o utilizador
-submete o pedido, a API coloca a tarefa na fila, e um \emph{worker}
-executa os módulos em segundo plano enquanto o \emph{frontend} mostra o
-progresso. A \Cref{fig:fullstack} apresenta uma vista detalhada,
+de vídeo podem demorar de segundos a minutos. Por isso, estas operações
+correm em segundo plano, por uma de duas vias intermutáveis (ver
+\Cref{sub:async}): uma \textbf{fila de tarefas} (Celery + Redis) quando
+existe um \emph{worker} dedicado, ou um \textbf{executor \emph{in-process}}
+dentro do próprio \emph{backend} quando não existe (o caso do plano
+gratuito). Em ambas, o utilizador submete o pedido, recebe de imediato um
+identificador de tarefa, e o \emph{frontend} acompanha o progresso por
+\emph{polling}. A \Cref{fig:fullstack} apresenta uma vista detalhada,
 camada a camada, de toda a \emph{stack}.
 
 \begin{figure}[H]
@@ -119,6 +122,57 @@ privilegiado para privacidade, sendo a nuvem (Gemini) um recurso de
 \emph{fallback}. Esta evolução é um exemplo concreto de compromisso
 maduro entre acessibilidade, privacidade e escalabilidade.
 
+\section{Fluxo de Dados e Execução}
+\label{sec:fluxo}
+
+\subsection{Encadeamento do \emph{pipeline}}
+
+Os quatro módulos formam uma cadeia em que a saída de cada um alimenta o
+seguinte. A \Cref{tab:fluxo} resume, para cada módulo, o que consome e o
+que produz — tornando explícito porque é que a ordem importa (por exemplo,
+o M3 só pode ancorar a narrativa em factos depois de o M1 os ter
+extraído).
+
+\begin{table}[H]
+\centering
+\caption{Fluxo de dados ao longo do \emph{pipeline} M1--M4.}
+\label{tab:fluxo}
+\small
+\begin{tabularx}{\linewidth}{@{}p{1.5cm}YY@{}}
+\toprule
+\textbf{Módulo} & \textbf{Consome} & \textbf{Produz} \\
+\midrule
+M1 & Bytes de fotografias, documentos e GEDCOM & \texttt{MediaFile} (metadados
+\textsc{exif} + descrição de IA + \textsc{ocr}); \texttt{Person} e relações. \\
+M2 & \texttt{MediaFile} e \texttt{Person} & Datas resolvidas;
+\texttt{TimelineEvent}; grafo de parentesco. \\
+M3 & Factos do M1/M2 (via RAG) + intenção do utilizador & \texttt{Story}
+(prosa + \texttt{scenes} ligadas a fotografias). \\
+M4 & \texttt{Story} (cenas) + fotografias do \emph{Storage} &
+\texttt{VideoOutput} (MP4 sincronizado, no \emph{Storage}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Sequência de uma geração assíncrona}
+
+Para uma geração em segundo plano (narrativa ou vídeo), o fluxo é o
+seguinte:
+
+\begin{enumerate}[leftmargin=*]
+  \item O \emph{frontend} envia o pedido com \texttt{mode=background}.
+  \item A API valida, cria um registo \texttt{TaskRecord} (estado
+  \texttt{pending}) e devolve \emph{imediatamente} o seu identificador.
+  \item A tarefa é despachada para o Celery ou para o executor
+  \emph{in-process} (\Cref{sub:async}), que a marca \texttt{running}.
+  \item O módulo (M3 ou M4) executa; ao terminar, o registo passa a
+  \texttt{done} (ou \texttt{failed}) e é ligado ao artefacto produzido
+  (\texttt{story\_id}/\texttt{video\_id}).
+  \item O \emph{frontend} faz \emph{polling} de \texttt{/api/v1/tasks/\{id\}}
+  e, na transição para \texttt{done}, notifica o utilizador com uma ação
+  para abrir a história/vídeo.
+\end{enumerate}
+
 \section{Modelo de Dados}
 \label{sec:modelo_dados}
 
@@ -151,10 +205,29 @@ em PostgreSQL (Supabase). As entidades principais são:
   \emph{payload}, carimbos temporais, erro).
 \end{itemize}
 
+As relações principais entre entidades resumem-se na \Cref{tab:relacoes}.
 Uma fronteira de tipos relevante: o \texttt{user\_id} é um \textsc{uuid}
 (proveniente do Supabase Auth), ao passo que as chaves primárias das
 entidades de domínio são inteiros sequenciais do PostgreSQL. A
 \Cref{fig:er} apresenta o diagrama entidade-relação.
+
+\begin{table}[H]
+\centering
+\caption{Relações principais entre entidades.}
+\label{tab:relacoes}
+\small
+\begin{tabular}{@{}lcl@{}}
+\toprule
+\textbf{Entidade A} & \textbf{Cardinalidade} & \textbf{Entidade B} \\
+\midrule
+Project      & 1 --- N & ProjectMedia \\
+ProjectMedia & N --- 1 & MediaFile \\
+Story        & 1 --- N & VideoOutput \\
+Project      & 1 --- N & Story \\
+TaskRecord   & N --- 1 & Story / VideoOutput (resultado) \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \begin{figure}[H]
 \centering

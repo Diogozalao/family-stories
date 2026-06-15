@@ -22,14 +22,23 @@ Vercel); e a premissa de privacidade e baixo custo (O6) foi
 ferramentas de código aberto. Em suma, os objetivos centrais do projeto
 foram alcançados.
 
+Para além dos objetivos definidos, o trabalho concretizou dois avanços
+que elevam o resultado: a \textbf{narrativa segmentada em cenas}, que
+sincroniza cada fotografia com a sua narração no vídeo (transformando o
+\emph{slideshow} num verdadeiro documentário), e a \textbf{geração
+assíncrona} — quando não há \emph{worker} Celery, as tarefas longas
+correm num executor \emph{in-process}, devolvendo a resposta de imediato
+e atualizando o estado por \emph{polling}.
+
 Mais do que a integração de modelos, o trabalho destacou-se pela
 \textbf{engenharia de robustez}: a degradação graciosa do RAG, os
-\emph{fallbacks} de IA, o \emph{sweep} de tarefas órfãs e o rebaixamento
-síncrono permitem ao sistema operar de forma fiável quer numa máquina
-local com todas as dependências, quer num ambiente de nuvem restrito. A
-migração de um protótipo \emph{local-first} para uma arquitetura
-\emph{multi-tenant}, preservando a opção de inferência local, ilustra um
-compromisso maduro entre acessibilidade, privacidade e escalabilidade.
+\emph{fallbacks} de IA, o \emph{sweep} de tarefas órfãs, a execução
+assíncrona \emph{in-process} e a recuperação de \emph{cold starts}
+permitem ao sistema operar de forma fiável quer numa máquina local com
+todas as dependências, quer num ambiente de nuvem restrito. A migração de
+um protótipo \emph{local-first} para uma arquitetura \emph{multi-tenant},
+preservando a opção de inferência local, ilustra um compromisso maduro
+entre acessibilidade, privacidade e escalabilidade.
 
 \section{Limitações}
 \label{sec:limitacoes}
@@ -42,9 +51,15 @@ atual:
   base sejam persistidos, falta ainda um painel consolidado de métricas
   (tempos de geração, taxa de sucesso por \emph{template}, qualidade do
   RAG) e um protocolo de avaliação humana sistemático.
-  \item \textbf{RAG inativo em produção.} No \emph{deploy} gratuito, a
-  ausência de ChromaDB faz o RAG operar em modo \emph{stub}; o passo de
-  \emph{retrieval} só está plenamente ativo em ambiente local.
+  \item \textbf{RAG inativo em produção.} O passo de \emph{retrieval} já
+  está ligado à geração (\Cref{sub:geracao_narrativa}), mas no \emph{deploy}
+  gratuito a ausência de ChromaDB força o modo \emph{stub} — só em ambiente
+  local o \emph{retrieval} fica plenamente ativo. A migração para
+  \emph{pgvector} (\Cref{sec:trabalho_futuro}) resolveria isto.
+  \item \textbf{Sincronização de vídeo aproximada.} A duração de cada
+  fotografia segue a narração da sua cena, mas pequenas derivas podem
+  acumular-se em histórias longas; um alinhamento ao nível da palavra
+  (via transcrição) seria mais preciso.
   \item \textbf{Sem identificação de pessoas.} O reconhecimento facial
   (que tornaria as narrativas menos genéricas) não foi implementado.
   \item \textbf{Cobertura de testes do \emph{frontend}.} A automação de

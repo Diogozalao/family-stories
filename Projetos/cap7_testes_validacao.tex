@@ -29,23 +29,26 @@ A estratégia de testes assentou em três pilares complementares:
 \label{sec:pytest}
 
 A suíte de testes do \emph{backend} foi implementada com \textbf{pytest}
-(com \texttt{pytest-asyncio} e \texttt{pytest-cov}) e conta atualmente com
-\textbf{37 testes a passar}. A \Cref{tab:testes} resume a sua distribuição.
+(com \texttt{pytest-asyncio} e \texttt{pytest-cov}). Conta atualmente com
+\textbf{36 testes unitários a passar}, a que acresce uma suíte de
+\emph{integração} (autenticação e sondas de saúde) que exige um ambiente
+\textsc{Supabase} configurado para correr. A \Cref{tab:testes} resume a
+distribuição.
 
 \begin{table}[H]
 \centering
 \caption{Distribuição da suíte de testes automatizados.}
 \label{tab:testes}
 \small
-\begin{tabularx}{\linewidth}{@{}llp{6.6cm}@{}}
+\begin{tabularx}{\linewidth}{@{}llp{6.4cm}@{}}
 \toprule
 \textbf{Tipo} & \textbf{Módulo de teste} & \textbf{Âmbito} \\
 \midrule
-Unitário    & \texttt{test\_security}        & \emph{Security scanner}: \emph{checksum} e deteção de ficheiros inseguros. \\
-Unitário    & \texttt{test\_upload\_validator} & Validação de tipo, \emph{magic bytes} e limites de tamanho. \\
+Unitário    & \texttt{test\_upload\_validator} & Validação de tipo, \emph{magic bytes} e limites de tamanho (M1). \\
 Unitário    & \texttt{test\_date\_resolver}  & Resolução de datas incompletas e ambíguas (M2). \\
 Unitário    & \texttt{test\_family\_graph}   & Construção do grafo e resumos de parentesco (M2). \\
 Unitário    & \texttt{test\_templates}       & Integridade e formatação dos \emph{templates} narrativos (M3). \\
+Unitário    & \texttt{test\_scene\_builder}  & Segmentação em cenas e atribuição foto$\rightarrow$parágrafo, e cálculo de durações (M3/M4). \\
 Unitário    & \texttt{test\_video\_builder}  & Funções de enquadramento e montagem de vídeo (M4). \\
 Integração  & \texttt{test\_auth\_routes}    & Fluxo de autenticação na API. \\
 Integração  & \texttt{test\_health\_route}   & Sondas de \emph{liveness} e \emph{deep health}. \\
@@ -63,7 +66,7 @@ não-determinística e, por isso, validada por outras vias
 \centering
 % \includegraphics[width=0.9\linewidth]{pytest.png}
 \figph[4.5cm]{Captura de ecrã da execução \texttt{pytest -v} mostrando
-os 37 testes a passar (idealmente com o sumário de cobertura
+os testes unitários a passar (idealmente com o sumário de cobertura
 \texttt{--cov}).}
 \caption{Resultado da execução da suíte de testes automatizados.}
 \label{fig:pytest}
@@ -145,8 +148,14 @@ campos entre \emph{frontend} e \emph{backend} (por exemplo,
 \texttt{narrative} vs.\ \texttt{content}, e \texttt{completed} vs.\
 \texttt{ready} no estado dos vídeos), captado e resolvido graças à tipagem
 estrita; a questão das tarefas eternamente ``em execução'', resolvida com
-o \emph{sweep} de órfãs (\Cref{lst:sweep}); e a migração de
+o \emph{sweep} de órfãs (\Cref{lst:sweep}); a migração de
 \texttt{datetime.utcnow()} para \texttt{datetime.now(UTC)} em conformidade
-com as versões recentes do Python. Globalmente, o sistema cumpre os
-requisitos funcionais essenciais (\rf{1}--\rf{13}), produzindo
-narrativas e vídeos coerentes a partir de arquivos familiares reais.
+com as versões recentes do Python; e a correção de um \texttt{NameError}
+na resolução de datas (M2) que faltava importar \texttt{UTC}. Foi ainda
+endurecida a resiliência a \emph{cold starts} do alojamento gratuito: um
+\emph{upload} ou geração cuja resposta se perca por o servidor estar a
+``acordar'' deixa de surgir como ``Network Error'' bruto — a interface
+reverifica o estado e recupera de forma transparente. Globalmente, o
+sistema cumpre os requisitos funcionais essenciais (\rf{1}--\rf{13}),
+produzindo narrativas e vídeos coerentes a partir de arquivos familiares
+reais.

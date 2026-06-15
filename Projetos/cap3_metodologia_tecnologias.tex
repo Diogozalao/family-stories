@@ -93,6 +93,38 @@ Supabase (dados); Git. \\
 \end{tabularx}
 \end{table}
 
+Justificar uma escolha implica também conhecer as alternativas que foram
+postas de lado. A \Cref{tab:decisoes} resume as decisões mais relevantes,
+o que se considerou em alternativa e a razão da opção tomada.
+
+\begin{table}[H]
+\centering
+\caption{Principais decisões tecnológicas e alternativas consideradas.}
+\label{tab:decisoes}
+\small
+\begin{tabularx}{\linewidth}{@{}p{2.9cm}p{3.1cm}Y@{}}
+\toprule
+\textbf{Decisão} & \textbf{Alternativas} & \textbf{Razão da escolha} \\
+\midrule
+FastAPI & Flask, Django & Assíncrono nativo, validação automática
+(Pydantic) e documentação interativa gerada. \\
+Ollama local + Gemini (\emph{fallback}) & Apenas API comercial
+(GPT-4/Claude) & Privacidade e custo nulo em local; \emph{fallback}
+robusto na nuvem. \\
+RAG (\emph{retrieval}) & \emph{Fine-tuning}; sem \emph{grounding} & Não
+exige treino e ancora a geração em factos, mitigando alucinação. \\
+MoviePy + FFmpeg & APIs de vídeo IA (Runway/Pika) & Custo nulo, controlo
+total e academicamente defensável (\Cref{sub:geracao_video}). \\
+TanStack Query + Zustand & Redux & O estado é maioritariamente
+\emph{server-state}; menos \emph{boilerplate}. \\
+Supabase & Firebase; infraestrutura própria & PostgreSQL, autenticação e
+\emph{Storage} integrados, com camada gratuita. \\
+Executor \emph{in-process} & \emph{Worker} Celery pago &
+Assíncrono sem custo no plano gratuito (\Cref{sub:async}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \subsection{\emph{Backend}: FastAPI}
 
 Escolheu-se o \textbf{FastAPI} pela sua natureza \emph{assíncrona}
@@ -121,10 +153,13 @@ de dupla via é detalhada no \Cref{cap:implementacao}.
 Para o subsistema \textbf{RAG} adotou-se o \textbf{ChromaDB} como base
 vetorial, com \emph{embeddings} de \emph{sentence-transformers}. A
 escolha recaiu sobre o ChromaDB pela simplicidade de integração
-(persistência local em ficheiro, sem servidor dedicado). Como se verá, o
-subsistema foi desenhado para \emph{degradar graciosamente} na ausência
-desta dependência, uma decisão motivada pelas restrições de
-\emph{deployment} discutidas no \Cref{cap:implementacao}.
+(persistência local em ficheiro, sem servidor dedicado). O passo de
+\emph{retrieval} está ligado à geração — seleciona, de entre uma
+biblioteca grande, as fotografias relevantes ao tema antes de construir o
+\emph{prompt}. Como se verá, o subsistema foi ainda desenhado para
+\emph{degradar graciosamente} na ausência desta dependência, uma decisão
+motivada pelas restrições de \emph{deployment} discutidas no
+\Cref{cap:implementacao}.
 
 \subsection{Multimédia: MoviePy, FFmpeg e Pillow}
 
@@ -158,3 +193,43 @@ incluir dependências de sistema como FFmpeg, Tesseract e libmagic) e
 implantado no \textbf{Render}; o \emph{frontend} é servido pela
 \textbf{Vercel}. Esta combinação assenta integralmente em camadas
 gratuitas, mantendo o custo operacional próximo de zero.
+
+\subsection{Tarefas assíncronas: Celery vs.\ executor \emph{in-process}}
+\label{sub:async}
+
+Gerar uma narrativa ou um vídeo pode demorar dezenas de segundos, pelo
+que estas operações devem correr \emph{em segundo plano} — devolvendo a
+resposta de imediato e atualizando o estado por \emph{polling}. A solução
+canónica seria o \textbf{Celery} com \textbf{Redis} e um \emph{worker}
+dedicado; porém, no plano gratuito do Render, um \emph{worker} é um
+serviço pago e, pior, adormeceria sem forma de ser acordado (não tem
+\textsc{http}), deixando tarefas presas. Optou-se, por isso, por uma
+estratégia de \emph{dupla via}: usa-se o Celery quando existe um
+\emph{worker}; na sua ausência (\texttt{CELERY\_ENABLED=False}), as
+tarefas correm num \textbf{executor \emph{in-process}} — um pequeno
+\emph{thread pool} dentro do próprio servidor, cada \emph{thread} com o
+seu \emph{event loop}, sem bloquear o FastAPI. Ambas as vias partilham os
+mesmos corpos de tarefa e o mesmo registo de estado, sendo transparentes
+para o cliente. O detalhe de implementação consta do
+\Cref{sec:impl_backend}.
+
+\subsection{Princípios de engenharia transversais}
+\label{sub:principios}
+
+Algumas decisões não pertencem a uma única tecnologia, mas atravessam todo
+o sistema e foram aplicadas de forma consistente:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Degradação graciosa.} Dependências opcionais (base
+  vetorial, \textsc{llm} local, \emph{worker} de tarefas) podem faltar sem
+  derrubar o sistema — este apenas perde a funcionalidade correspondente.
+  \item \textbf{\emph{Fallbacks} explícitos.} Quando um caminho preferido
+  falha (Ollama, Celery, \emph{edge-tts}), existe um plano B documentado
+  (Gemini, \emph{in-process}, gTTS).
+  \item \textbf{Isolamento por \texttt{user\_id}.} Todas as consultas
+  filtram pelo dono, sendo esta a barreira de segurança multi-inquilino.
+  \item \textbf{Tipagem forte ponta-a-ponta.} \emph{Type hints} em Python e
+  TypeScript estrito capturam erros em tempo de compilação.
+  \item \textbf{Observabilidade.} \emph{Logging} estruturado e sondas de
+  saúde profundas dão visibilidade sobre o estado das dependências.
+\end{itemize}

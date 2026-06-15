@@ -10,6 +10,23 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-13 — Verificação geral + aprofundamento (Cap. 3, 5, 6)
+
+**Correções factuais (todos os capítulos):**
+- **Resumo** — acrescentada a segmentação em cenas (sincronização imagem↔narração).
+- **Cap. 1** — duas novas contribuições: narrativa em cenas e geração assíncrona/resiliência a cold-starts.
+- **Cap. 7** — nº de testes corrigido (36 unitários a passar; removido `test_security` desatualizado, adicionado `test_scene_builder`); legenda da figura e secção de bugs atualizadas (fix `UTC` no date_resolver, resiliência a cold-start).
+- **Cap. 8** — síntese passa a referir cenas + assíncrono in-process; limitações atualizadas (RAG já ligado mas stub na nuvem; deriva de sincronização); removido o "rebaixamento síncrono" agora obsoleto.
+
+**Reescrita aprofundada:**
+- **Cap. 3** — tabela comparativa de decisões (alternativas + razão); nova subsecção "Tarefas assíncronas: Celery vs. in-process"; nova subsecção "Princípios de engenharia transversais"; RAG com retrieval ligado.
+- **Cap. 5** — visão global atualizada (duas vias de execução); nova secção "Fluxo de Dados e Execução" (tabela consome/produz + sequência de geração assíncrona); tabela de relações entre entidades.
+- **Cap. 6** — M2 com profundidade (qualificadores GEDCOM, validação de datas, eventos de casamento); excerto do executor in-process (`lst:inproc`); nova subsecção "Resiliência a cold starts".
+
+> Nota: a lista de acrónimos existe **uma única vez** (`acronimos.tex`, incluída 1× em `main.tex`). Se aparecerem duas no Overleaf, é uma cópia extra a remover lá.
+
+---
+
 ## 2026-06-11 — M1: análise de IA diferida (upload não bloqueia)
 
 - **[Reescrita]** `cap6_implementacao.tex` · §M1 — nova ordem do pipeline
