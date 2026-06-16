@@ -228,6 +228,7 @@ export default {
     analyzing: "a analisar…",
     dateLabel: "Data:",
     saveDate: "Guardar data",
+    peopleInPhoto: "Quem aparece nesta foto:",
     empty: "Ainda não tens fotografias. Começa por carregar algumas.",
     photoCount: "{{count}} fotografia",
     photoCount_plural: "{{count}} fotografias",

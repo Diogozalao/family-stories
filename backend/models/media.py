@@ -60,6 +60,10 @@ class MediaFile(Base):
 
     ocr_text = Column(Text, nullable=True)
 
+    # Ids of the persons (from the family tree) that appear in this photo —
+    # the link that lets M3/M4 connect faces to names in the story.
+    person_ids = Column(JSONB, default=list)
+
     is_safe      = Column(Boolean, default=True)
     checksum_md5 = Column(String(32), nullable=True)
     raw_exif     = Column(JSONB, nullable=True)

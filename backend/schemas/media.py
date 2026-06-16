@@ -28,7 +28,10 @@ class MediaFileResponse(BaseModel):
     
     # OCR
     ocr_text: Optional[str]
-    
+
+    # People tagged in the photo (ids from the family tree)
+    person_ids: Optional[List[int]] = []
+
     created_at: datetime
 
     class Config:

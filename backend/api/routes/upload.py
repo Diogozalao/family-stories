@@ -164,6 +164,42 @@ async def get_media(
     return record
 
 
+class MediaPersonsRequest(BaseModel):
+    """The full set of person ids that appear in a photo (replaces previous)."""
+    person_ids: list[int] = []
+
+
+@router.put("/media/{file_id}/persons", response_model=MediaFileResponse)
+async def set_media_persons(
+    file_id: int,
+    payload: MediaPersonsRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Tag which family members appear in a photo — owner only.
+
+    Only ids of persons owned by the caller are kept, so a photo can never
+    be linked to someone else's relatives.
+    """
+    from backend.models.timeline import Person
+
+    record = (await db.execute(
+        select(MediaFile).where(MediaFile.id == file_id, MediaFile.user_id == user.id)
+    )).scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    valid = set((await db.execute(
+        select(Person.id).where(Person.id.in_(payload.person_ids or []), Person.user_id == user.id)
+    )).scalars().all())
+    record.person_ids = [pid for pid in (payload.person_ids or []) if pid in valid]
+
+    await db.commit()
+    await db.refresh(record)
+    log.info("media_persons_set", id=record.id, n=len(record.person_ids))
+    return record
+
+
 class MediaUpdateRequest(BaseModel):
     """Partial update of a media's user-editable metadata.
 

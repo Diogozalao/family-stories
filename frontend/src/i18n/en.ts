@@ -220,6 +220,7 @@ export default {
     analyzing: "analysing…",
     dateLabel: "Date:",
     saveDate: "Save date",
+    peopleInPhoto: "Who appears in this photo:",
     empty: "No photos yet. Start by uploading a few.",
     photoCount: "{{count}} photo",
     photoCount_plural: "{{count}} photos",

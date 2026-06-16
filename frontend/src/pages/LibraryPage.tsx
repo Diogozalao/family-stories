@@ -7,10 +7,10 @@ import {
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import Photo from "../components/media/Photo";
-import { useBuildTimeline, useDeletePhoto, useMedia, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
+import { useBuildTimeline, useDeletePhoto, useMedia, usePersons, useSetMediaPersons, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
 import { photoUrl } from "../lib/photo";
 import { extractErrorMessage } from "../lib/api";
-import { formatBytes } from "../lib/utils";
+import { cn, formatBytes } from "../lib/utils";
 import type { MediaFile } from "../lib/types";
 
 export default function LibraryPage() {
@@ -214,6 +214,20 @@ function Viewer({
   };
   const dateChanged = (cur.date_taken?.slice(0, 10) ?? "") !== dateInput;
 
+  // Tag which family members appear in this photo.
+  const { data: persons } = usePersons();
+  const setPersons = useSetMediaPersons();
+  const [tagged, setTagged] = useState<number[]>(cur.person_ids ?? []);
+  useEffect(() => { setTagged(cur.person_ids ?? []); }, [cur.id, cur.person_ids]);
+  const togglePerson = (pid: number) => {
+    const updated = tagged.includes(pid) ? tagged.filter((x) => x !== pid) : [...tagged, pid];
+    setTagged(updated);
+    setPersons.mutate(
+      { id: cur.id, person_ids: updated },
+      { onError: (err) => toast.error(extractErrorMessage(err)) },
+    );
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -293,6 +307,27 @@ function Viewer({
                 </button>
               )}
             </div>
+            {(persons ?? []).length > 0 && (
+              <div className="mt-3">
+                <p className="mb-1 text-[11px] text-white/60">{t("library.peopleInPhoto")}</p>
+                <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+                  {(persons ?? []).map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => togglePerson(p.id)}
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[11px] transition",
+                        tagged.includes(p.id)
+                          ? "border-brand-400 bg-brand-500/30 text-white"
+                          : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10",
+                      )}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1">{index + 1} / {items.length}</span>
         </div>

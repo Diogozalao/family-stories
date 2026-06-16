@@ -139,6 +139,15 @@ export function useDeletePhoto() {
   });
 }
 
+export function useSetMediaPersons() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; person_ids: number[] }) =>
+      (await api.put(`/api/v1/media/${input.id}/persons`, { person_ids: input.person_ids })).data as MediaFile,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+  });
+}
+
 export function useUpdateMedia() {
   const qc = useQueryClient();
   return useMutation({

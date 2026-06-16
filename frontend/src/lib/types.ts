@@ -16,6 +16,7 @@ export interface MediaFile {
   location_name?: string | null;
   camera_make?: string | null;
   camera_model?: string | null;
+  person_ids?: number[] | null;
 }
 
 export interface Person {

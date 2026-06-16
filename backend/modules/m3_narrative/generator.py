@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.models.media import MediaFile, ProcessingStatus
 from backend.models.narrative import Story, StoryStatus
-from backend.models.timeline import TimelineEvent
+from backend.models.timeline import Person, TimelineEvent
 from backend.modules.m2_temporal.family_graph import FamilyGraph
 from backend.modules.m3_narrative.llm_client import LLMClient, LLMUnavailableError
 from backend.modules.m3_narrative.rag_system import RAGSystem
@@ -142,7 +142,14 @@ class NarrativeGenerator:
             except Exception as exc:                       # never block generation
                 log.warning("rag_select_failed", error=str(exc))
 
-        events_context = self._build_events_from_media(all_media)
+        # Map person id → name so each photo's context can name who appears
+        # in it (the photo↔person tagging) — connecting faces to the tree.
+        person_rows  = (await db.execute(
+            select(Person.id, Person.name).where(Person.user_id == user_id)
+        )).all()
+        person_names = {pid: name for pid, name in person_rows}
+
+        events_context = self._build_events_from_media(all_media, person_names)
         family_context = self._build_family_context(graph, person_ids)
 
         user_focus = (query or title or "").strip()
@@ -232,7 +239,7 @@ class NarrativeGenerator:
         )
         return story
 
-    def _build_events_from_media(self, media_list: list) -> str:
+    def _build_events_from_media(self, media_list: list, person_names: dict | None = None) -> str:
         if not media_list:
             return "Sem fotografias ou documentos disponíveis."
 
@@ -240,6 +247,10 @@ class NarrativeGenerator:
         for i, m in enumerate(media_list, 1):
             parts = []
             if m.ai_description:      parts.append(f"Descrição: {m.ai_description}")
+            if person_names:
+                who = [person_names.get(pid) for pid in (getattr(m, "person_ids", None) or [])]
+                who = [n for n in who if n]
+                if who:               parts.append(f"Quem aparece: {', '.join(who)}")
             if m.ai_setting:          parts.append(f"Local: {m.ai_setting}")
             if m.ai_emotion:          parts.append(f"Emoção: {m.ai_emotion}")
             if m.ai_tags:             parts.append(f"Tags: {', '.join(m.ai_tags)}")
