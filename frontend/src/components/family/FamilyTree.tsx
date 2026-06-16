@@ -8,7 +8,9 @@ import "reactflow/dist/style.css";
 import { Loader2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
+import { extractErrorMessage } from "../../lib/api";
 import { useFamilyTree, useSaveTreePositions } from "../../lib/hooks";
 import type { Person, TreeRelationship } from "../../lib/types";
 import { cn } from "../../lib/utils";
@@ -206,7 +208,10 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
 
   // Persist a node's position when the user finishes dragging it.
   const onNodeDragStop = useCallback((_evt: React.MouseEvent, node: Node) => {
-    savePos.mutate({ positions: [{ id: Number(node.id), x: node.position.x, y: node.position.y }] });
+    savePos.mutate(
+      { positions: [{ id: Number(node.id), x: node.position.x, y: node.position.y }] },
+      { onError: (err) => toast.error(extractErrorMessage(err)) },
+    );
   }, [savePos]);
 
   // Clear all saved positions → fall back to the automatic layout.

@@ -138,6 +138,13 @@ const PARENT_OF: Record<string, [string, string]> = {
   pai: ["avoPaterno", "avoPaterna"],
   mae: ["avoMaterno", "avoMaterna"],
 };
+// The spouse of each pedigree role, so "filho(a) de X" can link the child
+// to BOTH parents of the couple (pai e mãe), not just one.
+const SPOUSE_OF: Record<string, string> = {
+  pai: "mae", mae: "pai",
+  avoPaterno: "avoPaterna", avoPaterna: "avoPaterno",
+  avoMaterno: "avoMaterna", avoMaterna: "avoMaterno",
+};
 
 type Extra = { id: string; name: string; rel: "filho" | "casado" | "irmao"; target: string };
 
@@ -207,9 +214,14 @@ function PedigreeWizard({
       if (ex.rel === "casado") {
         rel.push({ from_ref: ref, to_ref: ex.target, kind: "cônjuge" });
       } else if (ex.rel === "filho") {
-        // "filho(a) de target": target is the parent of this new person.
-        const kind = SEX_OF_ROLE[ex.target] === "F" ? "mãe" : "pai";
-        rel.push({ from_ref: ex.target, to_ref: ref, kind });
+        // "filho(a) de target": link to target AND target's spouse, so the
+        // child has both parents (pai e mãe) — not just the one selected.
+        const linkParent = (parentRef: string) => {
+          rel.push({ from_ref: parentRef, to_ref: ref, kind: SEX_OF_ROLE[parentRef] === "F" ? "mãe" : "pai" });
+        };
+        linkParent(ex.target);
+        const spouse = SPOUSE_OF[ex.target];
+        if (spouse && (vals[spouse] ?? "").trim()) linkParent(spouse);
       } else {
         // "irmão(ã) de target": share the target's parents (tio / sibling).
         const parents = PARENT_OF[ex.target];

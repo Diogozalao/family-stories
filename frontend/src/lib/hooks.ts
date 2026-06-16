@@ -390,12 +390,14 @@ export interface BulkPersonInput {
 export interface BulkRelInput { from_ref: string; to_ref: string; kind: string }
 
 export function useSaveTreePositions() {
-  // Fire-and-forget: the dragged position is already reflected locally by
-  // React Flow, so we deliberately DON'T invalidate ["tree"] (that would
-  // refetch and yank the node back mid-interaction). It just persists.
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { positions: { id: number; x: number | null; y: number | null }[] }) =>
       (await api.post("/api/v1/genealogy/tree/positions", input)).data,
+    // Refresh the cached tree so the saved position survives leaving and
+    // coming back to the view (the node is already where it was dropped,
+    // so this doesn't cause a visible jump).
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["tree"] }),
   });
 }
 
