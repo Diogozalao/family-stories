@@ -39,7 +39,12 @@ class Settings(BaseSettings):
 
     # External AI services.
     GEMINI_API_KEY:  str = ""
-    GEMINI_MODEL:    str = "gemini-1.5-flash"
+    # Use a currently-available model. Gemini 1.5 is no longer served to API
+    # keys created after ~April 2025, which silently broke narrative
+    # generation (M1 already used 2.5-flash, which is why photo analysis kept
+    # working while narratives failed). Override via env if needed.
+    GEMINI_MODEL:    str = "gemini-2.5-flash"
+    GEMINI_TIMEOUT:  int = 90          # seconds per LLM call before giving up
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL:    str = "llama3.2:3b"
     NARRATIVE_MAX_TOKENS: int = 3500

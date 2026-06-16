@@ -33,7 +33,7 @@ class GeminiAnalyzer:
             return
         try:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel("gemini-2.5-flash")
+            self.model = genai.GenerativeModel(settings.GEMINI_MODEL)
             log.info("gemini_ready")
         except Exception as e:
             log.error("gemini_setup_error", error=str(e))

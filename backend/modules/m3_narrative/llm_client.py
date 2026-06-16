@@ -59,27 +59,56 @@ class LLMClient:
             return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
 
     def _gemini_generate(self, prompt: str, max_tokens: int, _ollama_error: str | None = None) -> str:
-        try:
-            import google.generativeai as genai
-            log.info("llm_generating", backend="gemini_fallback")
-            response = self._gemini.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    max_output_tokens=max_tokens,
-                    temperature=0.7,
+        import google.generativeai as genai
+
+        cfg = genai.GenerationConfig(max_output_tokens=max_tokens, temperature=0.7)
+        # Bound each call so a hanging/slow API doesn't keep the task spinning
+        # forever (it used to have no timeout, which is why a failing model
+        # looked like "takes ages, then errors"). One retry covers transient
+        # 5xx / network blips.
+        last_exc: Exception | None = None
+        for attempt in (1, 2):
+            try:
+                log.info("llm_generating", backend="gemini_fallback",
+                         model=settings.GEMINI_MODEL, attempt=attempt)
+                response = self._gemini.generate_content(
+                    prompt,
+                    generation_config=cfg,
+                    request_options={"timeout": settings.GEMINI_TIMEOUT},
                 )
-            )
-            text = response.text.strip()
-            log.info("llm_done", backend="gemini", chars=len(text))
-            return text
-        except Exception as e:
-            log.error("gemini_error", error=str(e))
-            # Both backends failed — propagate so the caller can mark the
-            # task/story as ``failed`` instead of saving a fake narrative.
-            details = str(e)
-            if _ollama_error:
-                details = f"Ollama: {_ollama_error}\nGemini: {details}"
-            raise LLMUnavailableError(details) from e
+                text = (getattr(response, "text", None) or "").strip()
+                if not text:
+                    # Empty text usually means the response was blocked or hit
+                    # a finish reason other than STOP — surface that clearly.
+                    reason = self._blocked_reason(response)
+                    raise RuntimeError(f"resposta vazia do Gemini ({reason})")
+                log.info("llm_done", backend="gemini", chars=len(text))
+                return text
+            except Exception as e:                              # noqa: BLE001
+                last_exc = e
+                log.warning("gemini_attempt_failed", attempt=attempt, error=str(e))
+
+        log.error("gemini_error", error=str(last_exc))
+        # Both backends failed — propagate so the caller can mark the
+        # task/story as ``failed`` instead of saving a fake narrative.
+        details = f"Gemini ({settings.GEMINI_MODEL}): {last_exc}"
+        if _ollama_error:
+            details = f"Ollama: {_ollama_error}\n{details}"
+        raise LLMUnavailableError(details) from last_exc
+
+    @staticmethod
+    def _blocked_reason(response) -> str:
+        """Extract a human hint for why a Gemini response carried no text."""
+        try:
+            fb = getattr(response, "prompt_feedback", None)
+            if fb and getattr(fb, "block_reason", None):
+                return f"bloqueado: {fb.block_reason}"
+            cands = getattr(response, "candidates", None) or []
+            if cands:
+                return f"finish_reason={getattr(cands[0], 'finish_reason', '?')}"
+        except Exception:                                       # noqa: BLE001
+            pass
+        return "sem detalhe"
 
 
 class LLMUnavailableError(RuntimeError):
