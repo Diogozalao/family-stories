@@ -1,23 +1,58 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  CheckCircle2, Clock, Eraser, ExternalLink, Loader2, Trash2, X, XCircle,
+  CheckCircle2, Clock, Eraser, ExternalLink, FolderKanban, Loader2, Trash2, X, XCircle,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useCancelTask, useClearFinishedTasks, useDeleteTask, useTasks,
+  useCancelTask, useClearFinishedTasks, useDeleteTask, useProjects, useTasks,
 } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
 import type { TaskRecord, TaskState } from "../lib/types";
 
+const NO_PROJECT = "__none__";
+
 export default function TasksPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useTasks();
+  const { data: projects } = useProjects();
   const clearFinished = useClearFinishedTasks();
   const tasks = data ?? [];
 
-  const finishedCount = tasks.filter((x) => x.state === "done" || x.state === "failed").length;
+  // Mapa id→nome de projeto, para etiquetar e filtrar as tarefas por projeto.
+  const projectName = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const p of projects ?? []) m.set(p.id, p.name);
+    return m;
+  }, [projects]);
+
+  // Filtro: "all" (todas) | NO_PROJECT (sem projeto) | id do projeto.
+  const [filter, setFilter] = useState<string>("all");
+  const visible = useMemo(() => {
+    if (filter === "all") return tasks;
+    if (filter === NO_PROJECT) return tasks.filter((x) => x.project_id == null);
+    return tasks.filter((x) => String(x.project_id) === filter);
+  }, [tasks, filter]);
+
+  // Só mostra projetos que têm tarefas (chips de filtro).
+  const filterChips = useMemo(() => {
+    const ids = new Set<number>();
+    let hasNone = false;
+    for (const x of tasks) {
+      if (x.project_id == null) hasNone = true;
+      else ids.add(x.project_id);
+    }
+    const chips: { key: string; label: string }[] = [
+      { key: "all", label: t("tasks.allProjects") },
+    ];
+    for (const id of ids) chips.push({ key: String(id), label: projectName.get(id) ?? `#${id}` });
+    if (hasNone) chips.push({ key: NO_PROJECT, label: t("tasks.noProject") });
+    return chips;
+  }, [tasks, projectName, t]);
+
+  const finishedCount = visible.filter((x) => x.state === "done" || x.state === "failed").length;
 
   const handleClearFinished = () => {
     if (!finishedCount) return;
@@ -43,26 +78,51 @@ export default function TasksPage() {
         }
       />
 
+      {filterChips.length > 1 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {filterChips.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setFilter(c.key)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
+                filter === c.key
+                  ? "bg-brand-600 text-white"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+              }`}
+            >
+              {c.key !== "all" && <FolderKanban className="h-3 w-3" />}
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="skeleton h-24 rounded-2xl" />
           ))}
         </div>
-      ) : tasks.length === 0 ? (
+      ) : visible.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
           {t("tasks.empty")}
         </div>
       ) : (
         <ul className="space-y-3">
-          {tasks.map((task) => <TaskRow key={task.id} task={task} />)}
+          {visible.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              projectLabel={task.project_id != null ? projectName.get(task.project_id) ?? null : null}
+            />
+          ))}
         </ul>
       )}
     </>
   );
 }
 
-function TaskRow({ task }: { task: TaskRecord }) {
+function TaskRow({ task, projectLabel }: { task: TaskRecord; projectLabel: string | null }) {
   const { t } = useTranslation();
   const cancel = useCancelTask();
   const del = useDeleteTask();
@@ -110,6 +170,12 @@ function TaskRow({ task }: { task: TaskRecord }) {
             <p className="font-medium">{t(`tasks.kind.${task.kind}`)}</p>
             <span className="chip">#{task.id}</span>
             <StateChip state={task.state} />
+            {projectLabel && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800 dark:bg-brand-400/15 dark:text-brand-300">
+                <FolderKanban className="h-3 w-3" />
+                {projectLabel}
+              </span>
+            )}
             {eventType && <span className="chip chip-accent">{eventType}</span>}
           </div>
 

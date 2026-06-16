@@ -36,6 +36,8 @@ class TaskRecord(Base):
     state     = Column(Enum(TaskState, name="task_state", create_type=False, values_callable=lambda x: [e.value for e in x]),
                        default=TaskState.PENDING, nullable=False)
 
+    project_id = Column(BigInteger, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True, index=True)
+
     story_id  = Column(BigInteger, ForeignKey("stories.id",       ondelete="CASCADE"), nullable=True)
     video_id  = Column(BigInteger, ForeignKey("video_outputs.id", ondelete="CASCADE"), nullable=True)
 

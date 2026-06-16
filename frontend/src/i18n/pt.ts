@@ -358,6 +358,8 @@ export default {
     title: "Tarefas",
     subtitle: "Estado das operações em segundo plano.",
     empty: "Ainda não tens tarefas.",
+    allProjects: "Todas",
+    noProject: "Sem projeto",
     kind: {
       narrative: "Geração de história",
       video: "Geração de vídeo",

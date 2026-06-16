@@ -76,10 +76,11 @@ async def generate_narrative(
     # and the client polls /api/v1/tasks/{id}.
     job_payload = {**payload.model_dump(), "user_id": str(user.id)}
     record = TaskRecord(
-        user_id = user.id,
-        kind    = TaskKind.NARRATIVE,
-        state   = TaskState.PENDING,
-        payload = job_payload,
+        user_id    = user.id,
+        kind       = TaskKind.NARRATIVE,
+        state      = TaskState.PENDING,
+        project_id = payload.project_id,
+        payload    = job_payload,
     )
     db.add(record)
     await db.commit()

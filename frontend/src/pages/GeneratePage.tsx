@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, FolderKanban, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, FolderKanban, Loader2, Search, Sparkles } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
   useGenerateNarrative, useIndexFacts, usePersons, useProject, useStories,
@@ -57,10 +57,21 @@ export default function GeneratePage() {
       project?.name && families.includes(project.name) ? project.name : families[0],
     );
   }, [families, project?.name, activeFamily]);
-  const familyPersons = useMemo(
-    () => (persons ?? []).filter((p) => (p.family_label || SEM_FAMILIA) === activeFamily),
-    [persons, activeFamily],
-  );
+  const familyCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of persons ?? []) {
+      const k = p.family_label || SEM_FAMILIA;
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }, [persons]);
+  const [peopleQuery, setPeopleQuery] = useState("");
+  const familyPersons = useMemo(() => {
+    const q = peopleQuery.trim().toLowerCase();
+    return (persons ?? [])
+      .filter((p) => (p.family_label || SEM_FAMILIA) === activeFamily)
+      .filter((p) => !q || p.name.toLowerCase().includes(q));
+  }, [persons, activeFamily, peopleQuery]);
 
   const valid = useMemo(() => {
     if (step === 1) return !!eventType;
@@ -232,13 +243,23 @@ export default function GeneratePage() {
                     )}
                   >
                     <FolderKanban className="h-3.5 w-3.5" />
-                    {f}
+                    {f} · {familyCounts.get(f) ?? 0}
                   </button>
                 ))}
               </div>
             )}
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="relative mt-4 max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+              <input
+                value={peopleQuery}
+                onChange={(e) => setPeopleQuery(e.target.value)}
+                placeholder={t("common.search")}
+                className="input pl-9"
+              />
+            </div>
+
+            <div className="mt-4 grid max-h-[46vh] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {familyPersons.map((p) => {
                 const active = selectedIds.includes(p.id);
                 return (

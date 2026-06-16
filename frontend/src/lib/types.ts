@@ -100,6 +100,7 @@ export interface TaskRecord {
   celery_id?: string | null;
   kind: TaskKind;
   state: TaskState;
+  project_id?: number | null;
   story_id?: number | null;
   video_id?: number | null;
   payload?: Record<string, unknown> | null;

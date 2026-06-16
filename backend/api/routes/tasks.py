@@ -30,6 +30,7 @@ def _serialize(record: TaskRecord) -> dict:
         "celery_id":  record.celery_id,
         "kind":       record.kind,
         "state":      record.state,
+        "project_id": record.project_id,
         "story_id":   record.story_id,
         "video_id":   record.video_id,
         "payload":    record.payload,
@@ -62,18 +63,22 @@ async def get_task(
 
 @router.get("")
 async def list_tasks(
-    limit: int = 50,
-    db:    AsyncSession = Depends(get_db),
-    user:  User         = Depends(get_current_user),
+    limit:      int        = 50,
+    project_id: int | None = None,
+    db:         AsyncSession = Depends(get_db),
+    user:       User         = Depends(get_current_user),
 ):
-    """Return the caller's most recent tasks."""
+    """Return the caller's most recent tasks.
+
+    When ``project_id`` is given, only tasks of that project are returned,
+    so each project sees its own tasks in isolation.
+    """
     limit = max(1, min(limit, 200))
-    result = await db.execute(
-        select(TaskRecord)
-        .where(TaskRecord.user_id == user.id)
-        .order_by(TaskRecord.created_at.desc())
-        .limit(limit)
-    )
+    stmt = select(TaskRecord).where(TaskRecord.user_id == user.id)
+    if project_id is not None:
+        stmt = stmt.where(TaskRecord.project_id == project_id)
+    stmt = stmt.order_by(TaskRecord.created_at.desc()).limit(limit)
+    result = await db.execute(stmt)
     return [_serialize(r) for r in result.scalars().all()]
 
 

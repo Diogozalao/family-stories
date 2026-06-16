@@ -26,6 +26,7 @@ from backend.core.supabase_storage import (
     delete_object,
     invalidate_signed_url,
 )
+from backend.models.narrative import Story
 from backend.models.task import TaskKind, TaskRecord, TaskState
 from backend.models.video import VideoOutput
 from backend.modules.m4_multimedia.processor import M4Processor
@@ -65,12 +66,19 @@ async def generate_video(
             "download_url": f"/api/v1/multimedia/video/{record.filename}",
         }
 
+    # Herda o projeto da história, para que a tarefa de vídeo apareça no
+    # mesmo projeto e não se misture com os outros.
+    project_id = (await db.execute(
+        select(Story.project_id).where(Story.id == story_id, Story.user_id == user.id)
+    )).scalar_one_or_none()
+
     task = TaskRecord(
-        user_id  = user.id,
-        kind     = TaskKind.VIDEO,
-        state    = TaskState.PENDING,
-        story_id = story_id,
-        payload  = {"story_id": story_id, "user_id": str(user.id)},
+        user_id    = user.id,
+        kind       = TaskKind.VIDEO,
+        state      = TaskState.PENDING,
+        story_id   = story_id,
+        project_id = project_id,
+        payload    = {"story_id": story_id, "user_id": str(user.id)},
     )
     db.add(task)
     await db.commit()

@@ -562,10 +562,11 @@ export function videoUrl(filename: string): string {
 }
 
 // ── Tasks ───────────────────────────────────────────────────────────────
-export function useTasks() {
+export function useTasks(projectId?: number) {
+  const qs = projectId != null ? `&project_id=${projectId}` : "";
   return useQuery<TaskRecord[]>({
-    queryKey: ["tasks"],
-    queryFn: async () => (await api.get("/api/v1/tasks?limit=50")).data,
+    queryKey: ["tasks", projectId ?? null],
+    queryFn: async () => (await api.get(`/api/v1/tasks?limit=50${qs}`)).data,
     refetchInterval: 3_000,
   });
 }

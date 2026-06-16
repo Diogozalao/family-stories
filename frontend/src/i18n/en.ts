@@ -350,6 +350,8 @@ export default {
     title: "Tasks",
     subtitle: "Status of background operations.",
     empty: "No tasks yet.",
+    allProjects: "All",
+    noProject: "No project",
     kind: {
       narrative: "Story generation",
       video: "Video generation",
