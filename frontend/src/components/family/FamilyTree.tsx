@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useEffect } from "react";
 import ReactFlow, {
   Background, Controls, Handle, MiniMap, Position,
+  useEdgesState, useNodesState,
   type Edge, type Node,
 } from "reactflow";
 import "reactflow/dist/style.css";
@@ -41,7 +42,7 @@ function PersonNode({ data }: { data: PersonNodeData }) {
 
 const nodeTypes = { person: PersonNode };
 
-// ── Layout (generational grid) ────────────────────────────────────────────────
+// ── Layout (generational + barycenter ordering) ───────────────────────────────
 
 const X_SPACING = 210;
 const Y_SPACING = 150;
@@ -63,10 +64,12 @@ function yearsLabel(p: Person): string {
 function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number, { x: number; y: number }> {
   const ids = persons.map((p) => p.id);
   const idset = new Set(ids);
+  const parentsOf = new Map<number, number[]>();
   const spousesOf = new Map<number, number[]>();
   for (const r of rels) {
     if (!idset.has(r.from) || !idset.has(r.to)) continue;
     if (r.kind === "cônjuge") { pushMap(spousesOf, r.from, r.to); pushMap(spousesOf, r.to, r.from); }
+    else { pushMap(parentsOf, r.to, r.from); }   // r.from is parent of r.to
   }
 
   // Generation = longest parent-chain depth (relaxation).
@@ -80,7 +83,6 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
     }
     if (!changed) break;
   }
-  // Pull spouses onto the same generation.
   for (let i = 0; i < 3; i++) {
     for (const r of rels) {
       if (r.kind !== "cônjuge" || !idset.has(r.from) || !idset.has(r.to)) continue;
@@ -92,23 +94,80 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
   const nameOf = new Map(persons.map((p) => [p.id, p.name]));
   const byGen = new Map<number, number[]>();
   for (const id of ids) pushMap(byGen, gen.get(id) ?? 0, id);
+  const gens = [...byGen.keys()].sort((a, b) => a - b);
 
-  const pos = new Map<number, { x: number; y: number }>();
-  for (const g of [...byGen.keys()].sort((a, b) => a - b)) {
-    const row = byGen.get(g)!.sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
-    // Reorder so spouses sit next to each other.
-    const ordered: number[] = [];
+  // Keep spouses next to each other while preserving the incoming order.
+  const groupCouples = (row: number[], g: number): number[] => {
+    const out: number[] = [];
     const seen = new Set<number>();
     for (const id of row) {
       if (seen.has(id)) continue;
-      ordered.push(id); seen.add(id);
+      out.push(id); seen.add(id);
       for (const sp of spousesOf.get(id) ?? []) {
-        if (!seen.has(sp) && (gen.get(sp) ?? 0) === g) { ordered.push(sp); seen.add(sp); }
+        if (!seen.has(sp) && (gen.get(sp) ?? 0) === g) { out.push(sp); seen.add(sp); }
       }
     }
-    ordered.forEach((id, i) => pos.set(id, { x: i * X_SPACING, y: g * Y_SPACING }));
+    return out;
+  };
+
+  const indexOf = new Map<number, number>();
+  const order = new Map<number, number[]>();
+
+  gens.forEach((g, gi) => {
+    let row = byGen.get(g)!;
+    if (gi === 0) {
+      row = [...row].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+    } else {
+      // Barycenter: order each person near the average position of its
+      // parents in the generation above — this pulls children under their
+      // parents and removes most crossing lines.
+      const bary = (id: number): number => {
+        const idxs = (parentsOf.get(id) ?? [])
+          .map((p) => indexOf.get(p))
+          .filter((x): x is number => x != null);
+        return idxs.length ? idxs.reduce((s, x) => s + x, 0) / idxs.length : Number.MAX_SAFE_INTEGER;
+      };
+      row = [...row].sort((a, b) => (bary(a) - bary(b)) || (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+    }
+    row = groupCouples(row, g);
+    order.set(g, row);
+    row.forEach((id, i) => indexOf.set(id, i));
+  });
+
+  const pos = new Map<number, { x: number; y: number }>();
+  for (const g of gens) {
+    order.get(g)!.forEach((id, i) => pos.set(id, { x: i * X_SPACING, y: g * Y_SPACING }));
   }
   return pos;
+}
+
+function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<PersonNodeData>[]; edges: Edge[] } {
+  const idset = new Set(persons.map((p) => p.id));
+  const pos = computeLayout(persons, rels);
+
+  const nodes: Node<PersonNodeData>[] = persons.map((p) => ({
+    id: String(p.id),
+    type: "person",
+    position: pos.get(p.id) ?? { x: 0, y: 0 },
+    data: { name: p.name, years: yearsLabel(p), sex: p.sex },
+  }));
+
+  const edges: Edge[] = rels.flatMap((r): Edge[] => {
+    if (!idset.has(r.from) || !idset.has(r.to)) return [];
+    if (r.kind === "cônjuge") {
+      return [{
+        id: `r${r.id}`, source: String(r.from), target: String(r.to),
+        sourceHandle: "r", targetHandle: "l", type: "straight",
+        style: { stroke: "#f43f5e", strokeDasharray: "4 3" },
+      }];
+    }
+    return [{
+      id: `r${r.id}`, source: String(r.from), target: String(r.to),
+      type: "smoothstep", style: { stroke: "#a8a29e" },
+    }];
+  });
+
+  return { nodes, edges };
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -117,36 +176,16 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
   const { t } = useTranslation();
   const { data, isLoading } = useFamilyTree(familyLabel ?? undefined);
 
-  const { nodes, edges } = useMemo(() => {
-    const persons = data?.persons ?? [];
-    const rels    = data?.relationships ?? [];
-    const idset   = new Set(persons.map((p) => p.id));
-    const pos     = computeLayout(persons, rels);
+  // ``useNodesState`` keeps the nodes editable so the user can DRAG them
+  // freely; we re-seed the auto-layout whenever the underlying data changes.
+  const [nodes, setNodes, onNodesChange] = useNodesState<PersonNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-    const nodes: Node<PersonNodeData>[] = persons.map((p) => ({
-      id: String(p.id),
-      type: "person",
-      position: pos.get(p.id) ?? { x: 0, y: 0 },
-      data: { name: p.name, years: yearsLabel(p), sex: p.sex },
-    }));
-
-    const edges: Edge[] = rels.flatMap((r): Edge[] => {
-      if (!idset.has(r.from) || !idset.has(r.to)) return [];
-      if (r.kind === "cônjuge") {
-        return [{
-          id: `r${r.id}`, source: String(r.from), target: String(r.to),
-          sourceHandle: "r", targetHandle: "l", type: "straight",
-          style: { stroke: "#f43f5e", strokeDasharray: "4 3" },
-        }];
-      }
-      return [{
-        id: `r${r.id}`, source: String(r.from), target: String(r.to),
-        type: "smoothstep", style: { stroke: "#a8a29e" },
-      }];
-    });
-
-    return { nodes, edges };
-  }, [data]);
+  useEffect(() => {
+    const { nodes: n, edges: e } = buildGraph(data?.persons ?? [], data?.relationships ?? []);
+    setNodes(n);
+    setEdges(e);
+  }, [data, setNodes, setEdges]);
 
   if (isLoading) {
     return (
@@ -156,7 +195,7 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
     );
   }
 
-  if (nodes.length === 0) {
+  if ((data?.persons ?? []).length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
         {t("family.noTree")}
@@ -169,6 +208,8 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}

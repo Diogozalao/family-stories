@@ -276,7 +276,7 @@ export default {
       noRelations: "Ainda não há relações. Usa o seletor acima para ligar duas pessoas.",
       person: "Pessoa",
       of: "de",
-      spouseOf: "cônjuge de",
+      spouseOf: "casado(a) com",
       namePlaceholder: "Nome",
       siblings: "Irmãos/Irmãs (opcional)",
       siblingsHint: "Separa por vírgulas; ficam como filhos dos mesmos pais.",

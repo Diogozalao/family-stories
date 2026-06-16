@@ -268,7 +268,7 @@ export default {
       noRelations: "No relationships yet. Use the selector above to link two people.",
       person: "Person",
       of: "of",
-      spouseOf: "spouse of",
+      spouseOf: "married to",
       namePlaceholder: "Name",
       siblings: "Siblings (optional)",
       siblingsHint: "Comma-separated; added as children of the same parents.",

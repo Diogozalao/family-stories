@@ -131,7 +131,15 @@ const PEDIGREE_FIELDS: { key: string; label: string; sex: string | null }[] = [
 const SEX_OF_ROLE: Record<string, string | null> =
   Object.fromEntries(PEDIGREE_FIELDS.map((f) => [f.key, f.sex]));
 
-type Extra = { name: string; rel: "conjuge" | "filho"; target: string };
+// Which pedigree roles are the parents of each role — lets "irmão(ã) de"
+// resolve to a sibling (so "irmão do Pai" becomes a tio, etc.).
+const PARENT_OF: Record<string, [string, string]> = {
+  eu:  ["pai", "mae"],
+  pai: ["avoPaterno", "avoPaterna"],
+  mae: ["avoMaterno", "avoMaterna"],
+};
+
+type Extra = { id: string; name: string; rel: "filho" | "casado" | "irmao"; target: string };
 
 function PedigreeWizard({
   familyLabel, onClose,
@@ -151,8 +159,13 @@ function PedigreeWizard({
     siblings.trim().length > 0 ||
     extras.some((e) => e.name.trim());
 
-  // Roles that actually have a name — valid targets to link extra people to.
-  const namedRoles = PEDIGREE_FIELDS.filter((f) => (vals[f.key] ?? "").trim());
+  // Anyone already named (a pedigree role OR another extra) can be the
+  // target an extra person is linked to.
+  const targetOptions = (selfId: string) => ([
+    ...PEDIGREE_FIELDS.filter((f) => (vals[f.key] ?? "").trim()).map((f) => ({ value: f.key, label: f.label })),
+    ...extras.filter((e) => e.name.trim() && e.id !== selfId).map((e) => ({ value: `x_${e.id}`, label: e.name.trim() })),
+  ]);
+  const defaultTarget = PEDIGREE_FIELDS.find((f) => (vals[f.key] ?? "").trim())?.key ?? "eu";
 
   const close = () => {
     if (dirty && !window.confirm(t("family.editor.confirmLeave"))) return;
@@ -187,16 +200,22 @@ function PedigreeWizard({
       rel.push({ from_ref: "mae", to_ref: ref, kind: "mãe" });
     });
 
-    extras.forEach((ex, i) => {
+    extras.forEach((ex) => {
       if (!ex.name.trim() || !ex.target) return;
-      const ref = `extra${i}`;
+      const ref = `x_${ex.id}`;
       persons.push({ ref, name: ex.name.trim(), sex: null, family_label: fl });
-      if (ex.rel === "conjuge") {
+      if (ex.rel === "casado") {
         rel.push({ from_ref: ref, to_ref: ex.target, kind: "cônjuge" });
-      } else {
+      } else if (ex.rel === "filho") {
         // "filho(a) de target": target is the parent of this new person.
         const kind = SEX_OF_ROLE[ex.target] === "F" ? "mãe" : "pai";
         rel.push({ from_ref: ex.target, to_ref: ref, kind });
+      } else {
+        // "irmão(ã) de target": share the target's parents (tio / sibling).
+        const parents = PARENT_OF[ex.target];
+        if (parents) for (const pr of parents) {
+          rel.push({ from_ref: pr, to_ref: ref, kind: SEX_OF_ROLE[pr] === "F" ? "mãe" : "pai" });
+        }
       }
     });
 
@@ -272,47 +291,49 @@ function PedigreeWizard({
             <label className="label !mb-0">Outros familiares</label>
             <button
               type="button"
-              onClick={() => setExtras((x) => [...x, { name: "", rel: "filho", target: namedRoles[0]?.key ?? "eu" }])}
+              onClick={() => setExtras((x) => [...x, { id: crypto.randomUUID(), name: "", rel: "filho", target: defaultTarget }])}
               className="btn btn-ghost !py-1 !text-xs"
             >
               <Plus className="h-3.5 w-3.5" /> Adicionar pessoa
             </button>
           </div>
-          {extras.length === 0 && (
+          {extras.length === 0 ? (
             <p className="text-xs text-stone-500 dark:text-stone-500">
-              Acrescenta cônjuges, filhos ou outros — ligados a alguém já preenchido acima.
+              Acrescenta qualquer familiar e liga-o a alguém já nomeado. Ex.: um <strong>tio</strong> = «irmão(ã) de» o Pai/Mãe; um <strong>primo</strong> = «filho(a) de» esse tio.
             </p>
+          ) : (
+            <div className="space-y-2">
+              {extras.map((ex) => (
+                <div key={ex.id} className="flex flex-wrap items-center gap-2">
+                  <input
+                    className="input flex-1 min-w-[120px]"
+                    placeholder={t("family.editor.namePlaceholder")}
+                    value={ex.name}
+                    onChange={(e) => setExtras((x) => x.map((r) => r.id === ex.id ? { ...r, name: e.target.value } : r))}
+                  />
+                  <select
+                    className="input w-auto"
+                    value={ex.rel}
+                    onChange={(e) => setExtras((x) => x.map((r) => r.id === ex.id ? { ...r, rel: e.target.value as Extra["rel"] } : r))}
+                  >
+                    <option value="filho">filho(a) de</option>
+                    <option value="irmao">irmão(ã) de</option>
+                    <option value="casado">casado(a) com</option>
+                  </select>
+                  <select
+                    className="input w-auto"
+                    value={ex.target}
+                    onChange={(e) => setExtras((x) => x.map((r) => r.id === ex.id ? { ...r, target: e.target.value } : r))}
+                  >
+                    {targetOptions(ex.id).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                  <button type="button" onClick={() => setExtras((x) => x.filter((r) => r.id !== ex.id))} className="rounded-lg p-1.5 text-stone-500 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/40">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-          <div className="space-y-2">
-            {extras.map((ex, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-2">
-                <input
-                  className="input flex-1 min-w-[120px]"
-                  placeholder={t("family.editor.namePlaceholder")}
-                  value={ex.name}
-                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
-                />
-                <select
-                  className="input w-auto"
-                  value={ex.rel}
-                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, rel: e.target.value as Extra["rel"] } : r))}
-                >
-                  <option value="filho">filho(a) de</option>
-                  <option value="conjuge">cônjuge de</option>
-                </select>
-                <select
-                  className="input w-auto"
-                  value={ex.target}
-                  onChange={(e) => setExtras((x) => x.map((r, j) => j === i ? { ...r, target: e.target.value } : r))}
-                >
-                  {namedRoles.map((f) => <option key={f.key} value={f.key}>{f.label}</option>)}
-                </select>
-                <button type="button" onClick={() => setExtras((x) => x.filter((_, j) => j !== i))} className="rounded-lg p-1.5 text-stone-500 hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/40">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
