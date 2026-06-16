@@ -72,7 +72,8 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
     else { pushMap(parentsOf, r.to, r.from); }   // r.from is parent of r.to
   }
 
-  // Generation = longest parent-chain depth (relaxation).
+  // Generation = longest parent-chain depth (relaxation). Oldest ancestors
+  // (no parents) sit at generation 0 (top); descendants grow downwards.
   const gen = new Map<number, number>(ids.map((id) => [id, 0]));
   for (let i = 0; i < ids.length + 2; i++) {
     let changed = false;
@@ -83,7 +84,9 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
     }
     if (!changed) break;
   }
-  for (let i = 0; i < 3; i++) {
+  // Pull a married-in spouse (e.g. someone with no parents in the tree) down
+  // onto the same generation as the person they married.
+  for (let i = 0; i < 4; i++) {
     for (const r of rels) {
       if (r.kind !== "cônjuge" || !idset.has(r.from) || !idset.has(r.to)) continue;
       const g = Math.max(gen.get(r.from) ?? 0, gen.get(r.to) ?? 0);
@@ -96,7 +99,6 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
   for (const id of ids) pushMap(byGen, gen.get(id) ?? 0, id);
   const gens = [...byGen.keys()].sort((a, b) => a - b);
 
-  // Keep spouses next to each other while preserving the incoming order.
   const groupCouples = (row: number[], g: number): number[] => {
     const out: number[] = [];
     const seen = new Set<number>();
@@ -110,34 +112,42 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
     return out;
   };
 
-  const indexOf = new Map<number, number>();
-  const order = new Map<number, number[]>();
+  const xpos = new Map<number, number>();
 
   gens.forEach((g, gi) => {
-    let row = byGen.get(g)!;
+    const row = byGen.get(g)!;
     if (gi === 0) {
-      row = [...row].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+      // Top generation: lay out left-to-right, couples together.
+      const ordered = groupCouples([...row].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? "")), g);
+      ordered.forEach((id, i) => xpos.set(id, i * X_SPACING));
     } else {
-      // Barycenter: order each person near the average position of its
-      // parents in the generation above — this pulls children under their
-      // parents and removes most crossing lines.
-      const bary = (id: number): number => {
-        const idxs = (parentsOf.get(id) ?? [])
-          .map((p) => indexOf.get(p))
-          .filter((x): x is number => x != null);
-        return idxs.length ? idxs.reduce((s, x) => s + x, 0) / idxs.length : Number.MAX_SAFE_INTEGER;
-      };
-      row = [...row].sort((a, b) => (bary(a) - bary(b)) || (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+      // Each person sits at the average X of its parents → centred between
+      // them (the pedigree look). Married-in people go beside their spouse.
+      for (const id of row) {
+        const px = (parentsOf.get(id) ?? []).map((p) => xpos.get(p)).filter((v): v is number => v != null);
+        if (px.length) xpos.set(id, px.reduce((s, v) => s + v, 0) / px.length);
+      }
+      let maxX = Math.max(0, ...[...xpos.values()]);
+      for (const id of row) {
+        if (xpos.get(id) == null) {
+          const sx = (spousesOf.get(id) ?? []).map((s) => xpos.get(s)).filter((v): v is number => v != null);
+          if (sx.length) xpos.set(id, sx[0] + X_SPACING);
+          else { maxX += X_SPACING; xpos.set(id, maxX); }
+        }
+      }
+      // Spread out any overlaps while keeping the left-to-right order.
+      const sorted = [...row].sort((a, b) => (xpos.get(a)! - xpos.get(b)!) || (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+      let last = -Infinity;
+      for (const id of sorted) {
+        const xi = Math.max(xpos.get(id)!, last + X_SPACING);
+        xpos.set(id, xi);
+        last = xi;
+      }
     }
-    row = groupCouples(row, g);
-    order.set(g, row);
-    row.forEach((id, i) => indexOf.set(id, i));
   });
 
   const pos = new Map<number, { x: number; y: number }>();
-  for (const g of gens) {
-    order.get(g)!.forEach((id, i) => pos.set(id, { x: i * X_SPACING, y: g * Y_SPACING }));
-  }
+  for (const id of ids) pos.set(id, { x: xpos.get(id) ?? 0, y: (gen.get(id) ?? 0) * Y_SPACING });
   return pos;
 }
 
