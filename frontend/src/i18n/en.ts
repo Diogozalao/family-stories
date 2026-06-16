@@ -254,6 +254,7 @@ export default {
     viewList: "List",
     viewTree: "Tree",
     editTree: "Edit tree",
+    exportGedcom: "Export GEDCOM",
     resetLayout: "Reset layout",
     editor: {
       title: "Tree editor",

@@ -90,11 +90,19 @@ JSON em disco, efémero na nuvem), tornando-se a fonte de verdade durável.
 Isto sustenta duas funcionalidades novas na página \emph{Família}: uma
 \textbf{vista interativa da árvore} (\emph{React~Flow}, com \emph{layout}
 por gerações e nós coloridos por sexo) alternável com a lista, e um
-\textbf{editor manual} que permite criar/editar pessoas e ligações à mão —
+\textbf{editor manual} que permite criar/editar pessoas e ligações à mão
+(\emph{pai}/\emph{mãe}/\emph{filho}/\emph{irmão}/\emph{cônjuge}) —
 incluindo um assistente de \emph{pedigree} pré-estruturado (eu, pais,
 avós, irmãos) — sem depender de um GEDCOM. Após cada edição, o grafo
 \texttt{FamilyGraph} é reconstruído a partir da base de dados, mantendo o
 M3 sincronizado. O grafo continua isolado \emph{por utilizador}.
+
+As \textbf{descrições (notas)} de cada pessoa são incorporadas no contexto
+familiar fornecido ao M3, influenciando diretamente a narrativa gerada. A
+árvore pode ainda ser \textbf{exportada de volta para GEDCOM~5.5.1}
+(re-importável noutras plataformas de genealogia), demonstrando
+\emph{interoperabilidade} com o formato standard — um inverso do
+\emph{parser} de importação.
 
 \section{Módulo M3 --- Geração Narrativa}
 \label{sec:impl_m3}

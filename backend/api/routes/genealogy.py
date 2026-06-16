@@ -421,6 +421,36 @@ async def save_positions(
     return {"updated": updated}
 
 
+@router.get("/genealogy/export/gedcom")
+async def export_gedcom(
+    family_label: Optional[str] = Query(default=None),
+    db:           AsyncSession  = Depends(get_db),
+    user:         User          = Depends(get_current_user),
+):
+    """Download the caller's family as a GEDCOM 5.5.1 file (re-importable)."""
+    from fastapi.responses import Response
+    from backend.modules.m1_ingestion.gedcom_export import persons_to_gedcom
+
+    pstmt = select(Person).where(Person.user_id == user.id)
+    if family_label:
+        pstmt = pstmt.where(Person.family_label == family_label)
+    persons = (await db.execute(pstmt.order_by(Person.id))).scalars().all()
+    person_ids = {p.id for p in persons}
+
+    rels = (await db.execute(
+        select(Relationship).where(Relationship.user_id == user.id)
+    )).scalars().all()
+    rels = [r for r in rels if r.from_person_id in person_ids and r.to_person_id in person_ids]
+
+    text  = persons_to_gedcom(persons, rels)
+    fname = (family_label or "familia").strip().replace(" ", "_") or "familia"
+    return Response(
+        content=text,
+        media_type="application/x-gedcom",
+        headers={"Content-Disposition": f'attachment; filename="{fname}.ged"'},
+    )
+
+
 @router.get("/genealogy/tree")
 async def get_tree(
     family_label: Optional[str] = Query(default=None),

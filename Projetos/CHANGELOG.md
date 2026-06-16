@@ -24,6 +24,17 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-16 — Árvore: exportação GEDCOM + descrições na narrativa
+
+- **[Reescrita]** `cap6_implementacao.tex` · §M2 — editor com todas as
+  relações (pai/mãe/filho/irmão/cônjuge); **descrições (notas) de cada
+  pessoa entram no contexto do M3**; **exportação para GEDCOM 5.5.1**
+  (inverso do parser, re-importável → interoperabilidade).
+
+> Código implementado e testado (conversor GEDCOM validado; 36 testes; tsc OK).
+
+---
+
 ## 2026-06-15 — Árvore familiar: relações na BD, vista interativa e editor
 
 - **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — nova

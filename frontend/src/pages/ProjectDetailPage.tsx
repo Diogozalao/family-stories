@@ -4,7 +4,7 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Calendar, Check, FileUp, Film, Images, Loader2, Network,
+  ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, Network,
   Pencil, Plus, ScrollText, Sparkles, Timer, UploadCloud,
   User as UserIcon, X,
 } from "lucide-react";
@@ -14,7 +14,7 @@ import {
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
   useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
-import { extractErrorMessage } from "../lib/api";
+import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
 import FamilyTree from "../components/family/FamilyTree";
 import FamilyEditor from "../components/family/FamilyEditor";
@@ -497,6 +497,17 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
           <button className="btn btn-ghost" onClick={() => setEditorOpen(true)}>
             <Pencil className="h-4 w-4" /><span>{t("family.editTree")}</span>
           </button>
+          {persons.length > 0 && (
+            <button
+              className="btn btn-ghost"
+              onClick={async () => {
+                try { await downloadGedcom(familyLabel); }
+                catch (err) { toast.error(extractErrorMessage(err)); }
+              }}
+            >
+              <Download className="h-4 w-4" /><span>{t("family.exportGedcom")}</span>
+            </button>
+          )}
           <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
             {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
             <span>{t("family.importGedcom")}</span>

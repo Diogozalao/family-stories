@@ -262,6 +262,7 @@ export default {
     viewList: "Lista",
     viewTree: "Árvore",
     editTree: "Editar árvore",
+    exportGedcom: "Exportar GEDCOM",
     resetLayout: "Repor automático",
     editor: {
       title: "Editor da árvore",

@@ -2,14 +2,14 @@ import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { FileUp, Loader2, Pencil, Search, Trash2, User as UserIcon, Users, X } from "lucide-react";
+import { Download, FileUp, Loader2, Pencil, Search, Trash2, User as UserIcon, Users, X } from "lucide-react";
 
 import { useQueryClient } from "@tanstack/react-query";
 
 import PageHeader from "../components/ui/PageHeader";
 import FamilyTree from "../components/family/FamilyTree";
 import FamilyEditor from "../components/family/FamilyEditor";
-import { extractErrorMessage, isLostResponse } from "../lib/api";
+import { downloadGedcom, extractErrorMessage, isLostResponse } from "../lib/api";
 import { useClearFamily, useFamilies, usePersons, useUploadGedcom } from "../lib/hooks";
 import type { Person } from "../lib/types";
 import { cn, initials } from "../lib/utils";
@@ -134,6 +134,18 @@ export default function FamilyPage() {
               <Pencil className="h-4 w-4" />
               <span>{t("family.editTree")}</span>
             </button>
+            {items.length > 0 && (
+              <button
+                className="btn btn-ghost"
+                onClick={async () => {
+                  try { await downloadGedcom(treeLabel); }
+                  catch (err) { toast.error(extractErrorMessage(err)); }
+                }}
+              >
+                <Download className="h-4 w-4" />
+                <span>{t("family.exportGedcom")}</span>
+              </button>
+            )}
             <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
               {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
               <span>{t("family.importGedcom")}</span>

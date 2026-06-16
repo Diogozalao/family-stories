@@ -30,6 +30,7 @@ class FamilyGraph:
             birth_date = str(person.birth_date) if person.birth_date else None,
             birth_place= person.birth_place,
             gedcom_id  = person.gedcom_id,
+            notes      = getattr(person, "notes", None),
         )
         log.info("graph_person_added", name=person.name, id=person.id)
 
@@ -117,6 +118,9 @@ class FamilyGraph:
             entry = ", ".join(info_parts)
             if rels:
                 entry += f" ({'; '.join(rels[:4])})"
+            note = node.get("notes")
+            if note:
+                entry += f" — {note}"
             lines.append(entry)
 
         return "; ".join(lines) if lines else self.get_narrative_summary()
@@ -140,10 +144,12 @@ class FamilyGraph:
                 rel = data.get("relation", "familiar")
                 relations.append(f"{rel} de {to_name}")
 
+            note = node.get("notes")
+            suffix = f" — {note}" if note else ""
             if relations:
-                lines.append(f"{name} ({', '.join(relations)})")
+                lines.append(f"{name} ({', '.join(relations)}){suffix}")
             else:
-                lines.append(name)
+                lines.append(f"{name}{suffix}")
 
         return "; ".join(lines)
 

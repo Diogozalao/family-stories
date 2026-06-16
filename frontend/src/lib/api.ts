@@ -63,6 +63,25 @@ export function isLostResponse(err: unknown): boolean {
   return axios.isAxiosError(err) && !err.response;
 }
 
+/**
+ * Download the family tree as a GEDCOM (.ged) file. Goes through the axios
+ * instance so the auth token is attached, then triggers a browser download.
+ */
+export async function downloadGedcom(familyLabel?: string | null): Promise<void> {
+  const res = await api.get("/api/v1/genealogy/export/gedcom", {
+    params: familyLabel ? { family_label: familyLabel } : {},
+    responseType: "blob",
+  });
+  const url = URL.createObjectURL(res.data as Blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${(familyLabel || "familia").replace(/\s+/g, "_")}.ged`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function extractErrorMessage(err: unknown, fallback = "Something went wrong"): string {
   if (axios.isAxiosError(err)) {
     const detail = (err.response?.data as { detail?: unknown } | undefined)?.detail;
