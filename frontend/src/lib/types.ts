@@ -28,6 +28,8 @@ export interface Person {
   notes?: string | null;
   gedcom_id?: string | null;
   family_label?: string | null;
+  tree_x?: number | null;
+  tree_y?: number | null;
 }
 
 export interface TreeRelationship {

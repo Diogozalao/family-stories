@@ -389,6 +389,16 @@ export interface BulkPersonInput {
 }
 export interface BulkRelInput { from_ref: string; to_ref: string; kind: string }
 
+export function useSaveTreePositions() {
+  // Fire-and-forget: the dragged position is already reflected locally by
+  // React Flow, so we deliberately DON'T invalidate ["tree"] (that would
+  // refetch and yank the node back mid-interaction). It just persists.
+  return useMutation({
+    mutationFn: async (input: { positions: { id: number; x: number | null; y: number | null }[] }) =>
+      (await api.post("/api/v1/genealogy/tree/positions", input)).data,
+  });
+}
+
 export function useBulkTree() {
   const invalidate = useTreeInvalidator();
   return useMutation({

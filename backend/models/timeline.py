@@ -34,6 +34,9 @@ class Person(Base):
     # so the Family page can group/filter trees coming from different
     # imports without forcing them into the same soup.
     family_label = Column(String(120), nullable=True)
+    # Hand-arranged position in the interactive tree (NULL = auto-layout).
+    tree_x       = Column(Float, nullable=True)
+    tree_y       = Column(Float, nullable=True)
     created_at   = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 

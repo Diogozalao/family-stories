@@ -254,6 +254,7 @@ export default {
     viewList: "List",
     viewTree: "Tree",
     editTree: "Edit tree",
+    resetLayout: "Reset layout",
     editor: {
       title: "Tree editor",
       finish: "Done",

@@ -262,6 +262,7 @@ export default {
     viewList: "Lista",
     viewTree: "Árvore",
     editTree: "Editar árvore",
+    resetLayout: "Repor automático",
     editor: {
       title: "Editor da árvore",
       finish: "Concluir",

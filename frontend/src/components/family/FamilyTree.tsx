@@ -1,14 +1,15 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import ReactFlow, {
-  Background, Controls, Handle, MiniMap, Position,
+  Background, Controls, Handle, MiniMap, Panel, Position,
   useEdgesState, useNodesState,
   type Edge, type Node,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
 
-import { useFamilyTree } from "../../lib/hooks";
+import { useFamilyTree, useSaveTreePositions } from "../../lib/hooks";
 import type { Person, TreeRelationship } from "../../lib/types";
 import { cn } from "../../lib/utils";
 
@@ -158,7 +159,11 @@ function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<
   const nodes: Node<PersonNodeData>[] = persons.map((p) => ({
     id: String(p.id),
     type: "person",
-    position: pos.get(p.id) ?? { x: 0, y: 0 },
+    // Use the hand-dragged position when the user saved one; otherwise the
+    // automatic pedigree layout.
+    position: (p.tree_x != null && p.tree_y != null)
+      ? { x: p.tree_x, y: p.tree_y }
+      : (pos.get(p.id) ?? { x: 0, y: 0 }),
     data: { name: p.name, years: yearsLabel(p), sex: p.sex },
   }));
 
@@ -190,12 +195,29 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
   // freely; we re-seed the auto-layout whenever the underlying data changes.
   const [nodes, setNodes, onNodesChange] = useNodesState<PersonNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const qc = useQueryClient();
+  const savePos = useSaveTreePositions();
 
   useEffect(() => {
     const { nodes: n, edges: e } = buildGraph(data?.persons ?? [], data?.relationships ?? []);
     setNodes(n);
     setEdges(e);
   }, [data, setNodes, setEdges]);
+
+  // Persist a node's position when the user finishes dragging it.
+  const onNodeDragStop = useCallback((_evt: React.MouseEvent, node: Node) => {
+    savePos.mutate({ positions: [{ id: Number(node.id), x: node.position.x, y: node.position.y }] });
+  }, [savePos]);
+
+  // Clear all saved positions → fall back to the automatic layout.
+  const resetLayout = () => {
+    const persons = data?.persons ?? [];
+    if (!persons.length) return;
+    savePos.mutate(
+      { positions: persons.map((p) => ({ id: p.id, x: null, y: null })) },
+      { onSuccess: () => qc.invalidateQueries({ queryKey: ["tree"] }) },
+    );
+  };
 
   if (isLoading) {
     return (
@@ -220,6 +242,7 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}
@@ -229,6 +252,16 @@ export default function FamilyTree({ familyLabel }: { familyLabel?: string | nul
         <Background color="#d6d3d1" gap={20} />
         <Controls showInteractive={false} />
         <MiniMap pannable zoomable nodeStrokeWidth={2} />
+        <Panel position="top-right">
+          <button
+            onClick={resetLayout}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow-soft backdrop-blur hover:bg-white dark:border-stone-700 dark:bg-stone-900/90 dark:text-stone-200"
+            title={t("family.resetLayout")}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {t("family.resetLayout")}
+          </button>
+        </Panel>
       </ReactFlow>
     </div>
   );

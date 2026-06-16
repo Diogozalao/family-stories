@@ -92,6 +92,8 @@ def _person_dict(p: Person) -> dict:
         "notes":        p.notes,
         "gedcom_id":    p.gedcom_id,
         "family_label": p.family_label,
+        "tree_x":       p.tree_x,
+        "tree_y":       p.tree_y,
     }
 
 
@@ -381,6 +383,42 @@ async def delete_person(
     await db.commit()
     await _rebuild_graph_from_db(db, user.id)
     log.info("person_deleted", id=person_id)
+
+
+class PositionItem(BaseModel):
+    id: int
+    x:  Optional[float] = None
+    y:  Optional[float] = None
+
+
+class PositionsRequest(BaseModel):
+    positions: list[PositionItem] = []
+
+
+@router.post("/genealogy/tree/positions")
+async def save_positions(
+    payload: PositionsRequest,
+    db:      AsyncSession = Depends(get_db),
+    user:    User         = Depends(get_current_user),
+):
+    """Persist hand-dragged tree positions (``x=y=null`` resets to auto)."""
+    if not payload.positions:
+        return {"updated": 0}
+    ids  = [item.id for item in payload.positions]
+    rows = (await db.execute(
+        select(Person).where(Person.id.in_(ids), Person.user_id == user.id)
+    )).scalars().all()
+    by_id = {r.id: r for r in rows}
+    updated = 0
+    for item in payload.positions:
+        person = by_id.get(item.id)
+        if person is None:
+            continue
+        person.tree_x = item.x
+        person.tree_y = item.y
+        updated += 1
+    await db.commit()
+    return {"updated": updated}
 
 
 @router.get("/genealogy/tree")
