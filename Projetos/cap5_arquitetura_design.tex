@@ -213,7 +213,10 @@ em PostgreSQL (Supabase). As entidades principais são:
   (identificada pela etiqueta do projeto), as suas histórias e vídeos não
   se misturam com os de outros projetos nem com a Biblioteca global.
   \item \texttt{TaskRecord} — registo de tarefas assíncronas (estado,
-  \emph{payload}, carimbos temporais, erro).
+  \emph{payload}, carimbos temporais, erro). Cada registo guarda também o
+  \texttt{project\_id} a que pertence, de modo que as tarefas em segundo
+  plano de um projeto não se misturam com as dos restantes (filtragem por
+  projeto na página de Tarefas).
 \end{itemize}
 
 As relações principais entre entidades resumem-se na \Cref{tab:relacoes}.

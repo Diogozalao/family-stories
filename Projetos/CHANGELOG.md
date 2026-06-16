@@ -24,6 +24,21 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-16 — Tarefas isoladas por projeto
+
+- **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados —
+  `TaskRecord` ganha `project_id`; as tarefas em segundo plano de um
+  projeto deixam de se misturar com as dos outros (filtragem por projeto
+  na página de Tarefas).
+
+> Backend: `task_records.project_id` (FK → projects, ON DELETE SET NULL);
+> definido ao criar a tarefa (narrativa = projeto do pedido; vídeo =
+> projeto da história); `GET /tasks?project_id=` filtra. Frontend: chips de
+> filtro por projeto + etiqueta de projeto em cada tarefa. Migração de BD:
+> `0008_task_project.sql`. tsc OK.
+
+---
+
 ## 2026-06-16 — Fotos↔pessoas (etiquetagem) ligadas à narrativa
 
 - **[Adição]** `cap5_arquitetura_design.tex` — `MediaFile` ganha
