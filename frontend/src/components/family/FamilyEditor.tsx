@@ -394,6 +394,9 @@ export default function FamilyEditor({
   const addRelation = async () => {
     if (!fromId || !toId || fromId === toId) return;
     const from = Number(fromId), to = Number(toId);
+    const sexOf = (id: number) => persons.find((p) => p.id === id)?.sex;
+    const kindFor = (id: number, fallback: string) =>
+      sexOf(id) === "F" ? "mãe" : sexOf(id) === "M" ? "pai" : fallback;
     try {
       if (kind === "irmao") {
         // Siblings aren't a stored edge — they share parents. Copy the
@@ -405,6 +408,21 @@ export default function FamilyEditor({
         }
         for (const p of parents) {
           await createRel.mutateAsync({ from_person_id: p.from, to_person_id: from, kind: p.kind });
+        }
+      } else if (kind === "filho") {
+        // "[from] filho(a) de [to]": link to BOTH parents — the chosen
+        // person AND their spouse (so the child gets pai e mãe in one go).
+        const toKind = kindFor(to, "pai");
+        const links: { parent: number; kind: string }[] = [{ parent: to, kind: toKind }];
+        for (const r of rels) {
+          if (r.kind !== "cônjuge") continue;
+          const sp = r.from === to ? r.to : (r.to === to ? r.from : null);
+          if (sp != null && sp !== from && !links.some((l) => l.parent === sp)) {
+            links.push({ parent: sp, kind: kindFor(sp, toKind === "pai" ? "mãe" : "pai") });
+          }
+        }
+        for (const l of links) {
+          await createRel.mutateAsync({ from_person_id: l.parent, to_person_id: from, kind: l.kind });
         }
       } else {
         await createRel.mutateAsync({ from_person_id: from, to_person_id: to, kind });
@@ -473,6 +491,7 @@ export default function FamilyEditor({
           </select>
           <select className="input w-auto" value={kind} onChange={(e) => setKind(e.target.value)}>
             {KINDS.map((k) => <option key={k} value={k}>{relVerb(k)}</option>)}
+            <option value="filho">filho(a) de</option>
             <option value="irmao">irmão(ã) de</option>
           </select>
           <select className="input max-w-[40%]" value={toId} onChange={(e) => setToId(e.target.value)}>
