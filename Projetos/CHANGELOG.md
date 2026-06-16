@@ -24,6 +24,19 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-16 — Fotos↔pessoas (etiquetagem) ligadas à narrativa
+
+- **[Adição]** `cap5_arquitetura_design.tex` — `MediaFile` ganha
+  `person_ids` (pessoas etiquetadas na foto).
+- **[Adição]** `cap6_implementacao.tex` · §M2/M3 — etiquetagem de pessoas
+  por fotografia; os nomes («quem aparece») entram no contexto do M3,
+  ligando rostos a nomes na narrativa.
+
+> Código implementado e testado (36 testes; tsc OK). Migração de BD:
+> `0007_media_persons.sql`.
+
+---
+
 ## 2026-06-16 — Árvore: exportação GEDCOM + descrições na narrativa
 
 - **[Reescrita]** `cap6_implementacao.tex` · §M2 — editor com todas as

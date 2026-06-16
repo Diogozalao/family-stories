@@ -184,8 +184,9 @@ em PostgreSQL (Supabase). As entidades principais são:
   documento, vídeo). Guarda o nome original, a chave de objeto no Storage,
   os metadados \textsc{exif} (data, GPS, câmara), os campos de análise de
   IA (\texttt{ai\_description}, \texttt{ai\_setting}, \texttt{ai\_emotion},
-  \texttt{ai\_tags}, \texttt{ai\_narrative\_hint}), o texto de \textsc{ocr}
-  e o estado de processamento.
+  \texttt{ai\_tags}, \texttt{ai\_narrative\_hint}), o texto de \textsc{ocr},
+  o estado de processamento e \texttt{person\_ids} (as pessoas da árvore
+  etiquetadas na fotografia).
   \item \texttt{Person} — cada pessoa, importada do GEDCOM \emph{ou criada
   manualmente} (nome, sexo, datas, locais, identificador GEDCOM, etiqueta
   de família).
