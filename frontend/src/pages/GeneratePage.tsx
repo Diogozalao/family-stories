@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,6 +39,28 @@ export default function GeneratePage() {
   const setStep = (s: Step) => patch({ step: s });
 
   const isCustom = eventType === "custom";
+
+  // ── People grouped into family "folders" ─────────────────────────────────
+  // The picker shows ONE family at a time. In a project it defaults to that
+  // project's family, but you can switch folders to pull in someone from
+  // another family if you want.
+  const SEM_FAMILIA = "Sem família";
+  const families = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of persons ?? []) set.add(p.family_label || SEM_FAMILIA);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [persons]);
+  const [activeFamily, setActiveFamily] = useState<string | null>(null);
+  useEffect(() => {
+    if (activeFamily !== null || families.length === 0) return;
+    setActiveFamily(
+      project?.name && families.includes(project.name) ? project.name : families[0],
+    );
+  }, [families, project?.name, activeFamily]);
+  const familyPersons = useMemo(
+    () => (persons ?? []).filter((p) => (p.family_label || SEM_FAMILIA) === activeFamily),
+    [persons, activeFamily],
+  );
 
   const valid = useMemo(() => {
     if (step === 1) return !!eventType;
@@ -190,9 +212,34 @@ export default function GeneratePage() {
         {step === 2 && (
           <div>
             <h2 className="font-serif text-xl font-semibold tracking-tight">{t("generate.step2")}</h2>
-            <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">{t("generate.selectPeople")}</p>
-            <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {(persons ?? []).map((p) => {
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+              {t("generate.selectPeople")}
+              {selectedIds.length > 0 && <span className="ml-1 text-brand-600 dark:text-brand-400">· {selectedIds.length} selecionada(s)</span>}
+            </p>
+
+            {/* Family "folders" — pick which family to choose people from. */}
+            {families.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {families.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setActiveFamily(f)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
+                      activeFamily === f
+                        ? "border-brand-400 bg-brand-100 text-brand-800 dark:border-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+                        : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300",
+                    )}
+                  >
+                    <FolderKanban className="h-3.5 w-3.5" />
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {familyPersons.map((p) => {
                 const active = selectedIds.includes(p.id);
                 return (
                   <button
