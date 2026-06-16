@@ -24,6 +24,20 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-16 — Correção: geração de narrativas falhava (modelo Gemini)
+
+- **[Correção]** `cap6_implementacao.tex` · §M3 (LLM) / `cap7` (bugs) — o M3
+  usava `gemini-1.5-flash`, indisponível para chaves de API criadas depois
+  de ~abril/2025 (o M1 já usava `2.5-flash`, daí a análise de fotos
+  continuar a funcionar e as narrativas não). Passou para `gemini-2.5-flash`
+  (configurável por env) e a chamada ao LLM ganhou **timeout + 1 retry** e
+  mensagens de erro legíveis, em vez de pendurar e falhar sem explicação.
+
+> Só backend (`config.py`, `llm_client.py`, `gemini_analyzer.py`). Sem
+> migração de BD. Sem alteração de frontend.
+
+---
+
 ## 2026-06-16 — Tarefas isoladas por projeto
 
 - **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados —
