@@ -309,11 +309,10 @@ function PedigreeWizard({
               <Plus className="h-3.5 w-3.5" /> Adicionar pessoa
             </button>
           </div>
-          {extras.length === 0 ? (
-            <p className="text-xs text-stone-500 dark:text-stone-500">
-              Acrescenta qualquer familiar e liga-o a alguém já nomeado. Ex.: um <strong>tio</strong> = «irmão(ã) de» o Pai/Mãe; um <strong>primo</strong> = «filho(a) de» esse tio.
-            </p>
-          ) : (
+          <p className="mb-2 text-xs text-stone-500 dark:text-stone-500">
+            Cada linha cria <strong>uma pessoa nova</strong>. Um <strong>tio</strong> = «irmão(ã) de» o Pai/Mãe (basta 1 linha — fica logo filho dos dois avós). Um <strong>primo</strong> = «filho(a) de» esse tio.
+          </p>
+          {extras.length > 0 && (
             <div className="space-y-2">
               {extras.map((ex) => (
                 <div key={ex.id} className="flex flex-wrap items-center gap-2">
@@ -394,8 +393,22 @@ export default function FamilyEditor({
 
   const addRelation = async () => {
     if (!fromId || !toId || fromId === toId) return;
+    const from = Number(fromId), to = Number(toId);
     try {
-      await createRel.mutateAsync({ from_person_id: Number(fromId), to_person_id: Number(toId), kind });
+      if (kind === "irmao") {
+        // Siblings aren't a stored edge — they share parents. Copy the
+        // chosen person's parents onto this one.
+        const parents = rels.filter((r) => r.to === to && (r.kind === "pai" || r.kind === "mãe"));
+        if (parents.length === 0) {
+          toast.error("Essa pessoa ainda não tem pais definidos. Define primeiro os pais dela (ou liga ambos aos mesmos pais).");
+          return;
+        }
+        for (const p of parents) {
+          await createRel.mutateAsync({ from_person_id: p.from, to_person_id: from, kind: p.kind });
+        }
+      } else {
+        await createRel.mutateAsync({ from_person_id: from, to_person_id: to, kind });
+      }
       toast.success(t("common.success"));
       setFromId(""); setToId("");
     } catch (err) {
@@ -460,6 +473,7 @@ export default function FamilyEditor({
           </select>
           <select className="input w-auto" value={kind} onChange={(e) => setKind(e.target.value)}>
             {KINDS.map((k) => <option key={k} value={k}>{relVerb(k)}</option>)}
+            <option value="irmao">irmão(ã) de</option>
           </select>
           <select className="input max-w-[40%]" value={toId} onChange={(e) => setToId(e.target.value)}>
             <option value="">{t("family.editor.person")}…</option>
