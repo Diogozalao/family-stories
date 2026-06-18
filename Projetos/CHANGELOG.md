@@ -24,6 +24,20 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-18 — Narrativas geradas de forma síncrona (fiabilidade no free tier)
+
+- **[Reescrita]** `cap6_implementacao.tex` · §M3 / §"vias de execução" — as
+  narrativas passam a ser geradas **sincronamente**: o pedido HTTP fica
+  aberto (~30 s), o que mantém a instância free-tier acordada e devolve a
+  história diretamente. Elimina as tarefas órfãs em "Pendente" que o
+  executor in-process deixava quando a instância estava ociosa. O modo em
+  segundo plano (in-process) fica reservado ao vídeo (mais pesado).
+
+> Só frontend (`GeneratePage.tsx` força `mode=sync`; removido o seletor de
+> modo). Backend inalterado (a rota já suportava `mode=sync`). tsc OK.
+
+---
+
 ## 2026-06-16 — Robustez: teto de tempo por tarefa (não wedge a fila)
 
 - **[Correção]** `cap6_implementacao.tex` · §"executor in-process" — o

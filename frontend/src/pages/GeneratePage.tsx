@@ -34,7 +34,7 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, mode, patch, reset,
+    selectedIds, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
 
@@ -116,7 +116,11 @@ export default function GeneratePage() {
         // i18n.language is "pt" or "en" — the M3 LLM writes in that
         // language and the M4 TTS later picks the matching voice.
         language:         i18n.language === "en" ? "en" : "pt",
-        mode,
+        // Narratives are short (~30 s) and we always run them synchronously:
+        // the open request keeps the free-tier instance awake and returns the
+        // story directly, which avoids the in-process background worker
+        // leaving orphaned "Pendente" tasks when the instance is idle.
+        mode: "sync",
       },
       {
         onSuccess: (data: any) => {
@@ -352,15 +356,15 @@ export default function GeneratePage() {
               <Row label={t("generate.step2")} value={`${selectedIds.length} / ${persons?.length ?? 0}`} />
             </dl>
 
-            <div className="flex items-center gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs dark:border-stone-800 dark:bg-stone-900/60">
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={mode === "background"} onChange={() => patch({ mode: "background" })} />
-                <span>Em segundo plano (recomendado)</span>
-              </label>
-              <label className="flex items-center gap-2">
-                <input type="radio" checked={mode === "sync"} onChange={() => patch({ mode: "sync" })} />
-                <span>Aguardar resultado</span>
-              </label>
+            <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-400">
+              {gen.isPending ? (
+                <span className="inline-flex items-center gap-2 text-brand-700 dark:text-brand-300">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  A escrever a história… costuma demorar ~30 segundos. Não feches a página.
+                </span>
+              ) : (
+                <span>A história é gerada e aberta de imediato — costuma demorar ~30 segundos.</span>
+              )}
             </div>
           </div>
         )}
