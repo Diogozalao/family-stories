@@ -1,3 +1,5 @@
+import asyncio
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -183,9 +185,13 @@ class NarrativeGenerator:
             prompt += "\n\nIMPORTANTE: Escreve a narrativa inteira em português europeu (pt-PT)."
 
         try:
-            narrative_text = self.llm.generate(
+            # The LLM SDK call is synchronous and takes ~30 s. Off-load it to a
+            # worker thread so the FastAPI event loop stays responsive (health
+            # checks / keep-alive pings keep flowing) while we run synchronously.
+            narrative_text = await asyncio.to_thread(
+                self.llm.generate,
                 prompt,
-                max_tokens=settings.NARRATIVE_MAX_TOKENS,
+                settings.NARRATIVE_MAX_TOKENS,
             )
         except LLMUnavailableError as exc:
             log.error("narrative_llm_unavailable", title=title, error=str(exc))

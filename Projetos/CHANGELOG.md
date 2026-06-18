@@ -27,14 +27,19 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 ## 2026-06-18 — Narrativas geradas de forma síncrona (fiabilidade no free tier)
 
 - **[Reescrita]** `cap6_implementacao.tex` · §M3 / §"vias de execução" — as
-  narrativas passam a ser geradas **sincronamente**: o pedido HTTP fica
-  aberto (~30 s), o que mantém a instância free-tier acordada e devolve a
-  história diretamente. Elimina as tarefas órfãs em "Pendente" que o
-  executor in-process deixava quando a instância estava ociosa. O modo em
-  segundo plano (in-process) fica reservado ao vídeo (mais pesado).
+  narrativas passam a ser geradas **sempre sincronamente, garantido no
+  backend**: o pedido HTTP fica aberto (~30 s), mantém a instância acordada e
+  devolve a história diretamente. Causa raiz das tarefas presas em
+  "Pendente": ambos os caminhos de segundo plano falhavam no free tier — o
+  executor in-process corre cada job noutra thread via `asyncio.run()`
+  enquanto o pool async do SQLAlchemy está preso ao loop principal (awaits
+  entre loops penduram para sempre), e o caminho Celery enfileira num broker
+  sem worker a consumir. A chamada ao LLM (síncrona, ~30 s) é descarregada
+  para uma thread (`asyncio.to_thread`) para não bloquear o event loop.
 
-> Só frontend (`GeneratePage.tsx` força `mode=sync`; removido o seletor de
-> modo). Backend inalterado (a rota já suportava `mode=sync`). tsc OK.
+> Backend: `narrative.py` ignora o `mode` e gera sempre sincronamente;
+> `generator.py` usa `asyncio.to_thread` para o LLM. Frontend:
+> `GeneratePage.tsx` deixa de oferecer o seletor de modo. Sem migração. tsc OK.
 
 ---
 

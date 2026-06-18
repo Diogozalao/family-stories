@@ -16,7 +16,6 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
 from backend.models.narrative import Story
-from backend.models.task import TaskKind, TaskRecord, TaskState
 from backend.modules.m3_narrative.generator import NarrativeGenerator
 from backend.modules.m3_narrative.templates import NARRATIVE_TEMPLATES
 from backend.schemas.narrative import GenerateRequest, StoryResponse, UpdateStoryRequest
@@ -52,58 +51,32 @@ async def generate_narrative(
             detail=f"Invalid event_type. Available: {list(NARRATIVE_TEMPLATES.keys())}",
         )
 
-    if mode == "sync":
-        try:
-            story = await generator.generate(
-                db               = db,
-                user_id          = user.id,
-                title            = payload.title,
-                event_type       = payload.event_type,
-                query            = payload.query,
-                person_ids       = payload.person_ids,
-                project_id       = payload.project_id,
-                custom_tone      = payload.custom_tone,
-                custom_structure = payload.custom_structure,
-                language         = payload.language,
-            )
-        except PermissionError as exc:
-            raise HTTPException(status_code=404, detail=str(exc))
-        return StoryResponse.model_validate(story)
-
-    # Background mode — create the tracking record first, then run the job
-    # either on a Celery worker (if one exists) or in-process on this very
-    # server (free cloud tier). Either way the request returns immediately
-    # and the client polls /api/v1/tasks/{id}.
-    job_payload = {**payload.model_dump(), "user_id": str(user.id)}
-    record = TaskRecord(
-        user_id    = user.id,
-        kind       = TaskKind.NARRATIVE,
-        state      = TaskState.PENDING,
-        project_id = payload.project_id,
-        payload    = job_payload,
-    )
-    db.add(record)
-    await db.commit()
-    await db.refresh(record)
-
-    if settings.CELERY_ENABLED:
-        from backend.tasks.narrative_tasks import generate_narrative_task
-        celery_id = generate_narrative_task.delay(record.id, job_payload).id
-        record.celery_id = celery_id
-        await db.commit()
-    else:
-        from backend.tasks.bodies import narrative_body
-        from backend.tasks.inproc import run_in_background
-        celery_id = run_in_background(record.id, lambda: narrative_body(job_payload))
-
-    log.info("narrative_task_enqueued", task_record_id=record.id,
-             celery_id=celery_id, celery=settings.CELERY_ENABLED)
-    return {
-        "task_id":   record.id,
-        "celery_id": celery_id,
-        "state":     record.state,
-        "poll_url":  f"/api/v1/tasks/{record.id}",
-    }
+    # Narratives ALWAYS run synchronously, regardless of the requested
+    # ``mode``. They are short (~30 s) and every background path on the free
+    # tier is unreliable: the in-process executor runs each job on a separate
+    # thread via ``asyncio.run()`` while the SQLAlchemy async pool is bound to
+    # the main loop (cross-loop awaits hang forever — the "stuck on Pendente"
+    # symptom), and the Celery path enqueues to a broker that has no worker
+    # consuming it. Running on the request's own loop/session avoids both and
+    # keeps the instance awake while it generates, returning the story
+    # directly. ``mode`` is accepted for backwards compatibility but ignored.
+    _ = mode
+    try:
+        story = await generator.generate(
+            db               = db,
+            user_id          = user.id,
+            title            = payload.title,
+            event_type       = payload.event_type,
+            query            = payload.query,
+            person_ids       = payload.person_ids,
+            project_id       = payload.project_id,
+            custom_tone      = payload.custom_tone,
+            custom_structure = payload.custom_structure,
+            language         = payload.language,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return StoryResponse.model_validate(story)
 
 
 @router.get("/narrative/templates")
