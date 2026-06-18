@@ -12,6 +12,7 @@ from typing import Awaitable, Callable, TypeVar
 
 import structlog
 
+from backend.core.config import settings
 from backend.core.database import AsyncSessionLocal
 from backend.core.logging import configure_logging
 from backend.models.task import TaskRecord, TaskState
@@ -85,10 +86,24 @@ async def run_with_tracking(
     """
     await mark_task_state(task_record_id, state=TaskState.RUNNING, celery_id=celery_id)
     try:
-        result = await coroutine_factory()
+        # Hard wall-clock cap on every task. The in-process executor has a
+        # single worker, so one hung task (e.g. an LLM/network call with no
+        # timeout of its own) would otherwise block every queued task forever
+        # — exactly the "stuck on Pendente" symptom. Failing it here frees the
+        # worker without needing a process restart.
+        result = await asyncio.wait_for(coroutine_factory(), timeout=settings.TASK_MAX_SECONDS)
+    except TimeoutError:
+        msg = (f"A tarefa excedeu o tempo máximo ({settings.TASK_MAX_SECONDS}s) "
+               "e foi terminada.")
+        log.error("task_timeout", task_record_id=task_record_id,
+                  limit=settings.TASK_MAX_SECONDS)
+        await mark_task_state(task_record_id, state=TaskState.FAILED, error=msg,
+                              skip_if_terminal=True)
+        raise
     except Exception as exc:
         log.exception("task_failed", task_record_id=task_record_id, error=str(exc))
-        await mark_task_state(task_record_id, state=TaskState.FAILED, error=str(exc))
+        await mark_task_state(task_record_id, state=TaskState.FAILED, error=str(exc),
+                              skip_if_terminal=True)
         raise
     # ``skip_if_terminal`` so a user cancellation (FAILED) isn't overwritten.
     await mark_task_state(task_record_id, state=TaskState.DONE, result=result,

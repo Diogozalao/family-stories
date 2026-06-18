@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # working while narratives failed). Override via env if needed.
     GEMINI_MODEL:    str = "gemini-2.5-flash"
     GEMINI_TIMEOUT:  int = 90          # seconds per LLM call before giving up
+    # Hard wall-clock cap per background task. The in-process executor runs a
+    # single worker, so a hung task would block the whole queue; this frees it.
+    # A documentary render is the heaviest case, hence the generous default.
+    TASK_MAX_SECONDS: int = 600
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL:    str = "llama3.2:3b"
     NARRATIVE_MAX_TOKENS: int = 3500

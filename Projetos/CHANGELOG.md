@@ -24,6 +24,18 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-16 — Robustez: teto de tempo por tarefa (não wedge a fila)
+
+- **[Correção]** `cap6_implementacao.tex` · §"executor in-process" — o
+  executor tem um único worker; uma tarefa pendurada bloqueava todas as
+  seguintes (sintoma "Pendente para sempre"). Cada tarefa passa a ter um
+  **teto de tempo global** (`TASK_MAX_SECONDS=600`): ao exceder, falha
+  sozinha e liberta o worker, sem depender de reinício do processo.
+
+> Só backend (`tasks/_runtime.py`, `config.py`). Sem migração nem frontend.
+
+---
+
 ## 2026-06-16 — Correção: geração de narrativas falhava (modelo Gemini)
 
 - **[Correção]** `cap6_implementacao.tex` · §M3 (LLM) / `cap7` (bugs) — o M3
