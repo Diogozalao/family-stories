@@ -6,6 +6,9 @@ to Postgres as ``postgres`` (which bypasses RLS). The owner column on
 what keeps a caller from accessing or mutating someone else's data.
 """
 
+import asyncio
+import time
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
@@ -23,6 +26,48 @@ from backend.schemas.narrative import GenerateRequest, StoryResponse, UpdateStor
 router    = APIRouter(prefix="/api/v1", tags=["narrative"])
 log       = structlog.get_logger()
 generator = NarrativeGenerator()
+
+
+# ── Temporary diagnostics ────────────────────────────────────────────────
+# Public (gated by an unguessable key) so it can be probed with curl without
+# a JWT. It runs a tiny LLM generation and reports timing + the exact error,
+# to pin down why narrative generation hangs. Safe to remove once fixed.
+_DIAG_KEY = "lm-diag-7f3a9c2e"
+
+
+@router.get("/narrative/_diag")
+async def narrative_diag(
+    key:    str = Query(...),
+    tokens: int = Query(80, ge=8, le=4000),
+):
+    """Run one small LLM call and report backend/model/elapsed/error."""
+    if key != _DIAG_KEY:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    info = {
+        "backend":    generator.llm.backend,
+        "text_model": settings.GEMINI_TEXT_MODEL,
+        "vision_model": settings.GEMINI_MODEL,
+        "gemini_timeout": settings.GEMINI_TIMEOUT,
+        "key_set":    bool(settings.GEMINI_API_KEY),
+        "tokens":     tokens,
+    }
+    t0 = time.monotonic()
+    try:
+        text = await asyncio.wait_for(
+            asyncio.to_thread(
+                generator.llm.generate,
+                "Escreve uma única frase curta de boas-vindas a uma família, em português.",
+                tokens,
+            ),
+            timeout=settings.GEMINI_TIMEOUT + 30,
+        )
+        info.update(ok=True, elapsed=round(time.monotonic() - t0, 2),
+                    chars=len(text or ""), sample=(text or "")[:200])
+    except Exception as exc:                                   # noqa: BLE001
+        info.update(ok=False, elapsed=round(time.monotonic() - t0, 2),
+                    error=f"{type(exc).__name__}: {exc}")
+    return info
 
 
 @router.post("/narrative/index")
