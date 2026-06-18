@@ -24,6 +24,20 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-19 — Modelo de texto rápido (Gemini 2.0 Flash, sem "thinking")
+
+- **[Correção]** `cap6_implementacao.tex` · §M3 (LLM) — o `gemini-2.5-flash`
+  tem *thinking* ativo por defeito; para uma narrativa de ~3500 tokens
+  ultrapassava frequentemente o limite de ~100 s do proxy do Render e o
+  pedido era largado (erro de rede no cliente). O texto passa a usar
+  `gemini-2.0-flash` (sem thinking, ~15-25 s); a visão do M1 mantém-se em
+  2.5-flash. Timeout por chamada reduzido para 60 s.
+
+> Backend: `config.py` (novo `GEMINI_TEXT_MODEL`), `llm_client.py`. Sem
+> migração nem frontend.
+
+---
+
 ## 2026-06-18 — Narrativas geradas de forma síncrona (fiabilidade no free tier)
 
 - **[Reescrita]** `cap6_implementacao.tex` · §M3 / §"vias de execução" — as

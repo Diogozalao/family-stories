@@ -30,7 +30,7 @@ class LLMClient:
     def _setup_gemini(self):
         import google.generativeai as genai
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        self._gemini = genai.GenerativeModel(settings.GEMINI_MODEL)
+        self._gemini = genai.GenerativeModel(settings.GEMINI_TEXT_MODEL)
 
     def generate(self, prompt: str, max_tokens: int = 1500) -> str:
         if self._ollama_ok:
@@ -70,7 +70,7 @@ class LLMClient:
         for attempt in (1, 2):
             try:
                 log.info("llm_generating", backend="gemini_fallback",
-                         model=settings.GEMINI_MODEL, attempt=attempt)
+                         model=settings.GEMINI_TEXT_MODEL, attempt=attempt)
                 response = self._gemini.generate_content(
                     prompt,
                     generation_config=cfg,
@@ -91,7 +91,7 @@ class LLMClient:
         log.error("gemini_error", error=str(last_exc))
         # Both backends failed — propagate so the caller can mark the
         # task/story as ``failed`` instead of saving a fake narrative.
-        details = f"Gemini ({settings.GEMINI_MODEL}): {last_exc}"
+        details = f"Gemini ({settings.GEMINI_TEXT_MODEL}): {last_exc}"
         if _ollama_error:
             details = f"Ollama: {_ollama_error}\n{details}"
         raise LLMUnavailableError(details) from last_exc

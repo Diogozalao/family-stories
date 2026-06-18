@@ -43,8 +43,12 @@ class Settings(BaseSettings):
     # keys created after ~April 2025, which silently broke narrative
     # generation (M1 already used 2.5-flash, which is why photo analysis kept
     # working while narratives failed). Override via env if needed.
-    GEMINI_MODEL:    str = "gemini-2.5-flash"
-    GEMINI_TIMEOUT:  int = 90          # seconds per LLM call before giving up
+    GEMINI_MODEL:    str = "gemini-2.5-flash"   # M1 vision (short prompts → fast)
+    # M3 narrative text. 2.5-flash has "thinking" on by default, which for a
+    # ~3500-token narrative often runs past Render's ~100 s proxy limit and the
+    # request gets dropped. 2.0-flash has no thinking and writes in ~15-25 s.
+    GEMINI_TEXT_MODEL: str = "gemini-2.0-flash"
+    GEMINI_TIMEOUT:  int = 60          # seconds per LLM call before giving up
     # Hard wall-clock cap per background task. The in-process executor runs a
     # single worker, so a hung task would block the whole queue; this frees it.
     # A documentary render is the heaviest case, hence the generous default.
