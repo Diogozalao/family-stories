@@ -160,7 +160,55 @@ Se um fornecedor não tiver visão, podias usá-lo só para texto e manter o Gem
 
 ---
 
-## 4. Avisos transversais (válidos para qualquer fornecedor pago)
+## 4. Usar VÁRIOS fornecedores ao mesmo tempo? (arquitetura multi-fornecedor)
+
+**Sim, é possível** — atribuir cada tarefa ao melhor fornecedor ("best-of-breed").
+Mas há dois enganos comuns a desfazer primeiro:
+
+### ⚠️ O projeto só tem DUAS tarefas de IA (não quatro/cinco)
+
+| Tarefa | Precisa de fornecedor de IA? | Quem faz hoje |
+|---|---|---|
+| 🖼️ Ler/descrever fotos (M1) | ✅ Sim — precisa de **visão** | Gemini |
+| ✍️ Escrever a narrativa (M3) | ✅ Sim — qualquer LLM | Ollama → Gemini → Groq |
+| 🎬 Montar o vídeo (M4) | ❌ **Não** — MoviePy/FFmpeg **local** | — |
+| 🔊 Gerar a voz (M4) | ❌ **Não** — edge-tts/gTTS **local** | — |
+
+➡️ **Vídeo e voz NÃO são gerados por IA** — são montados localmente, de graça.
+Não há (nem é preciso) "um fornecedor para vídeo".
+
+> Existe geração de vídeo por IA (texto→vídeo: Veo, Runway, Sora, Kling), mas é
+> **caríssima** (segundos custam cêntimos a euros) — rebentaria o tecto de 5 €.
+> Não é o que este projeto faz.
+
+### Vale a pena dividir por vários fornecedores?
+
+Cada fornecedor extra acrescenta: mais uma chave para gerir, mais código, mais
+pontos de falha e mais coisas para vigiar. **Só compensa quando há ganho real.**
+
+**Decisão tomada:** um só fornecedor principal (**Gemini**), por simplicidade e
+porque cobre texto *e* visão a custo de cêntimos. O Groq entra **só como rede de
+segurança** para o texto (grátis), nunca como motor principal.
+
+### A arquitetura final (implementada)
+
+```
+🖼️ Visão (fotos, M1)   → Gemini            (Gemini-only; Groq é fraco em visão)
+✍️ Texto (M3)          → Ollama → Gemini → Groq   (cadeia de fallback)
+🎬 Vídeo + 🔊 Voz       → local             (MoviePy + edge-tts, sem IA)
+```
+
+- **Ollama** (local): motor principal em desenvolvimento. € 0.
+- **Gemini** (pago): motor principal em produção (Render não corre Ollama).
+- **Groq** (grátis): só dispara se o Gemini falhar, e só para texto.
+
+> Ativar o Groq: basta pôr `GROQ_API_KEY` no `.env` (de `console.groq.com`).
+> Sem chave, a rede de segurança fica inativa e o comportamento é o de antes
+> (Ollama → Gemini). Ver `backend/modules/m3_narrative/llm_client.py`.
+
+---
+
+## 5. Avisos transversais (válidos para qualquer fornecedor pago)
 
 1. **Modelos com visão custam mais** — analisar uma foto gasta mais do que gerar texto.
 2. **Põe sempre um travão** — quota diária de pedidos e/ou budget com alertas.
@@ -170,8 +218,9 @@ Se um fornecedor não tiver visão, podias usá-lo só para texto e manter o Gem
 
 ---
 
-## 5. Estado atual do projeto (referência)
+## 6. Estado atual do projeto (referência)
 
-- **Local:** Ollama (`llama3.2:3b`) como motor principal — `backend/modules/m3_narrative/llm_client.py`.
-- **Produção (Render):** fallback para **Gemini** (`gemini-2.0-flash` para texto, `gemini-2.5-flash` para visão) — `backend/core/config.py`.
-- **Decisão tomada:** ativar **pay-as-you-go no Gemini** (projeto `family-story`), com crédito de 300 USD a ser consumido primeiro, quota diária + budget de 5 €.
+- **Texto (M3):** cadeia **Ollama (`llama3.2:3b`) → Gemini (`gemini-2.0-flash`) → Groq (`llama-3.3-70b-versatile`)** — `backend/modules/m3_narrative/llm_client.py`.
+- **Visão (M1):** **Gemini** (`gemini-1.5-flash` no `.env` atual) — `backend/modules/m1_ingestion/gemini_analyzer.py`.
+- **Vídeo/voz (M4):** **local** (MoviePy/FFmpeg + edge-tts/gTTS), sem IA.
+- **Decisão tomada:** **pay-as-you-go no Gemini** (projeto `family-story`), crédito de 300 USD consumido primeiro, quota diária + budget de 5 €. Groq como fallback grátis só de texto.

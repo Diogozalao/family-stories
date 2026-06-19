@@ -23,9 +23,21 @@ troca o comando `\figph{...}` pela linha `\includegraphics` que está
 | 13 | `pytest.png` | Cap.7 · Fig. pytest | Captura da execução `pytest -v` (37 testes OK) | Terminal |
 | 14 | `grafo_familiar.png` *(opcional)* | (podes adicionar no Cap.6 M2) | Visualização do grafo NetworkX de uma família | `networkx` + matplotlib |
 
+## Atualização 2026-06-19 — camada de IA com 3 níveis
+- O **diagrama de arquitetura global** (Cap.5, TikZ) foi atualizado: a
+  caixa **IA** passa a mostrar **Ollama (local) · Gemini (nuvem) · Groq
+  (*fallback*)**, refletindo a nova cadeia de geração de texto. Como é
+  TikZ, **não precisa de ficheiro de imagem** — recompila e fica certo.
+- Se tiveres capturas de ecrã com a arquitetura/infra (não há nenhuma na
+  lista abaixo), nenhuma precisa de ser refeita — a mudança é só no
+  diagrama em código.
+- Os *prints* de UI (#7–#11) **não** são afetados: o Groq é interno
+  (*backend*) e não aparece na interface.
+
 ## Notas
 - **Figuras já resolvidas em TikZ** (não precisam de imagem): o diagrama
-  de **arquitetura global** (Cap.5) está desenhado em código.
+  de **arquitetura global** (Cap.5) está desenhado em código (já inclui
+  a camada de IA de 3 níveis acima descrita).
 - Para as capturas de ecrã, usa preferencialmente o **tema claro** e
   resolução alta (retina) para boa qualidade na impressão.
 - Se quiseres, o diagrama **full-stack** (#4) também pode ser refeito em

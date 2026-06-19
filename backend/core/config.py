@@ -55,6 +55,12 @@ class Settings(BaseSettings):
     TASK_MAX_SECONDS: int = 600
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL:    str = "llama3.2:3b"
+    # Groq — rede de segurança SÓ para texto, usada apenas se o Gemini falhar.
+    # API compatível com OpenAI, modelos abertos, free tier generoso → custo
+    # zero. Sem chave configurada, o fallback fica inativo (Ollama→Gemini só).
+    # Não cobre a visão do M1, que se mantém Gemini-only.
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL:   str = "llama-3.3-70b-versatile"
     NARRATIVE_MAX_TOKENS: int = 3500
 
     # Upload size limits (in megabytes).

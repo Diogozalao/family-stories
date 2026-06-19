@@ -117,12 +117,18 @@ O M3 é o módulo de IA generativa central. Combina três componentes: um
 
 \subsection{Cliente LLM híbrido e \emph{fallback}}
 
-O \texttt{LLMClient} privilegia a inferência local via \emph{Ollama}
-(Llama~3.2~3B); se este não estiver disponível, recorre ao \emph{Gemini
-1.5~Flash}. O \Cref{lst:llm} mostra o coração desta lógica: se a inferência
-local falhar \emph{durante} a geração, há ainda um \emph{fallback} em
-tempo de execução; se ambos falharem, é lançada uma exceção que faz a
-tarefa ser marcada como falhada — evitando guardar uma narrativa falsa.
+O \texttt{LLMClient} implementa uma \textbf{cadeia de \emph{fallback} de
+três níveis} para a geração de texto: privilegia a inferência local via
+\emph{Ollama} (Llama~3.2~3B); se esta não estiver disponível, recorre ao
+\emph{Gemini~Flash} (nuvem, motor principal em produção); e, se o Gemini
+falhar, há ainda uma última rede de segurança no \emph{Groq} (modelos
+abertos em \emph{cloud}, camada gratuita), acionada apenas quando
+configurada e \emph{só para texto} --- a análise visual (M1) mantém-se
+\emph{Gemini-only}, por o Groq não oferecer visão equivalente. O
+\Cref{lst:llm} mostra o coração desta lógica: se a inferência local falhar
+\emph{durante} a geração, há \emph{fallback} em tempo de execução; só
+quando \emph{todos} os níveis falham é lançada uma exceção que marca a
+tarefa como falhada --- evitando guardar uma narrativa falsa.
 
 \begin{lstlisting}[language=Python,caption={Cliente LLM com dupla via
 local/nuvem e \emph{fallback} em tempo de execução (\texttt{llm\_client.py}).},label={lst:llm}]

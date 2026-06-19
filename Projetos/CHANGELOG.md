@@ -10,6 +10,33 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-19 — Cadeia de fallback de 3 níveis + decisão multi-API
+
+- **[Reescrita]** `cap3_metodologia_tecnologias.tex` · §"IA: estratégia
+  híbrida local/nuvem" — a estratégia passa a descrever uma **cadeia de
+  três níveis para texto** (Ollama → Gemini → **Groq**); o Gemini é o motor
+  principal em produção (texto `2.0-flash`, visão `1.5-flash`) e o Groq uma
+  **rede de segurança grátis só para texto**. Acrescentado parágrafo
+  *"Um fornecedor, não vários"*: o sistema **suporta** múltiplos fornecedores,
+  mas optou-se por **um só principal** (Gemini) por simplicidade, suficiência
+  dos modelos *Flash* (texto+visão) e controlo de custos; Ollama e Groq são
+  **camadas de resiliência**, não fornecedores paralelos.
+- **[Correção]** `cap3_metodologia_tecnologias.tex` · tabela de tecnologias —
+  linha de IA atualizada para "Ollama local + Gemini + Groq (cadeia de
+  *fallback*)".
+- **[Reescrita]** `cap6_implementacao.tex` · §"Cliente LLM híbrido e
+  *fallback*" — descrição passa a refletir os três níveis e deixa explícito
+  que a **visão (M1) é Gemini-only** (o Groq não tem visão equivalente).
+
+> Backend correspondente: `llm_client.py` (novo método `_groq_generate`,
+> acionado só se `GROQ_API_KEY` definida e só após o Gemini falhar),
+> `config.py` (`GROQ_API_KEY`/`GROQ_MODEL`), `requirements.txt` (`groq`),
+> `.env` (chave Groq opcional, vazia por defeito). Sem migração nem frontend.
+> O bloco de código `lst:llm` no LaTeX pode manter-se (ilustra Ollama→Gemini);
+> se quiseres, acrescento a linha do Groq ao excerto — diz.
+
+---
+
 ## 2026-06-15 — Projetos isolados (timeline/família por projeto + upload)
 
 - **[Adição]** `cap5_arquitetura_design.tex` · modelo de dados — nota de

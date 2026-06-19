@@ -40,7 +40,7 @@ principais.
 
 % Dados e IA
 \node[svc,below=1.8cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
-\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Ollama (local)\\Gemini (nuvem)};
+\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Ollama (local)\\Gemini (nuvem)\\Groq (\emph{fallback})};
 
 \draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
 \draw[arrow] (api.east) -- (m1.west);

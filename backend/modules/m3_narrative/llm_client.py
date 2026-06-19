@@ -89,12 +89,51 @@ class LLMClient:
                 log.warning("gemini_attempt_failed", attempt=attempt, error=str(e))
 
         log.error("gemini_error", error=str(last_exc))
-        # Both backends failed — propagate so the caller can mark the
-        # task/story as ``failed`` instead of saving a fake narrative.
-        details = f"Gemini ({settings.GEMINI_TEXT_MODEL}): {last_exc}"
+
+        # Última rede de segurança: Groq (modelos abertos, free tier generoso).
+        # Só entra quando o Gemini falha, e SÓ cobre texto — a visão do M1 não
+        # passa por aqui, mantém-se Gemini-only. Custo zero: serve apenas para o
+        # utilizador receber a narrativa mesmo numa falha pontual da nuvem
+        # principal. Ativa-se só se ``GROQ_API_KEY`` estiver configurada.
+        gemini_exc = last_exc
+        if settings.GROQ_API_KEY:
+            try:
+                return self._groq_generate(prompt, max_tokens)
+            except Exception as groq_exc:                   # noqa: BLE001
+                log.error("groq_error", error=str(groq_exc))
+                last_exc = groq_exc
+
+        # Todos os backends falharam — propaga para a tarefa ser marcada como
+        # ``failed`` em vez de guardar uma narrativa falsa.
+        details = f"Gemini ({settings.GEMINI_TEXT_MODEL}): {gemini_exc}"
+        if settings.GROQ_API_KEY and last_exc is not gemini_exc:
+            details += f"\nGroq ({settings.GROQ_MODEL}): {last_exc}"
         if _ollama_error:
             details = f"Ollama: {_ollama_error}\n{details}"
         raise LLMUnavailableError(details) from last_exc
+
+    def _groq_generate(self, prompt: str, max_tokens: int) -> str:
+        """Gera texto via Groq (API compatível com OpenAI). Rede de segurança.
+
+        Invocado apenas quando o Gemini falha. Usa um modelo aberto alojado
+        no Groq (free tier), pelo que não tem custo. Não é usado para visão.
+        """
+        from groq import Groq
+
+        log.info("llm_generating", backend="groq", model=settings.GROQ_MODEL)
+        client = Groq(api_key=settings.GROQ_API_KEY,
+                      timeout=settings.GEMINI_TIMEOUT)
+        resp = client.chat.completions.create(
+            model=settings.GROQ_MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.7,
+        )
+        text = (resp.choices[0].message.content or "").strip()
+        if not text:
+            raise RuntimeError("resposta vazia do Groq")
+        log.info("llm_done", backend="groq", chars=len(text))
+        return text
 
     @staticmethod
     def _blocked_reason(response) -> str:

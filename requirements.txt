@@ -31,6 +31,10 @@ python-dateutil==2.9.0
 
 # M3 - Narrativa
 google-generativeai==0.5.3
+# Groq: fallback de texto (só usado se o Gemini falhar). API compatível com
+# OpenAI; o cliente importa-se sempre, mas só é chamado se ``GROQ_API_KEY``
+# estiver definida. Intervalo flexível para não partir o build do Render.
+groq>=0.13,<1.0
 langchain==0.1.20
 langchain-community==0.0.38
 # chromadb is heavy (~600 MB + opentelemetry dependency hell + C++ compile)
