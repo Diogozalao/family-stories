@@ -24,7 +24,19 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
-## 2026-06-19 — Modelo de texto rápido (Gemini 2.0 Flash, sem "thinking")
+## 2026-06-19 — Remoção do endpoint de diagnóstico + decisão de custos
+
+- **[Remoção]** (código) `narrative.py` — removido o endpoint público
+  temporário `/_diag` (já revelou a causa: chave Gemini sem quota grátis,
+  `429 limit:0`). Risco de abuso com faturação ativa + repo público.
+- **[Adição sugerida]** `cap3_metodologia_tecnologias.tex` — secção de
+  **custos/infraestrutura**: arquitetura deliberadamente *low-cost*; único
+  serviço pago = Gemini (pay-as-you-go, tecto 5€/mês, custo real ~cêntimos);
+  tudo o resto é local/open-source (MoviePy/FFmpeg, edge-tts/gTTS, Tesseract,
+  Supabase/Render free tier). Híbrido: Ollama em local, Gemini em produção.
+
+> Ainda NÃO escrevi esta secção no LaTeX — só o registo aqui. Diz se queres
+> a tabela de custos no relatório (confirmo o capítulo e adiciono).
 
 - **[Correção]** `cap6_implementacao.tex` · §M3 (LLM) — o `gemini-2.5-flash`
   tem *thinking* ativo por defeito; para uma narrativa de ~3500 tokens
