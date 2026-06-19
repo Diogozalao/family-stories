@@ -35,39 +35,50 @@ generator = NarrativeGenerator()
 _DIAG_KEY = "lm-diag-7f3a9c2e"
 
 
+def _try_gemini_model(model_name: str, tokens: int) -> dict:
+    """Synchronously call one Gemini model and report ok/elapsed/error."""
+    import google.generativeai as genai
+    out = {"model": model_name}
+    t0 = time.monotonic()
+    try:
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        gm = genai.GenerativeModel(model_name)
+        resp = gm.generate_content(
+            "Escreve uma única frase curta de boas-vindas a uma família, em português.",
+            generation_config=genai.GenerationConfig(max_output_tokens=tokens, temperature=0.7),
+            request_options={"timeout": 45},
+        )
+        text = (getattr(resp, "text", None) or "").strip()
+        out.update(ok=bool(text), elapsed=round(time.monotonic() - t0, 2),
+                   chars=len(text), sample=text[:120])
+    except Exception as exc:                                   # noqa: BLE001
+        msg = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        out.update(ok=False, elapsed=round(time.monotonic() - t0, 2),
+                   error=f"{type(exc).__name__}: {msg}")
+    return out
+
+
 @router.get("/narrative/_diag")
 async def narrative_diag(
     key:    str = Query(...),
     tokens: int = Query(80, ge=8, le=4000),
+    models: str = Query("gemini-1.5-flash,gemini-1.5-flash-8b,gemini-2.0-flash,gemini-2.5-flash"),
 ):
-    """Run one small LLM call and report backend/model/elapsed/error."""
+    """Probe several Gemini models for this key and report which ones work."""
     if key != _DIAG_KEY:
         raise HTTPException(status_code=404, detail="Not found")
 
-    info = {
-        "backend":    generator.llm.backend,
-        "text_model": settings.GEMINI_TEXT_MODEL,
+    names = [m.strip() for m in models.split(",") if m.strip()]
+    results = await asyncio.gather(*[
+        asyncio.to_thread(_try_gemini_model, name, tokens) for name in names
+    ])
+    return {
+        "backend":      generator.llm.backend,
+        "text_model":   settings.GEMINI_TEXT_MODEL,
         "vision_model": settings.GEMINI_MODEL,
-        "gemini_timeout": settings.GEMINI_TIMEOUT,
-        "key_set":    bool(settings.GEMINI_API_KEY),
-        "tokens":     tokens,
+        "key_set":      bool(settings.GEMINI_API_KEY),
+        "results":      results,
     }
-    t0 = time.monotonic()
-    try:
-        text = await asyncio.wait_for(
-            asyncio.to_thread(
-                generator.llm.generate,
-                "Escreve uma única frase curta de boas-vindas a uma família, em português.",
-                tokens,
-            ),
-            timeout=settings.GEMINI_TIMEOUT + 30,
-        )
-        info.update(ok=True, elapsed=round(time.monotonic() - t0, 2),
-                    chars=len(text or ""), sample=(text or "")[:200])
-    except Exception as exc:                                   # noqa: BLE001
-        info.update(ok=False, elapsed=round(time.monotonic() - t0, 2),
-                    error=f"{type(exc).__name__}: {exc}")
-    return info
 
 
 @router.post("/narrative/index")
