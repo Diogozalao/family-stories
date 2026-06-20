@@ -331,6 +331,9 @@ export default {
     size: "{{size}} MB",
     photos: "{{count}} fotografias",
     processing: "A processar…",
+    generating: "A gerar o vídeo — pode demorar 1–2 minutos. Não feches a página.",
+    done: "Vídeo gerado!",
+    stillRendering: "O vídeo continua a ser gerado no servidor — vai aparecer aqui daqui a pouco.",
   },
   generate: {
     title: "Gerar nova história",

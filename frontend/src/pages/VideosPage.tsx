@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Download, Film, Loader2, Play, Plus, Sparkles, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { useGenerateVideo, useStories, useVideos, videoUrl } from "../lib/hooks";
-import { extractErrorMessage } from "../lib/api";
+import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { cn } from "../lib/utils";
 import type { Video } from "../lib/types";
 
@@ -142,14 +142,27 @@ function StoryPicker({ onClose }: { onClose: () => void }) {
 
   const handleGenerate = () => {
     if (selectedId === null) return;
+    // Synchronous render: keeps the free-tier instance awake instead of
+    // handing the job to a background worker that gets killed when the
+    // instance sleeps (the old "Tarefa abandonada" failure). It can take
+    // 1–2 min; the videos list polls so the result appears even if the
+    // request itself times out at the proxy.
+    toast.info(t("videos.generating"));
     gen.mutate(
-      { story_id: selectedId, mode: "background" },
+      { story_id: selectedId, mode: "sync" },
       {
         onSuccess: () => {
-          toast.success(t("videos.processing"));
+          toast.success(t("videos.done"));
           onClose();
         },
-        onError: (err) => toast.error(extractErrorMessage(err)),
+        onError: (err) => {
+          if (isLostResponse(err)) {
+            toast.info(t("videos.stillRendering"));
+            onClose();
+          } else {
+            toast.error(extractErrorMessage(err));
+          }
+        },
       },
     );
   };

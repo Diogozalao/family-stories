@@ -537,6 +537,14 @@ export function useVideos() {
   return useQuery<Video[]>({
     queryKey: ["videos"],
     queryFn: async () => (await api.get("/api/v1/multimedia/videos")).data,
+    // A synchronous render can outlive the HTTP request on the free tier
+    // (proxy timeout). Keep polling while any video is still "processing"
+    // so the finished MP4 shows up on its own once the server commits it,
+    // even if the original request already gave up.
+    refetchInterval: (query) => {
+      const data = query.state.data as Video[] | undefined;
+      return data?.some((v) => v.status === "processing") ? 5000 : false;
+    },
   });
 }
 

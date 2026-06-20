@@ -61,14 +61,25 @@ export default function StoryReaderPage() {
   const paragraphs = (story.narrative ?? "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 
   const handleGenerateVideo = () => {
+    // Synchronous render (same reasoning as the Videos page): avoids the
+    // background worker that gets abandoned on the free tier. Takes 1–2 min;
+    // the Videos page polls so the result lands even if the request times out.
+    toast.info(t("videos.generating"));
     genVideo.mutate(
-      { story_id: story.id, mode: "background" },
+      { story_id: story.id, mode: "sync" },
       {
         onSuccess: () => {
-          toast.success(t("videos.processing"));
-          navigate("/tasks");
+          toast.success(t("videos.done"));
+          navigate("/videos");
         },
-        onError: (err) => toast.error(extractErrorMessage(err)),
+        onError: (err) => {
+          if (isLostResponse(err)) {
+            toast.info(t("videos.stillRendering"));
+            navigate("/videos");
+          } else {
+            toast.error(extractErrorMessage(err));
+          }
+        },
       },
     );
   };

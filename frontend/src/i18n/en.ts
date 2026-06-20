@@ -323,6 +323,9 @@ export default {
     size: "{{size}} MB",
     photos: "{{count}} photos",
     processing: "Processing…",
+    generating: "Rendering the video — this can take 1–2 minutes. Don't close the page.",
+    done: "Video ready!",
+    stillRendering: "The video is still rendering on the server — it'll show up here shortly.",
   },
   generate: {
     title: "Generate a new story",
