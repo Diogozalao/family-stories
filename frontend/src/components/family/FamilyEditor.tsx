@@ -1,15 +1,72 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Check, Loader2, Pencil, Plus, Trash2, Users, X } from "lucide-react";
+import { Check, Image as ImageIcon, Loader2, Pencil, Plus, Trash2, User as UserIcon, Users, X } from "lucide-react";
 
 import { extractErrorMessage, isLostResponse } from "../../lib/api";
 import {
   useBulkTree, useCreatePerson, useCreateRelationship, useDeletePerson,
-  useDeleteRelationship, useFamilyTree, useUpdatePerson,
+  useDeleteRelationship, useFamilyTree, useMedia, useUpdatePerson,
   type BulkPersonInput, type BulkRelInput,
 } from "../../lib/hooks";
-import type { Person } from "../../lib/types";
+import type { MediaFile, Person } from "../../lib/types";
+import Photo from "../media/Photo";
+
+// ── Person avatar (profile photo, or initials fallback) ───────────────────────
+
+function PersonAvatar({ photoId, name, size = 40 }: { photoId?: number | null; name: string; size?: number }) {
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
+  return (
+    <div
+      className="relative shrink-0 overflow-hidden rounded-full bg-stone-200 text-stone-500 dark:bg-stone-800 dark:text-stone-400"
+      style={{ width: size, height: size }}
+    >
+      {photoId ? (
+        <Photo mediaId={photoId} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-xs font-semibold">
+          {initials || <UserIcon className="h-4 w-4" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Photo picker grid (choose a profile photo from the library) ───────────────
+
+function PhotoPicker({ onPick, onClose }: { onPick: (id: number) => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { data: media } = useMedia();
+  const photos = useMemo(
+    () => (media ?? []).filter((m: MediaFile) => m.media_type === "photo"),
+    [media],
+  );
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-2xl border border-stone-200 bg-white p-5 shadow-lift dark:border-stone-800 dark:bg-stone-900">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="font-serif text-lg font-semibold">{t("family.editor.pickPhoto")}</h3>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"><X className="h-4 w-4" /></button>
+        </div>
+        {photos.length === 0 ? (
+          <p className="py-8 text-center text-sm text-stone-500">{t("family.editor.noPhotos")}</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+            {photos.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => { onPick(m.id); onClose(); }}
+                className="relative aspect-square overflow-hidden rounded-lg border border-stone-200 hover:ring-2 hover:ring-amber-500 dark:border-stone-800"
+              >
+                <Photo mediaId={m.id} alt={m.ai_description ?? ""} className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const KINDS = ["pai", "mãe", "cônjuge"] as const;
 
@@ -32,6 +89,8 @@ function PersonForm({
   const [death, setDeath] = useState(initial?.death_date?.slice(0, 10) ?? "");
   const [place, setPlace] = useState(initial?.birth_place ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [photoId, setPhotoId] = useState<number | null>(initial?.photo_media_id ?? null);
+  const [picking, setPicking] = useState(false);
 
   const saving = create.isPending || update.isPending;
 
@@ -44,6 +103,7 @@ function PersonForm({
       death_date: death || null,
       birth_place: place || null,
       notes: notes || null,
+      photo_media_id: photoId,
     };
     try {
       if (initial?.id) {
@@ -71,6 +131,19 @@ function PersonForm({
         </div>
 
         <div className="mt-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <PersonAvatar photoId={photoId} name={name || "?"} size={56} />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => setPicking(true)} className="btn btn-ghost !py-1.5 !text-xs">
+                <ImageIcon className="h-3.5 w-3.5" /> {t("family.editor.choosePhoto")}
+              </button>
+              {photoId != null && (
+                <button type="button" onClick={() => setPhotoId(null)} className="btn btn-ghost !py-1.5 !text-xs">
+                  <Trash2 className="h-3.5 w-3.5" /> {t("family.editor.removePhoto")}
+                </button>
+              )}
+            </div>
+          </div>
           <div>
             <label className="label">{t("family.editor.fName")}</label>
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
@@ -113,6 +186,7 @@ function PersonForm({
           </button>
         </div>
       </div>
+      {picking && <PhotoPicker onPick={setPhotoId} onClose={() => setPicking(false)} />}
     </div>
   );
 }
@@ -467,11 +541,14 @@ export default function FamilyEditor({
         <div className="mb-8 grid gap-2 sm:grid-cols-2">
           {persons.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-2 rounded-xl border border-stone-200 bg-white p-3 dark:border-stone-800 dark:bg-stone-900">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{p.name}</p>
-                <p className="text-xs text-stone-500">
-                  {[p.sex === "M" ? "♂" : p.sex === "F" ? "♀" : null, p.birth_date?.slice(0, 4)].filter(Boolean).join(" · ")}
-                </p>
+              <div className="flex min-w-0 items-center gap-2.5">
+                <PersonAvatar photoId={p.photo_media_id} name={p.name} size={36} />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{p.name}</p>
+                  <p className="text-xs text-stone-500">
+                    {[p.sex === "M" ? "♂" : p.sex === "F" ? "♀" : null, p.birth_date?.slice(0, 4)].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
               </div>
               <div className="flex shrink-0 gap-1">
                 <button onClick={() => setEditing(p)} className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"><Pencil className="h-3.5 w-3.5" /></button>

@@ -34,6 +34,12 @@ class Person(Base):
     # so the Family page can group/filter trees coming from different
     # imports without forcing them into the same soup.
     family_label = Column(String(120), nullable=True)
+    # Optional "profile photo" — the id of a MediaFile the user picked to
+    # represent this person (a face for the tree, and a stronger anchor when
+    # M3 weaves the person into a story). No FK constraint on purpose: the
+    # column is a soft pointer, so deleting the photo just leaves it dangling
+    # (the UI/serializer treats a missing media id as "no avatar").
+    photo_media_id = Column(BigInteger, nullable=True)
     # Hand-arranged position in the interactive tree (NULL = auto-layout).
     tree_x       = Column(Float, nullable=True)
     tree_y       = Column(Float, nullable=True)

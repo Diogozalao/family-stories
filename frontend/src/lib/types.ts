@@ -31,6 +31,7 @@ export interface Person {
   family_label?: string | null;
   tree_x?: number | null;
   tree_y?: number | null;
+  photo_media_id?: number | null;
 }
 
 export interface TreeRelationship {

@@ -17,6 +17,7 @@ from backend.core.config import settings
 from backend.core.database import get_db
 from backend.core.rate_limit import limiter
 from backend.core.upload_validator import validate_gedcom
+from backend.models.media import MediaFile
 from backend.models.timeline import Person, Relationship
 from backend.modules.m1_ingestion.gedcom_parser import gedcom_to_database
 
@@ -45,13 +46,16 @@ class PersonCreate(BaseModel):
 
 
 class PersonUpdate(BaseModel):
-    name:         Optional[str] = None
-    sex:          Optional[str] = None
-    birth_date:   Optional[str] = None
-    death_date:   Optional[str] = None
-    birth_place:  Optional[str] = None
-    notes:        Optional[str] = None
-    family_label: Optional[str] = None
+    name:           Optional[str] = None
+    sex:            Optional[str] = None
+    birth_date:     Optional[str] = None
+    death_date:     Optional[str] = None
+    birth_place:    Optional[str] = None
+    notes:          Optional[str] = None
+    family_label:   Optional[str] = None
+    # Set to a MediaFile id to give this person a profile photo, or to
+    # ``null`` to clear it. Omitted = unchanged (handled via exclude_unset).
+    photo_media_id: Optional[int] = None
 
 
 class RelationshipCreate(BaseModel):
@@ -94,6 +98,7 @@ def _person_dict(p: Person) -> dict:
         "family_label": p.family_label,
         "tree_x":       p.tree_x,
         "tree_y":       p.tree_y,
+        "photo_media_id": p.photo_media_id,
     }
 
 
@@ -359,6 +364,21 @@ async def update_person(
         person.notes = (fields["notes"] or "").strip() or None
     if "family_label" in fields:
         person.family_label = (fields["family_label"] or "").strip() or None
+    if "photo_media_id" in fields:
+        new_photo = fields["photo_media_id"]
+        if new_photo is None:
+            person.photo_media_id = None
+        else:
+            # Only accept a media id the caller actually owns — never let a
+            # person point at a stranger's photo.
+            owns_media = (await db.execute(
+                select(MediaFile.id).where(
+                    MediaFile.id == new_photo, MediaFile.user_id == user.id
+                )
+            )).scalar_one_or_none()
+            if owns_media is None:
+                raise HTTPException(status_code=404, detail="Foto não encontrada")
+            person.photo_media_id = new_photo
 
     await db.commit()
     await db.refresh(person)

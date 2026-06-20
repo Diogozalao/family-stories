@@ -130,24 +130,30 @@ configurada e \emph{só para texto} --- a análise visual (M1) mantém-se
 quando \emph{todos} os níveis falham é lançada uma exceção que marca a
 tarefa como falhada --- evitando guardar uma narrativa falsa.
 
-\begin{lstlisting}[language=Python,caption={Cliente LLM com dupla via
-local/nuvem e \emph{fallback} em tempo de execução (\texttt{llm\_client.py}).},label={lst:llm}]
+\begin{lstlisting}[language=Python,caption={Cliente LLM com cadeia de
+\emph{fallback} de três níveis (Ollama $\rightarrow$ Gemini $\rightarrow$
+Groq) em tempo de execução (\texttt{llm\_client.py}).},label={lst:llm}]
 def generate(self, prompt: str, max_tokens: int = 1500) -> str:
-    if self._ollama_ok:
+    if self._ollama_ok:                            # 1. local (privacidade)
         return self._ollama_generate(prompt, max_tokens)
-    return self._gemini_generate(prompt, max_tokens)
+    return self._gemini_generate(prompt, max_tokens)  # 2. nuvem
 
 def _ollama_generate(self, prompt: str, max_tokens: int) -> str:
     try:
         response = ollama_client.generate(
-            model=settings.OLLAMA_MODEL, prompt=prompt,
-            options={"num_predict": max_tokens, "temperature": 0.7,
-                     "top_p": 0.9, "repeat_penalty": 1.1})
+            model=settings.OLLAMA_MODEL, prompt=prompt, options={...})
         return response.response.strip()
-    except Exception as e:
-        log.error("ollama_error", error=str(e))
-        self._setup_gemini()                       # fallback em runtime
+    except Exception as e:                         # Ollama falhou em runtime
+        self._setup_gemini()
         return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
+
+def _gemini_generate(self, prompt, max_tokens, _ollama_error=None) -> str:
+    try:
+        return self._gemini.generate_content(prompt, ...).text  # 2. Gemini
+    except Exception as exc:
+        if settings.GROQ_API_KEY:                  # 3. Groq (so' texto)
+            return self._groq_generate(prompt, max_tokens)
+        raise LLMUnavailableError(...)             # todos falharam -> falha
 \end{lstlisting}
 
 \subsection{Retrieval-Augmented Generation com degradação graciosa}

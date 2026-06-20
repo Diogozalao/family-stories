@@ -14,13 +14,15 @@ import { extractErrorMessage } from "../../lib/api";
 import { useFamilyTree, useSaveTreePositions } from "../../lib/hooks";
 import type { Person, TreeRelationship } from "../../lib/types";
 import { cn } from "../../lib/utils";
+import Photo from "../media/Photo";
 
 // ── Custom node ─────────────────────────────────────────────────────────────
 
 interface PersonNodeData {
-  name:  string;
-  years: string;
-  sex:   string | null | undefined;
+  name:    string;
+  years:   string;
+  sex:     string | null | undefined;
+  photoId: number | null | undefined;
 }
 
 function PersonNode({ data }: { data: PersonNodeData }) {
@@ -37,6 +39,11 @@ function PersonNode({ data }: { data: PersonNodeData }) {
       <Handle type="source" position={Position.Bottom} className="!opacity-0" />
       <Handle type="target" position={Position.Left}  id="l" className="!opacity-0" />
       <Handle type="source" position={Position.Right} id="r" className="!opacity-0" />
+      {data.photoId != null && (
+        <div className="relative mx-auto mb-1.5 h-12 w-12 overflow-hidden rounded-full border border-stone-200 dark:border-stone-700">
+          <Photo mediaId={data.photoId} alt={data.name} className="h-full w-full object-cover" />
+        </div>
+      )}
       <div className="truncate text-xs font-medium text-stone-900 dark:text-stone-100">{data.name}</div>
       {data.years && <div className="text-[10px] text-stone-500 dark:text-stone-500">{data.years}</div>}
     </div>
@@ -166,7 +173,7 @@ function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<
     position: (p.tree_x != null && p.tree_y != null)
       ? { x: p.tree_x, y: p.tree_y }
       : (pos.get(p.id) ?? { x: 0, y: 0 }),
-    data: { name: p.name, years: yearsLabel(p), sex: p.sex },
+    data: { name: p.name, years: yearsLabel(p), sex: p.sex, photoId: p.photo_media_id },
   }));
 
   const edges: Edge[] = rels.flatMap((r): Edge[] => {

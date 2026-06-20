@@ -14,6 +14,7 @@ interface PersonInput {
   birth_place?: string | null;
   notes?: string | null;
   family_label?: string | null;
+  photo_media_id?: number | null;
 }
 import { useAuthStore } from "../store/auth";
 
