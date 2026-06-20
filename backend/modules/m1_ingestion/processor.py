@@ -184,12 +184,16 @@ class M1Processor:
             log.info("m1_ocr", file=filename)
             record.ocr_text = self.ocr.extract(path)
 
-    async def analyze(self, media_id: int, db: AsyncSession, user_id) -> MediaFile | None:
+    async def analyze(self, media_id: int, db: AsyncSession, user_id,
+                      force: bool = False) -> MediaFile | None:
         """Run the deferred AI analysis for an already-uploaded media row.
 
         Downloads the file back from Storage into a temp dir, runs Gemini /
         OCR, and flips the row to ``COMPLETED`` (or ``FAILED``). Idempotent:
-        a row that's already completed is returned untouched.
+        a row that's already completed is returned untouched — UNLESS
+        ``force=True``, which re-runs the analysis even on a completed row
+        (used to re-describe photos that were analysed while the Gemini key
+        was down and therefore came back with empty descriptions).
         """
         record = (await db.execute(
             select(MediaFile).where(MediaFile.id == media_id, MediaFile.user_id == user_id)
@@ -197,7 +201,7 @@ class M1Processor:
         if record is None:
             log.warning("m1_analyze_missing", media_id=media_id)
             return None
-        if record.status == ProcessingStatus.COMPLETED:
+        if record.status == ProcessingStatus.COMPLETED and not force:
             return record
         if not record.file_path:
             return record

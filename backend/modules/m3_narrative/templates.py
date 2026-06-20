@@ -17,7 +17,8 @@ narrative, but the user's intent decides what the narrative is *about*.
 """
 
 PT_PT_RULES = """REGRAS OBRIGATÓRIAS DE PORTUGUÊS EUROPEU (NÃO BRASILEIRO):
-- Usa SEMPRE "tu"/"vós" (nunca "você"/"vocês" com valor de 2.ª pessoa).
+- Se (e só se) te dirigires a alguém, trata por "tu"/"vós" (nunca "você"/"vocês").
+  Isto NÃO te obriga a escrever na 2.ª pessoa — ver as regras de fidelidade.
 - Usa "o meu", "a minha", "os meus" (NUNCA "meu", "minha" sem artigo).
 - Gerúndio proibido em frases simples: usa "a + infinitivo".
   • "estou a escrever" (NÃO "estou escrevendo")
@@ -35,15 +36,32 @@ PT_PT_RULES = """REGRAS OBRIGATÓRIAS DE PORTUGUÊS EUROPEU (NÃO BRASILEIRO):
   quando se quer dizer "em casa dele"."""
 
 
-USER_FOCUS_BLOCK = """INTENÇÃO DO UTILIZADOR (PRIORIDADE MÁXIMA — segue-a literalmente):
+USER_FOCUS_BLOCK = """INTENÇÃO DO UTILIZADOR (define o TEMA e o ângulo da narrativa):
 \"\"\"
 {user_focus}
 \"\"\"
 
-Esta intenção é o tema central da narrativa. Os factos abaixo são o material que
-podes usar; o ângulo, o tom emocional e o assunto são definidos pela intenção.
-Se a intenção e os factos parecerem distantes, dá prioridade à intenção e
-referencia os factos apenas quando reforçarem o que o utilizador pediu."""
+A intenção decide SOBRE O QUE é a narrativa e o tom. MAS as pessoas, as relações
+familiares e os factos do contexto são VERDADE e mandam sobre tudo o resto: não
+podem ser contrariados nem inventados. Constrói a narrativa em torno do tema
+pedido usando os factos reais; se faltarem factos, mantém-te fiel ao que existe
+em vez de inventar nomes, parentescos ou acontecimentos."""
+
+
+GROUNDING_RULES = """REGRAS DE FIDELIDADE AOS FACTOS (OBRIGATÓRIAS — têm prioridade sobre o estilo):
+- Usa APENAS as pessoas, os laços familiares e os factos dados no contexto.
+- NUNCA inventes pessoas, nomes, namoros, casamentos, parentescos, datas ou
+  acontecimentos que não estejam explicitamente no contexto.
+- Respeita os laços indicados: se o contexto diz que A é mãe/pai/filho/cônjuge
+  de B, trata-os exatamente assim — não os transformes noutra relação (ex.: não
+  inventes namoros entre pessoas que não estão indicadas como cônjuges).
+- NÃO te dirijas a um "tu" indefinido nem inventes um interlocutor. Narra na
+  1.ª pessoa (memória de quem escreve) ou na 3.ª pessoa. Só uses a 2.ª pessoa
+  ("tu") se a intenção do utilizador pedir explicitamente uma carta/dedicatória
+  a uma pessoa concreta e nomeada.
+- Aproveita as descrições das fotografias e as notas de cada pessoa para dar
+  detalhe e verdade — são o material real desta memória. Se uma foto tem
+  descrição, deixa-a influenciar a cena; se uma pessoa tem nota, honra-a."""
 
 
 NARRATIVE_TEMPLATES = {

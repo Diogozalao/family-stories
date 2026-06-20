@@ -35,6 +35,53 @@ async def index_facts(
     return {"message": "Facts indexed successfully", **result}
 
 
+@router.post("/narrative/reanalyze-photos")
+@limiter.limit(settings.RATE_LIMIT_GENERATE)
+async def reanalyze_photos(
+    request:      Request,
+    only_missing: bool         = Query(True),
+    db:           AsyncSession = Depends(get_db),
+    user:         User         = Depends(get_current_user),
+):
+    """Re-run the AI vision analysis on the caller's photos.
+
+    Useful after the Gemini key was fixed: photos analysed while the key was
+    down came back with empty descriptions, so the narrative had nothing to
+    ground on. By default re-describes only photos that still have NO
+    description, to avoid spending the free-tier daily quota on photos already
+    described. Pass ``only_missing=false`` to force every photo.
+
+    ⚠️ Each photo is one Gemini Vision call — on the free tier (~20/day) a large
+    batch can exhaust the day's quota, so run it sparingly.
+    """
+    from backend.models.media import MediaFile, MediaType
+    from backend.modules.m1_ingestion.processor import M1Processor
+
+    q = select(MediaFile).where(
+        MediaFile.user_id    == user.id,
+        MediaFile.media_type == MediaType.PHOTO,
+    )
+    if only_missing:
+        q = q.where(MediaFile.ai_description.is_(None))
+    photos = (await db.execute(q)).scalars().all()
+
+    proc = M1Processor()
+    described, still_missing = 0, 0
+    for p in photos:
+        rec = await proc.analyze(p.id, db, user.id, force=True)
+        if rec and rec.ai_description:
+            described += 1
+        else:
+            still_missing += 1
+
+    log.info("photos_reanalyzed", total=len(photos), described=described)
+    return {
+        "photos_considered": len(photos),
+        "described":         described,
+        "still_missing":     still_missing,
+    }
+
+
 @router.post("/narrative/generate")
 @limiter.limit(settings.RATE_LIMIT_GENERATE)
 async def generate_narrative(

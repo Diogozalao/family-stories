@@ -7,25 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.config import settings
 from backend.models.media import MediaFile, ProcessingStatus
 from backend.models.narrative import Story, StoryStatus
-from backend.models.timeline import Person, TimelineEvent
+from backend.models.timeline import Person, Relationship, TimelineEvent
 from backend.modules.m2_temporal.family_graph import FamilyGraph
 from backend.modules.m3_narrative.llm_client import LLMClient, LLMUnavailableError
 from backend.modules.m3_narrative.rag_system import RAGSystem
-from backend.modules.m3_narrative.templates import NARRATIVE_TEMPLATES, get_template
+from backend.modules.m3_narrative.templates import (
+    GROUNDING_RULES,
+    NARRATIVE_TEMPLATES,
+    get_template,
+)
 
 log = structlog.get_logger()
-
-
-def _graph_path_for(user_id) -> "object":
-    """Return the on-disk path of the family graph belonging to ``user_id``.
-
-    Each user has their own graph file — sharing a single
-    ``family_graph.json`` across the archive would leak relatives between
-    accounts, defeating the whole point of the multi-tenant migration.
-    """
-    folder = settings.PROCESSED_DIR / "graphs"
-    folder.mkdir(parents=True, exist_ok=True)
-    return folder / f"{user_id}.json"
 
 
 class NarrativeGenerator:
@@ -37,15 +29,34 @@ class NarrativeGenerator:
             llm_backend = self.llm.backend,
         )
 
-    def _load_graph(self, user_id) -> FamilyGraph:
-        """Build a fresh ``FamilyGraph`` for the caller — always per-user.
+    async def _build_graph_from_db(self, db: AsyncSession, user_id) -> FamilyGraph:
+        """Build the family graph straight from the DB (persons + relationships).
 
-        We do NOT keep a process-level graph cached across requests:
-        sharing it would cross user boundaries, and reloading is cheap
-        compared to the LLM call that follows.
+        The DB (Supabase) is the source of truth. The old on-disk JSON graph
+        is unreliable in production: Render's free disk is **ephemeral** and is
+        wiped on every restart/deploy, so the file is usually missing and the
+        narrative loses ALL genealogical context — which is exactly why stories
+        used to invent relatives and relationships. Building from the DB here
+        guarantees the tree, the kinship links and each person's notes always
+        reach the prompt. Mirrors ``_rebuild_graph_from_db`` in the genealogy
+        route. Always per-user, never cached across requests (multi-tenant).
         """
+        persons = (await db.execute(
+            select(Person).where(Person.user_id == user_id)
+        )).scalars().all()
+        rels = (await db.execute(
+            select(Relationship).where(Relationship.user_id == user_id)
+        )).scalars().all()
+
         graph = FamilyGraph()
-        graph.load(_graph_path_for(user_id))
+        for p in persons:
+            graph.add_person(p)
+        for r in rels:
+            graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
+            # Parent edges are directional; add the reverse so the context can
+            # also phrase it from the child's side ("filho de …").
+            if r.kind in ("pai", "mãe"):
+                graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
         return graph
 
     async def index_all(self, db: AsyncSession, user_id) -> dict:
@@ -88,7 +99,7 @@ class NarrativeGenerator:
         log.info("generating_narrative",
             title=title, type=event_type, project_id=project_id, user_id=str(user_id))
 
-        graph    = self._load_graph(user_id)
+        graph    = await self._build_graph_from_db(db, user_id)
         template = get_template(event_type)
 
         # When scoped to a project, only consider media that's (a) owned by
@@ -168,6 +179,11 @@ class NarrativeGenerator:
             events_context = events_context,
             user_focus     = user_focus,
         )
+
+        # Append the factual-grounding rules to every template at once — they
+        # stop the model from inventing relatives/relationships and from
+        # narrating to an undefined "tu" (the two biggest quality complaints).
+        prompt += "\n\n" + GROUNDING_RULES
 
         # The templates are written in Portuguese; we steer the LLM with a
         # short suffix that overrides the output language when the caller
