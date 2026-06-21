@@ -33,6 +33,7 @@ KEN_BURNS_PAN_FRAC = 0.10   # Max pan distance as fraction of frame width/height
 CROSSFADE_SECONDS  = 1.2    # Overlap between consecutive clips (smoother than 0.9).
 TITLE_DURATION     = 4.0    # Length of the opening title card.
 END_FADE_SECONDS   = 1.5    # Fade-to-black before the last frame.
+END_CARD_DURATION  = 3.5    # Length of the closing "Fim" card.
 MIN_PHOTO_DURATION = 5.5    # Floor per photo, even for long slideshows.
 
 # Font lookup (Linux). Falls back to PIL default if none are present.
@@ -188,6 +189,54 @@ def _make_title_card(title: str, duration: float = TITLE_DURATION):
             alpha = t / 0.8
         elif t > duration - 0.8:
             alpha = max(0.0, (duration - t) / 0.8)
+        return (static * alpha).astype(np.uint8)
+
+    clip = VideoClip(make_frame, duration=duration)
+    clip.fps = FPS
+    return clip
+
+
+def _make_end_card(title: str, duration: float = END_CARD_DURATION):
+    """Closing card — same look as the title card, with a gentle "Fim".
+
+    Gives the documentary a proper ending instead of just fading on the last
+    photo. Plays over silence (the narration track is padded to the video
+    length), and the global end-fade darkens it on the way out.
+    """
+    from moviepy.editor import VideoClip
+
+    background = np.zeros((TARGET_H, TARGET_W, 3), dtype=np.uint8)
+    for y in range(TARGET_H):
+        shade = int(12 + 32 * y / TARGET_H)
+        background[y] = [shade, shade, int(shade * 1.4)]
+
+    font_main = _load_font(FONT_PATHS_SERIF, 52)
+    font_sub  = _load_font(FONT_PATHS_SERIF, 28)
+
+    image = Image.fromarray(background)
+    draw  = ImageDraw.Draw(image)
+
+    main = "Fim"
+    mb = draw.textbbox((0, 0), main, font=font_main)
+    mx = (TARGET_W - (mb[2] - mb[0])) // 2
+    my = TARGET_H // 2 - 50
+    draw.text((mx + 2, my + 2), main, fill=(0, 0, 0), font=font_main)
+    draw.text((mx, my), main, fill=(240, 220, 160), font=font_main)
+
+    rule_x = (TARGET_W - 160) // 2
+    draw.line([(rule_x, my + 70), (rule_x + 160, my + 70)], fill=(200, 180, 100), width=2)
+
+    if title:
+        sb = draw.textbbox((0, 0), title, font=font_sub)
+        sx = (TARGET_W - (sb[2] - sb[0])) // 2
+        draw.text((sx, my + 86), title, fill=(170, 150, 100), font=font_sub)
+
+    static = np.array(image)
+
+    def make_frame(t: float) -> np.ndarray:
+        alpha = 1.0
+        if t < 0.8:                      # fade in; the global end-fade handles the out
+            alpha = t / 0.8
         return (static * alpha).astype(np.uint8)
 
     clip = VideoClip(make_frame, duration=duration)
@@ -366,7 +415,7 @@ def build_slideshow(
 # Slightly lower per-photo floor for scene mode: here the pacing is driven
 # by each scene's narration, so we want to respect the audio rather than
 # stretch every photo to the slideshow minimum.
-MIN_SCENE_PHOTO_DURATION = 3.0
+MIN_SCENE_PHOTO_DURATION = 4.0   # Floor per photo in scene mode — 3.0 felt rushed against the 1.2s crossfade.
 
 
 def plan_scene_durations(scene_audio_durations: list[float],
@@ -434,6 +483,8 @@ def build_documentary(
             except Exception as exc:
                 log.warning("m4_scene_photo_error", photo=str(photo), error=str(exc))
                 clips.append(ColorClip((TARGET_W, TARGET_H), color=[10, 10, 10], duration=per))
+
+    clips.append(_make_end_card(title))
 
     video = _concatenate_with_crossfade(clips, CROSSFADE_SECONDS)
 
