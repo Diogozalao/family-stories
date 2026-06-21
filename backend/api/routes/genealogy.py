@@ -102,31 +102,41 @@ def _person_dict(p: Person) -> dict:
     }
 
 
+async def _graph_from_db(db: AsyncSession, user_id):
+    """Build the family graph from the DB (persons + relationships), in memory.
+
+    The DB (Supabase) is the source of truth. The on-disk JSON cache is
+    unreliable on Render's free tier — the disk is **ephemeral** and wiped on
+    every restart/deploy, so reading it would return an empty graph (relatives
+    and visualisation vanishing after a restart). Read paths build from here so
+    the tree, kinship and notes are always present.
+    """
+    from backend.modules.m2_temporal.family_graph import FamilyGraph
+
+    persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
+    rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
+
+    graph = FamilyGraph()
+    for p in persons:
+        graph.add_person(p)
+    for r in rels:
+        graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
+        if r.kind in ("pai", "mãe"):
+            graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
+    return graph
+
+
 async def _rebuild_graph_from_db(db: AsyncSession, user_id) -> None:
     """Rewrite the on-disk narrative graph from the DB persons + relations.
 
-    Called after any manual edit so the M3 narrative context stays in sync
-    with what the user sees in the tree (the DB is the source of truth).
-
-    Defensive on purpose: the graph is a *secondary* artefact (only the M3
-    narrative reads it), so a failure to write it must never bubble up and
-    fail the person/relationship edit the user actually asked for.
+    Kept for backward compatibility, but the read endpoints below now build
+    straight from the DB via ``_graph_from_db`` and no longer depend on this
+    file. Defensive on purpose: a failure to write the cache must never bubble
+    up and fail the person/relationship edit the user actually asked for.
     """
     try:
-        from backend.modules.m2_temporal.family_graph import FamilyGraph
-
-        persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
-        rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
-
-        graph = FamilyGraph()
-        for p in persons:
-            graph.add_person(p)
-        for r in rels:
-            graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
-            if r.kind in ("pai", "mãe"):
-                graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
-
-        path = _user_graph_path(user_id)
+        graph = await _graph_from_db(db, user_id)
+        path  = _user_graph_path(user_id)
         path.parent.mkdir(parents=True, exist_ok=True)   # ephemeral disk may be empty
         graph.save(path)
     except Exception as exc:                              # never fail the edit
@@ -251,9 +261,7 @@ async def get_person(
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
 
-    from backend.modules.m2_temporal.family_graph import FamilyGraph
-    graph = FamilyGraph()
-    graph.load(_user_graph_path(user.id))
+    graph   = await _graph_from_db(db, user.id)
     context = graph.get_family_context(person_id)
 
     return {
@@ -270,12 +278,11 @@ async def get_person(
 
 @router.get("/genealogy/graph")
 async def get_graph(
-    user: User = Depends(get_current_user),
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(get_current_user),
 ):
     """Return the caller's complete family graph (for visualisation)."""
-    from backend.modules.m2_temporal.family_graph import FamilyGraph
-    graph = FamilyGraph()
-    graph.load(_user_graph_path(user.id))
+    graph = await _graph_from_db(db, user.id)
 
     return {
         "nodes":   [{"id": n, **graph.graph.nodes[n]} for n in graph.graph.nodes],
