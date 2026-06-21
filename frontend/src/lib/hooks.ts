@@ -94,13 +94,14 @@ export function useResetPassword() {
 }
 
 export function useDeleteAccount() {
-  // Implementação atual: simples sign-out + nota. Apagar a conta
-  // requer permissões admin que ainda não expusemos via backend. Volta
-  // a isto quando precisares mesmo (ver TODO em routes/auth.py).
+  // The backend wipes every owned row AND deletes the Supabase Auth user via
+  // the admin API, so the credentials actually stop working (the old version
+  // only signed out, which is why a "deleted" account could still log in).
+  // Afterwards we clear the local session so the UI returns to the landing.
   return useMutation({
-    mutationFn: async (_input: { current_password: string; confirm: string }) => {
+    mutationFn: async (_input?: { current_password?: string; confirm?: string }) => {
+      await api.delete("/api/v1/auth/account");
       await supabase.auth.signOut();
-      throw new Error("A eliminação definitiva de conta ainda não está disponível — só sessão terminada.");
     },
   });
 }
