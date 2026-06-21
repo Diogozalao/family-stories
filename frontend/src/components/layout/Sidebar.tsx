@@ -1,8 +1,8 @@
 import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  Clapperboard, FolderKanban, Home, Images,
-  Settings, Sparkles, X,
+  BookOpen, Clapperboard, Clock, FolderKanban, Home, Images,
+  ListChecks, Settings, Sparkles, Users, X,
 } from "lucide-react";
 import Logo from "../brand/Logo";
 import { cn } from "../../lib/utils";
@@ -25,12 +25,16 @@ export default function Sidebar({
   const { t } = useTranslation();
 
   const items: Item[] = [
-    { to: "/",         icon: <Home        className="h-[18px] w-[18px]" />, label: t("nav.dashboard") },
-    { to: "/library",  icon: <Images      className="h-[18px] w-[18px]" />, label: t("nav.library") },
+    { to: "/",         icon: <Home         className="h-[18px] w-[18px]" />, label: t("nav.dashboard") },
+    { to: "/library",  icon: <Images       className="h-[18px] w-[18px]" />, label: t("nav.library") },
+    { to: "/family",   icon: <Users        className="h-[18px] w-[18px]" />, label: t("nav.family") },
+    { to: "/timeline", icon: <Clock        className="h-[18px] w-[18px]" />, label: t("nav.timeline") },
     { to: "/projects", icon: <FolderKanban className="h-[18px] w-[18px]" />, label: t("nav.projects") },
-    { to: "/generate", icon: <Sparkles    className="h-[18px] w-[18px]" />, label: t("nav.generate"), accent: true },
-    { to: "/tasks",    icon: <Clapperboard className="h-[18px] w-[18px]" />, label: t("nav.tasks") },
-    { to: "/settings", icon: <Settings    className="h-[18px] w-[18px]" />, label: t("nav.settings") },
+    { to: "/generate", icon: <Sparkles     className="h-[18px] w-[18px]" />, label: t("nav.generate"), accent: true },
+    { to: "/stories",  icon: <BookOpen     className="h-[18px] w-[18px]" />, label: t("nav.stories") },
+    { to: "/videos",   icon: <Clapperboard className="h-[18px] w-[18px]" />, label: t("nav.videos") },
+    { to: "/tasks",    icon: <ListChecks   className="h-[18px] w-[18px]" />, label: t("nav.tasks") },
+    { to: "/settings", icon: <Settings     className="h-[18px] w-[18px]" />, label: t("nav.settings") },
   ];
 
   const content = (
