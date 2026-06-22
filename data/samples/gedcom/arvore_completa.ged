@@ -1,0 +1,199 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 21 JUN 2026
+1 NOTE Árvore genealógica completa e totalmente ligada (4 gerações). Pronta a importar. Edita os nomes/datas para a tua família real.
+0 @I1@ INDI
+1 NAME Manuel /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 4 FEB 1900
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 18 NOV 1972
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 OCCU Lavrador
+1 NOTE Bisavô paterno. Casou em Belmonte em 1928.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Joaquina /Marques/
+1 SEX F
+1 BIRT
+2 DATE 12 JUL 1903
+2 PLAC Sortelha, Sabugal, Portugal
+1 DEAT
+2 DATE 23 FEB 1981
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 OCCU Tecedeira
+1 NOTE Bisavó paterna.
+1 FAMS @F1@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 8 SEP 1928
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 CHIL @I3@
+1 CHIL @I4@
+0 @I3@ INDI
+1 NAME António /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 21 JAN 1930
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 5 MAY 2008
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Industrial têxtil
+1 NOTE Avô paterno. Mudou-se para a Covilhã na expansão dos lanifícios.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Carolina /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 2 JUN 1935
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 17 DEC 2010
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 OCCU Professora primária
+1 NOTE Tia-avó paterna, irmã de António.
+1 FAMC @F1@
+1 FAMS @F3@
+0 @I5@ INDI
+1 NAME Adélia /Cardoso/
+1 SEX F
+1 BIRT
+2 DATE 6 FEB 1933
+2 PLAC Fundão, Castelo Branco, Portugal
+1 DEAT
+2 DATE 19 NOV 2019
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Costureira
+1 NOTE Avó paterna.
+1 FAMS @F2@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I5@
+1 MARR
+2 DATE 4 SEP 1957
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 CHIL @I6@
+1 CHIL @I7@
+0 @I6@ INDI
+1 NAME João /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 APR 1962
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Engenheiro civil
+1 NOTE Pai. Conheceu Maria Lopes na Universidade de Coimbra.
+1 FAMC @F2@
+1 FAMS @F4@
+0 @I7@ INDI
+1 NAME Carlos /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 8 JAN 1965
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Médico de família
+1 NOTE Tio paterno.
+1 FAMC @F2@
+1 FAMS @F5@
+0 @I8@ INDI
+1 NAME Eduardo /Pinheiro/
+1 SEX M
+1 BIRT
+2 DATE 30 JUN 1932
+2 PLAC Lisboa, Portugal
+1 DEAT
+2 DATE 11 MAR 2005
+2 PLAC Castelo Branco, Portugal
+1 OCCU Engenheiro mecânico
+1 NOTE Casou com Carolina Dinis.
+1 FAMS @F3@
+0 @F3@ FAM
+1 HUSB @I8@
+1 WIFE @I4@
+1 MARR
+2 DATE 27 SEP 1959
+2 PLAC Castelo Branco, Portugal
+1 CHIL @I9@
+0 @I9@ INDI
+1 NAME Ricardo /Pinheiro/
+1 SEX M
+1 BIRT
+2 DATE 14 MAY 1965
+2 PLAC Lisboa, Portugal
+1 OCCU Arquiteto
+1 NOTE Primo do pai (filho de Carolina e Eduardo).
+1 FAMC @F3@
+0 @I10@ INDI
+1 NAME Maria /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 27 SEP 1965
+2 PLAC Castelo Branco, Portugal
+1 OCCU Bibliotecária
+1 NOTE Mãe. Originária da Família Lopes.
+1 FAMS @F4@
+0 @F4@ FAM
+1 HUSB @I6@
+1 WIFE @I10@
+1 MARR
+2 DATE 18 JUL 1998
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 CHIL @I11@
+1 CHIL @I12@
+0 @I11@ INDI
+1 NAME Diogo /Lopes Dinis/
+1 SEX M
+1 BIRT
+2 DATE 14 MAR 2002
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Estudante
+1 EDUC Universidade da Beira Interior — Engenharia Informática
+1 NOTE Sujeito do arquivo.
+1 FAMC @F4@
+0 @I12@ INDI
+1 NAME Mariana /Lopes Dinis/
+1 SEX F
+1 BIRT
+2 DATE 8 NOV 2005
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Estudante
+1 NOTE Irmã de Diogo.
+1 FAMC @F4@
+0 @I13@ INDI
+1 NAME Sofia /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 14 MAY 1968
+2 PLAC Viseu, Portugal
+1 OCCU Enfermeira
+1 NOTE Esposa de Carlos Dinis. Originária da Família Nogueira.
+1 FAMS @F5@
+0 @F5@ FAM
+1 HUSB @I7@
+1 WIFE @I13@
+1 MARR
+2 DATE 11 OCT 1996
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 CHIL @I14@
+0 @I14@ INDI
+1 NAME Filipe /Dinis Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 3 SEP 1998
+2 PLAC Covilhã, Castelo Branco, Portugal
+1 OCCU Engenheiro de software
+1 NOTE Primo paterno de Diogo.
+1 FAMC @F5@
+0 TRLR
