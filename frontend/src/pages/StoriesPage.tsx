@@ -1,18 +1,22 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { BookOpen, Sparkles, Trash2 } from "lucide-react";
+import { BookOpen, FolderKanban, Sparkles, Trash2 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useDeleteStory, useStories } from "../lib/hooks";
+import { useDeleteStory, useProjects, useStories } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
 import type { Story } from "../lib/types";
 
 export default function StoriesPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useStories();
+  const { data: projects } = useProjects();
   const del = useDeleteStory();
 
   const stories = data ?? [];
+  // Map project id -> project so each story card can show which project it
+  // belongs to (the "organisation" the user was missing).
+  const projectById = new Map((projects ?? []).map((p) => [p.id, p]));
 
   const handleDelete = (s: Story) => {
     if (!window.confirm(`${t("common.confirm")}?`)) return;
@@ -57,8 +61,17 @@ export default function StoriesPage() {
               >
                 <Trash2 className="h-4 w-4" />
               </button>
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="chip chip-accent">{s.event_type}</span>
+                {s.project_id != null && projectById.get(s.project_id) && (
+                  <Link
+                    to={`/projects/${s.project_id}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 font-medium text-stone-700 transition hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+                  >
+                    <FolderKanban className="h-3 w-3" />
+                    {projectById.get(s.project_id)!.name}
+                  </Link>
+                )}
                 <span className="text-stone-500 dark:text-stone-500">
                   {new Date(s.created_at).toLocaleDateString()}
                 </span>

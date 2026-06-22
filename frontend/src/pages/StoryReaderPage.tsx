@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Film, Loader2, Pencil, RefreshCw, X } from "lucide-react";
-import { useGenerateVideo, useStory, useUpdateStory } from "../lib/hooks";
+import { ArrowLeft, Check, Film, FolderKanban, Loader2, Pencil, RefreshCw, X } from "lucide-react";
+import { useGenerateVideo, useProjects, useStory, useUpdateStory } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 
 export default function StoryReaderPage() {
@@ -14,6 +14,10 @@ export default function StoryReaderPage() {
   const { data: story, isLoading, isFetching, error, refetch } = useStory(storyId);
   const genVideo = useGenerateVideo();
   const update = useUpdateStory();
+  const { data: projects } = useProjects();
+  // The project this story belongs to (if it was generated inside one) —
+  // shown as a badge so the story's "home" is always clear.
+  const project = projects?.find((p) => p.id === story?.project_id);
 
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
@@ -125,6 +129,15 @@ export default function StoryReaderPage() {
       <header className="mb-8">
         <div className="flex flex-wrap items-center gap-2">
           <span className="chip chip-accent">{story.event_type}</span>
+          {project && (
+            <Link
+              to={`/projects/${project.id}`}
+              className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-700 transition hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
+            >
+              <FolderKanban className="h-3 w-3" />
+              {project.name}
+            </Link>
+          )}
           <span className="text-xs text-stone-500 dark:text-stone-500">
             {t("stories.generatedOn", { date: new Date(story.created_at).toLocaleDateString() })}
           </span>
