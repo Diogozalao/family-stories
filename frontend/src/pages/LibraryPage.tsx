@@ -94,11 +94,16 @@ export default function LibraryPage() {
                   `Vais analisar ${pendingAnalysis} foto(s) com a IA — gasta ${pendingAnalysis} pedido(s) do Gemini Vision (limite ~20/dia). Continuar?`,
                 )) return;
                 reanalyze.mutate(undefined, {
-                  onSuccess: (r) => toast.success(
-                    r.described > 0
-                      ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
-                      : "Nenhuma foto precisava de análise.",
-                  ),
+                  onSuccess: async (r) => {
+                    toast.success(
+                      r.described > 0
+                        ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
+                        : "Nenhuma foto precisava de análise.",
+                    );
+                    // As fotos passam a COMPLETED — reconstrói a linha temporal
+                    // para os eventos aparecerem (antes ficava vazia).
+                    try { await buildTimeline.mutateAsync(); } catch { /* best-effort */ }
+                  },
                   onError: (err) => toast.error(extractErrorMessage(err)),
                 });
               }}

@@ -1,21 +1,42 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Calendar } from "lucide-react";
+import { toast } from "sonner";
+import { Calendar, Loader2, RefreshCw } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useTimeline } from "../lib/hooks";
+import { useBuildTimeline, useTimeline } from "../lib/hooks";
+import { extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
 import type { TimelineEvent } from "../lib/types";
 
 export default function TimelinePage() {
   const { t } = useTranslation();
   const { data, isLoading } = useTimeline();
+  const build = useBuildTimeline();
 
   const grouped = useMemo(() => groupByYear(data ?? []), [data]);
   const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
+  const rebuild = () => build.mutate(undefined, {
+    onSuccess: (r: { total_events?: number }) => toast.success(
+      (r?.total_events ?? 0) > 0
+        ? `Linha temporal atualizada: ${r.total_events} evento(s).`
+        : "Ainda sem eventos — as fotos não estão analisadas. Usa 'Re-analisar IA' na Biblioteca primeiro.",
+    ),
+    onError: (err) => toast.error(extractErrorMessage(err)),
+  });
+
   return (
     <>
-      <PageHeader title={t("timeline.title")} subtitle={t("timeline.subtitle")} />
+      <PageHeader
+        title={t("timeline.title")}
+        subtitle={t("timeline.subtitle")}
+        actions={
+          <button className="btn btn-ghost" onClick={rebuild} disabled={build.isPending}>
+            {build.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span>Atualizar</span>
+          </button>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-4">
