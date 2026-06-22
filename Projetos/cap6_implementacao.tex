@@ -53,6 +53,15 @@ imediatamente visível (já está no \emph{Storage}); o registo permanece em
 sinalizada na interface por um indicador ``a analisar''. O \emph{frontend}
 faz \emph{polling} da biblioteca enquanto houver registos por concluir.
 
+\textbf{Re-análise sob procura.} Como o executor de segundo plano pode ser
+terminado pela plataforma gratuita antes de concluir (deixando fotografias
+presas em \texttt{PROCESSING}), expõe-se um \emph{endpoint} de
+\textbf{re-análise} --- e um botão na Biblioteca --- que reprocessa de forma
+síncrona as fotografias ainda sem descrição, marcando-as \texttt{COMPLETED} e
+desbloqueando a linha temporal e o vídeo (que dependem desse estado). A
+operação é \emph{consciente da quota}: indica quantas fotografias serão
+analisadas (uma chamada ao Gemini cada) e pede confirmação antes de avançar.
+
 A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}
 dedicado (o maior módulo, $\approx$380 linhas), que converte o ficheiro em
 registos \texttt{Person} e nas respetivas relações, com suporte a
@@ -95,14 +104,22 @@ por gerações e nós coloridos por sexo) alternável com a lista, e um
 incluindo um assistente de \emph{pedigree} pré-estruturado (eu, pais,
 avós, irmãos) — sem depender de um GEDCOM. Após cada edição, o grafo
 \texttt{FamilyGraph} é reconstruído a partir da base de dados, mantendo o
-M3 sincronizado. O grafo continua isolado \emph{por utilizador}.
+M3 sincronizado. O grafo continua isolado \emph{por utilizador}. Mais
+importante, os próprios \textbf{caminhos de leitura} (a visualização do
+grafo e o contexto fornecido ao M3) passaram a construí-lo \emph{diretamente
+da base de dados}, eliminando a dependência de um ficheiro JSON em disco que,
+sendo efémero na nuvem, deixava o contexto familiar vazio após cada reinício
+da instância — uma fonte subtil de narrativas sem relações.
 
 As \textbf{descrições (notas)} de cada pessoa são incorporadas no contexto
 familiar fornecido ao M3, influenciando diretamente a narrativa gerada.
 Cada fotografia pode ainda ser \textbf{etiquetada com as pessoas que nela
 aparecem} (\texttt{media\_files.person\_ids}); esses nomes entram no
 contexto do M3 (``quem aparece''), ligando \emph{rostos a nomes} — a ponte
-entre a árvore familiar e a narrativa. A
+entre a árvore familiar e a narrativa. Cada pessoa pode também ter uma
+\textbf{fotografia de perfil} (\texttt{persons.photo\_media\_id}, escolhida de
+entre o acervo), apresentada como \emph{avatar} na lista e \textbf{nos nós da
+árvore interativa}, tornando o grafo mais legível. A
 árvore pode ainda ser \textbf{exportada de volta para GEDCOM~5.5.1}
 (re-importável noutras plataformas de genealogia), demonstrando
 \emph{interoperabilidade} com o formato standard — um inverso do
@@ -487,6 +504,15 @@ api.interceptors.response.use((r) => r, async (err) => {
 });
 \end{lstlisting}
 
+A \textbf{navegação} cobre os dez destinos da aplicação (Início, Biblioteca,
+Família, Linha Temporal, Projetos, Gerar, Histórias, Vídeos, Tarefas e
+Definições), e cada história exibe um \emph{badge} com o \textbf{projeto} a que
+pertence (com ligação direta), clarificando a organização do acervo. A
+\textbf{página pública} (\emph{landing}) inclui uma \textbf{demonstração
+interativa} do \emph{pipeline} (foto $\rightarrow$ análise por IA $\rightarrow$
+narrativa $\rightarrow$ vídeo), com a descrição e a história a serem
+``escritas'' ao vivo, comunicando o valor do sistema antes do registo.
+
 \subsection{Resiliência a \emph{cold starts}}
 \label{sub:coldstart}
 
@@ -521,6 +547,13 @@ payload = jwt.decode(
     audience="authenticated",
     options={"verify_iss": False})
 \end{lstlisting}
+
+\textbf{Eliminação de conta.} A remoção definitiva de uma conta é feita por um
+\emph{endpoint} dedicado que apaga todas as linhas do dono (média, pessoas,
+relações, histórias, vídeos, tarefas e projetos) e, em seguida, remove o
+utilizador através da \emph{Admin~API} do Supabase (chave \emph{service role}),
+garantindo que as credenciais deixam efetivamente de funcionar --- ao contrário
+de um mero \emph{sign-out}, que deixava a conta acessível.
 
 \subsection{Servir ficheiros com autenticação}
 

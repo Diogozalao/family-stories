@@ -26,7 +26,7 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 >   configurável + **pré-geração local** (o MP4 persiste no Storage e reproduz
 >   leve); + **quota de visão** Gemini (~dezenas/dia; texto vai por Groq).
 
-**A ACRESCENTAR por ti (features novas desta sessão):**
+**Também já apliquei no `.tex` (features novas desta sessão — só copiar para o Overleaf):**
 
 - **[Adição]** `cap5...tex` (modelo de dados) + `cap6...tex` (M2/frontend) —
   **foto/avatar por pessoa**: novo campo `Person.photo_media_id` (migração SQL
