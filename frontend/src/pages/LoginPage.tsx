@@ -10,6 +10,7 @@ import { extractErrorMessage } from "../lib/api";
 import LandingFooter from "../components/landing/LandingFooter";
 import LandingHeader from "../components/landing/LandingHeader";
 import LandingHero   from "../components/landing/LandingHero";
+import PipelineDemo  from "../components/landing/PipelineDemo";
 import {
   LandingPlatforms, LandingStats, LandingTrustBar,
 } from "../components/landing/LandingPlatforms";
@@ -31,7 +32,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const token = useAuthStore((s) => s.token);
   const navigate = useNavigate();
-  const location = useLocation() as { state?: { from?: { pathname?: string } } };
+  const location = useLocation() as { hash?: string; state?: { from?: { pathname?: string } } };
   const login = useLogin();
 
   const [email,    setEmail]    = useState("");
@@ -54,6 +55,23 @@ export default function LoginPage() {
       window.removeEventListener("pageshow", reset);
     };
   }, []);
+
+  // Smooth-scroll to the section named in the URL hash (#platforms / #how /
+  // #privacy / #demo). The nav links point at /login#section, so arriving
+  // from /about — or clicking again on /login — both land on the section.
+  // Offset by the fixed header height so the title isn't tucked under it.
+  useEffect(() => {
+    const id = location.hash?.replace("#", "");
+    if (!id) return;
+    const tmr = window.setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.scrollY - 72;
+        window.scrollTo({ top: y, behavior: "smooth" });
+      }
+    }, 60);
+    return () => window.clearTimeout(tmr);
+  }, [location.hash]);
 
   if (token) return <Navigate to="/" replace />;
 
@@ -89,6 +107,7 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
       />
 
+      <PipelineDemo />
       <LandingTrustBar />
       <LandingPlatforms />
       <LandingStats />

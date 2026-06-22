@@ -20,11 +20,15 @@ export default function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen]         = useState(false);
 
-  const links: { label: string; href: string }[] = [
-    { label: t("landing.navAbout"),    href: "/about"     },
-    { label: t("landing.navPlatforms"),href: "#platforms" },
-    { label: t("landing.navHow"),      href: "#how"       },
-    { label: t("landing.navPrivacy"),  href: "#privacy"   },
+  // Section links point at the landing page (/login) + hash, so they scroll
+  // to the right section even when the visitor is on /about (where those
+  // sections don't exist). LoginPage handles the smooth-scroll-to-hash.
+  const links: { label: string; to: string }[] = [
+    { label: t("landing.navAbout"),     to: "/about"          },
+    { label: "Demonstração",            to: "/login#demo"     },
+    { label: t("landing.navPlatforms"), to: "/login#platforms" },
+    { label: t("landing.navHow"),       to: "/login#how"      },
+    { label: t("landing.navPrivacy"),   to: "/login#privacy"  },
   ];
 
   useEffect(() => {
@@ -51,15 +55,15 @@ export default function LandingHeader() {
         </Link>
 
         <nav className="ml-8 hidden items-center gap-0.5 md:flex">
-          {links.map((l) => {
-            const cls =
-              "rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-900 dark:hover:text-stone-100";
-            return l.href.startsWith("#") ? (
-              <a key={l.href} href={l.href} className={cls}>{l.label}</a>
-            ) : (
-              <Link key={l.href} to={l.href} className={cls}>{l.label}</Link>
-            );
-          })}
+          {links.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 hover:text-stone-900 dark:text-stone-300 dark:hover:bg-stone-900 dark:hover:text-stone-100"
+            >
+              {l.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -104,14 +108,16 @@ export default function LandingHeader() {
         <div className="border-t border-stone-200 bg-stone-50/95 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95 md:hidden">
           <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
             <nav className="flex flex-col">
-              {links.map((l) => {
-                const cls = "rounded-lg px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900";
-                return l.href.startsWith("#") ? (
-                  <a key={l.href} href={l.href} className={cls} onClick={() => setOpen(false)}>{l.label}</a>
-                ) : (
-                  <Link key={l.href} to={l.href} className={cls} onClick={() => setOpen(false)}>{l.label}</Link>
-                );
-              })}
+              {links.map((l) => (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-900"
+                  onClick={() => setOpen(false)}
+                >
+                  {l.label}
+                </Link>
+              ))}
               <div className="my-2 h-px bg-stone-200 dark:bg-stone-800" />
               <button
                 onClick={() => { toggleLang(); setOpen(false); }}
