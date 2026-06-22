@@ -3,11 +3,11 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ChevronLeft, ChevronRight, Loader2, Trash2, UploadCloud, X,
+  ChevronLeft, ChevronRight, Loader2, Sparkles, Trash2, UploadCloud, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import Photo from "../components/media/Photo";
-import { useBuildTimeline, useDeletePhoto, useMedia, usePersons, useSetMediaPersons, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
+import { useBuildTimeline, useDeletePhoto, useMedia, usePersons, useReanalyzePhotos, useSetMediaPersons, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
 import { photoUrl } from "../lib/photo";
 import { extractErrorMessage } from "../lib/api";
 import { cn, formatBytes } from "../lib/utils";
@@ -19,6 +19,7 @@ export default function LibraryPage() {
   const upload = useUploadPhoto();
   const buildTimeline = useBuildTimeline();
   const del = useDeletePhoto();
+  const reanalyze = useReanalyzePhotos();
 
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [uploadingTotal, setUploadingTotal] = useState(0);
@@ -78,6 +79,22 @@ export default function LibraryPage() {
                 ? t("library.photoCount", { count: 1 })
                 : t("library.photoCount_plural", { count: items.length })}
             </span>
+            <button
+              className="btn btn-ghost"
+              onClick={() => reanalyze.mutate(undefined, {
+                onSuccess: (r) => toast.success(
+                  r.described > 0
+                    ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
+                    : "As fotos já estavam todas analisadas.",
+                ),
+                onError: (err) => toast.error(extractErrorMessage(err)),
+              })}
+              disabled={reanalyze.isPending || items.length === 0}
+              title="Volta a analisar com a IA as fotos sem descrição (desbloqueia os vídeos)."
+            >
+              {reanalyze.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              <span>Re-analisar IA</span>
+            </button>
             <button className="btn btn-primary" onClick={open}>
               <UploadCloud className="h-4 w-4" />
               <span>{t("common.upload")}</span>

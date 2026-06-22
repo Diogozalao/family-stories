@@ -179,6 +179,20 @@ export function useUploadPhoto() {
   });
 }
 
+/** Re-run the AI vision on photos that have no description yet (e.g. ones
+ *  analysed while the Gemini key was down). Marks them COMPLETED, which also
+ *  unblocks video generation. Long request (one Gemini call per photo). */
+export function useReanalyzePhotos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      (await api.post("/api/v1/narrative/reanalyze-photos")).data as {
+        photos_considered: number; described: number; still_missing: number;
+      },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+  });
+}
+
 // ── Projects ────────────────────────────────────────────────────────────
 export function useProjects() {
   return useQuery<Project[]>({
