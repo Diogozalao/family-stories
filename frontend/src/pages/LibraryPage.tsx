@@ -58,6 +58,13 @@ export default function LibraryPage() {
   });
 
   const items = media ?? [];
+  // Photos still missing an AI description = exactly the ones a re-analysis
+  // would touch, i.e. how many Gemini Vision calls it would spend. Shown on
+  // the button so the (limited, ~20/day free-tier) quota is never burned by
+  // surprise.
+  const pendingAnalysis = items.filter(
+    (m) => m.media_type === "photo" && !m.ai_description,
+  ).length;
 
   const handleDelete = (m: MediaFile) => {
     if (!window.confirm(t("library.confirmDelete"))) return;
@@ -81,19 +88,27 @@ export default function LibraryPage() {
             </span>
             <button
               className="btn btn-ghost"
-              onClick={() => reanalyze.mutate(undefined, {
-                onSuccess: (r) => toast.success(
-                  r.described > 0
-                    ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
-                    : "As fotos já estavam todas analisadas.",
-                ),
-                onError: (err) => toast.error(extractErrorMessage(err)),
-              })}
-              disabled={reanalyze.isPending || items.length === 0}
-              title="Volta a analisar com a IA as fotos sem descrição (desbloqueia os vídeos)."
+              onClick={() => {
+                if (pendingAnalysis === 0) return;
+                if (!window.confirm(
+                  `Vais analisar ${pendingAnalysis} foto(s) com a IA — gasta ${pendingAnalysis} pedido(s) do Gemini Vision (limite ~20/dia). Continuar?`,
+                )) return;
+                reanalyze.mutate(undefined, {
+                  onSuccess: (r) => toast.success(
+                    r.described > 0
+                      ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
+                      : "Nenhuma foto precisava de análise.",
+                  ),
+                  onError: (err) => toast.error(extractErrorMessage(err)),
+                });
+              }}
+              disabled={reanalyze.isPending || pendingAnalysis === 0}
+              title={pendingAnalysis === 0
+                ? "Todas as fotos já estão analisadas."
+                : `Analisar ${pendingAnalysis} foto(s) sem descrição (gasta ${pendingAnalysis} pedido(s) Gemini).`}
             >
               {reanalyze.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              <span>Re-analisar IA</span>
+              <span>Re-analisar IA{pendingAnalysis > 0 ? ` (${pendingAnalysis})` : ""}</span>
             </button>
             <button className="btn btn-primary" onClick={open}>
               <UploadCloud className="h-4 w-4" />
