@@ -10,6 +10,70 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-22 — Sessão grande: vídeo/memória, grafo na BD, foto-pessoa, UX, auth
+
+> **Já editado por mim no `.tex` desta vez** (confirma/copia no Overleaf):
+> - **[Correção]** `cap3...tex` · tabela de tecnologias **e** §"IA híbrida" —
+>   `Gemini 1.5-Flash` estava **errado** (descontinuado, dá 404): visão passa a
+>   **`2.5-flash`**, texto `2.0-flash`; tabela passa a incluir o **Groq**.
+> - **[Adição]** `cap6...tex` · §M4 (intro) — resolução/\emph{fps}
+>   **parametrizáveis por ambiente** (aliviar memória) + render **síncrono numa
+>   thread** (mantém a instância acordada, evita tarefas abandonadas).
+> - **[Adição]** `cap6...tex` · §M4 "Montagem" — **cartão de fim** + **ritmo
+>   calibrado** (piso 3→4~s por foto).
+> - **[Reescrita]** `cap8...tex` · §Limitações — vídeo **limitado pela memória**
+>   (512MB do Render → \emph{out-of-memory}); mitigações: resolução
+>   configurável + **pré-geração local** (o MP4 persiste no Storage e reproduz
+>   leve); + **quota de visão** Gemini (~dezenas/dia; texto vai por Groq).
+
+**A ACRESCENTAR por ti (features novas desta sessão):**
+
+- **[Adição]** `cap5...tex` (modelo de dados) + `cap6...tex` (M2/frontend) —
+  **foto/avatar por pessoa**: novo campo `Person.photo_media_id` (migração SQL
+  **0009**); o utilizador escolhe uma fotografia para cada pessoa, mostrada como
+  avatar na lista e **nos nós da árvore (React Flow)**.
+- **[Correção]** `cap6...tex` · §M2/§M3 — o **grafo familiar passa a ser lido
+  sempre da BD** (`persons`+`relationships`) em `get_person`, `get_graph` e no
+  gerador de narrativas. Antes lia o JSON em disco, que no free tier do Render é
+  efémero (apagado em cada restart) → relações/visualização vazias. Fonte de
+  verdade única = BD.
+- **[Adição]** `cap6...tex` · §M3 — **grounding anti-alucinação**: regras que
+  proíbem inventar pessoas, parentescos e o "tu" indefinido; a intenção define o
+  tema mas os factos/relações são verdade. Resolveu narrativas que inventavam
+  pessoas (ex.: "Marta").
+- **[Adição]** `cap6...tex` · §M1 — **re-análise de fotografias**: a análise no
+  upload é diferida para segundo plano, que **morre no free tier** (fotos presas
+  em `PROCESSING`). Novo endpoint + botão "Re-analisar IA" reprocessa-as
+  (→ `COMPLETED`), desbloqueando **timeline e vídeo**; é **consciente da quota**
+  (mostra nº de fotos = pedidos Gemini e pede confirmação).
+- **[Adição]** `cap6...tex` · §M2/frontend — botão **"Atualizar" na Linha
+  Temporal** + a re-análise **reconstrói a timeline** (que só era construída no
+  upload).
+- **[Adição]** `cap6...tex` · §M4/§"vias de execução" — **geração de vídeo
+  síncrona** (como as narrativas), evitando o \emph{worker} de segundo plano
+  abandonado no free tier.
+- **[Adição]** `cap6...tex` · §frontend — **navegação completa** na sidebar
+  (adicionados Família, Linha Temporal, Histórias, Vídeos --- antes só 6 dos 10
+  destinos); **âncoras do landing** corrigidas (rolam para a secção, mesmo a
+  partir do `/about`); nova **demo interativa do \emph{pipeline}** no landing
+  (foto→IA→narrativa→vídeo, com \emph{typewriter}).
+- **[Adição]** `cap5...tex`/`cap6...tex` · histórias — **indicador de projeto**:
+  cada história mostra (badge + link) a que projeto pertence, na lista e no
+  leitor.
+- **[Adição]** `cap6...tex` · §autenticação — **eliminação de conta real**:
+  `DELETE /api/v1/auth/account` apaga todas as linhas do dono e **remove o
+  utilizador via Supabase Admin API** (antes só fazia \emph{sign-out}, pelo que
+  a conta "apagada" continuava a poder entrar).
+
+> **Decisão de custos/infra (para §custos ou §Limitações):** ficou-se no
+> **nível gratuito** (projeto Google `Memoria-viva`); o pré-pagamento foi
+> abandonado. Gemini visão ~20/dia; **Groq grátis** cobre o texto; o **Render
+> 512MB** não aguenta o \emph{render} de vídeo → estratégia recomendada:
+> **pré-gerar vídeos em local** (persistem no Supabase, reproduzem no site sem
+> \emph{render}) para uma demonstração/defesa fiável.
+
+---
+
 ## 2026-06-19 — Cadeia de fallback de 3 níveis + decisão multi-API
 
 - **[Reescrita]** `cap3_metodologia_tecnologias.tex` · §"IA: estratégia

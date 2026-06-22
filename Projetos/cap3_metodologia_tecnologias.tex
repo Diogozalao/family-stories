@@ -80,7 +80,8 @@ CSS~3, TanStack Query, Zustand, React Router~6, react-i18next, Framer
 Motion, React Flow, Sonner, Lucide. \\
 \emph{Backend} & Python~3, FastAPI (assíncrono), SQLAlchemy~2 (async),
 Pydantic~v2, slowapi, structlog, Celery + Redis (opcional). \\
-IA / ML & Ollama (Llama~3.2~3B, local); Google Gemini~1.5~Flash (nuvem);
+IA / ML & Ollama (Llama~3.2~3B, local); Google Gemini~Flash (nuvem ---
+\emph{2.5} visão, \emph{2.0} texto); Groq (texto, rede de segurança);
 ChromaDB + \emph{sentence-transformers} (RAG, opcional); Tesseract
 (\textsc{ocr}); NetworkX (grafo). \\
 Multimédia & MoviePy + FFmpeg; Pillow (Ken Burns / \emph{letterbox});
@@ -142,8 +143,8 @@ Privilegia-se a inferência \textbf{local} via \textbf{Ollama} (executando
 o \emph{Llama~3.2~3B}) por três razões: \emph{privacidade} (os factos do
 arquivo não saem da máquina), \emph{custo} (nulo) e \emph{autonomia} (não
 depende de conectividade). Como \emph{fallback} principal recorre-se ao
-\textbf{Google Gemini~Flash} (\emph{2.0} para texto, \emph{1.5} para
-visão), pois o ambiente de produção gratuito não dispõe de \textsc{gpu}
+\textbf{Google Gemini~Flash} (\emph{2.0} para texto, \emph{2.5} para
+visão; o \emph{1.5} foi descontinuado), pois o ambiente de produção gratuito não dispõe de \textsc{gpu}
 para executar modelos locais. Para a análise visual das fotografias (M1)
 usa-se sempre o \textbf{Gemini Vision}, por ser a única via com
 capacidade multimodal madura na cadeia. Como \emph{segunda} rede de

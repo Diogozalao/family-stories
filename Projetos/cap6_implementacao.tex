@@ -265,10 +265,15 @@ sua narração.
 \label{sec:impl_m4}
 
 O M4 converte uma narrativa num \textbf{vídeo documental} MP4 (H.264,
-$1280\times720$, 24~fps). O \texttt{M4Processor} orquestra a seleção
-cronológica das fotografias, a síntese de voz da narrativa e a montagem do
-vídeo, mantendo apenas espaço de trabalho temporário no disco (as
-fotografias e o vídeo final vivem no \emph{Storage}).
+$1280\times720$, 24~fps por defeito --- a resolução e os \emph{frames}/segundo
+são parametrizáveis por variável de ambiente, permitindo aliviar a memória em
+ambientes restritos, \Cref{sec:limitacoes}). O \texttt{M4Processor} orquestra a
+seleção cronológica das fotografias, a síntese de voz da narrativa e a montagem
+do vídeo, mantendo apenas espaço de trabalho temporário no disco (as
+fotografias e o vídeo final vivem no \emph{Storage}). A montagem corre numa
+\emph{thread} dedicada e o pedido é tratado de forma \textbf{síncrona}, mantendo
+a instância acordada durante o \emph{render} (evitando o problema das tarefas de
+segundo plano abandonadas no plano gratuito).
 
 \subsection{Montagem cinematográfica}
 
@@ -287,8 +292,12 @@ O \texttt{video\_builder} eleva a qualidade percebida acima de um simples
   consecutivas não se movem na mesma direção (\Cref{lst:kenburns}).
   \item \textbf{Transições} por \emph{crossfade} e \emph{fade-to-black}
   final, evitando cortes abruptos.
-  \item \textbf{Cartão de título} de abertura e \textbf{legendas}
-  (\emph{lower thirds}) com data e local de cada fotografia.
+  \item \textbf{Cartões de título e de fim} de abertura e fecho, e
+  \textbf{legendas} (\emph{lower thirds}) com data e local de cada
+  fotografia.
+  \item \textbf{Ritmo calibrado}: piso de $\sim$4~s por fotografia em modo
+  cena (subido de 3~s), para que nenhuma imagem passe a correr contra o
+  \emph{crossfade} de 1.2~s.
 \end{itemize}
 
 \begin{lstlisting}[language=Python,caption={Geração de cada fotograma do

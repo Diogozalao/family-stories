@@ -67,9 +67,23 @@ atual:
   (E2E) da interface.
   \item \textbf{Acessibilidade não auditada formalmente.} Existem boas
   práticas, mas falta uma auditoria \textsc{wcag}~AA.
-  \item \textbf{Geração de vídeo intensiva.} A montagem com MoviePy/FFmpeg
-  é exigente em CPU/memória, podendo ser limitante no plano gratuito do
-  Render para acervos grandes.
+  \item \textbf{Geração de vídeo limitada pela memória no \emph{deploy}
+  gratuito.} A montagem com MoviePy/FFmpeg pode exceder os 512~MB de RAM do
+  plano gratuito do Render, que termina a instância (\emph{out-of-memory}) a
+  meio do \emph{render}. Mitiga-se de duas formas: \emph{(i)} a resolução e os
+  \emph{fps} são parametrizáveis por ambiente, permitindo baixá-los para caber;
+  e \emph{(ii)} como o MP4 final é persistido no \emph{Storage} (Supabase) e a
+  sua reprodução é leve (apenas servir o ficheiro), os vídeos podem ser
+  \textbf{pré-gerados em ambiente local} --- sem o limite de memória e
+  escrevendo no mesmo \emph{backend} --- e depois reproduzidos no site sem
+  qualquer \emph{render} em tempo real. A reprodução nunca é afetada; apenas a
+  geração em tempo real no plano gratuito.
+  \item \textbf{Quota de visão limitada no nível gratuito.} A análise visual
+  das fotografias (M1) depende do Gemini, cujo nível gratuito permite apenas
+  poucas dezenas de pedidos por dia; a geração de texto (M3) não é afetada por
+  recorrer ao Groq como alternativa. A re-análise manual de fotografias é, por
+  isso, parcimoniosa (só processa fotografias ainda sem descrição e confirma o
+  custo em pedidos antes de avançar).
 \end{itemize}
 
 \section{Trabalho Futuro}
