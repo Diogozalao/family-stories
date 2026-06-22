@@ -10,9 +10,26 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 
 ---
 
+## 2026-06-22 — Capa: design FE-UBI + logótipo
+
+> **Já editado por mim no `.tex`** (confirma/copia no Overleaf):
+> - **[Reescrita]** `capa.tex` · folha de rosto — adoptado o layout centrado
+>   ao estilo FE-UBI: "Universidade da Beira Interior" + "Departamento de
+>   Informática", logótipo a `width=191pt`, blocos "Elaborado por:" /
+>   "Orientadores:" centrados e data (`\today`). Mantido o título e
+>   subtítulo da tese e as réguas `ubiblue`.
+> - **[Adição]** `capa.tex` · o logótipo é carregado via `\IfFileExists`:
+>   usa `images/ubi-fe-di.png` se existir, senão mostra o placeholder
+>   `\figph` (o documento compila na mesma).
+> - **[Correção]** `IMAGENS_NECESSARIAS.md` · imagem #1 renomeada de
+>   `feubi.png` → **`ubi-fe-di.png`** (falta colocar o PNG em `images/`).
+
 ## 2026-06-22 — Sessão grande: vídeo/memória, grafo na BD, foto-pessoa, UX, auth
 
 > **Já editado por mim no `.tex` desta vez** (confirma/copia no Overleaf):
+> - **[Correção]** `capa.tex` — espaçamentos/logótipo originais restaurados;
+>   removidas as linhas "Relatório de Projeto Final de Licenciatura" e
+>   "Licenciatura em Engenharia Informática"; título mantido.
 > - **[Correção]** `cap3...tex` · tabela de tecnologias **e** §"IA híbrida" —
 >   `Gemini 1.5-Flash` estava **errado** (descontinuado, dá 404): visão passa a
 >   **`2.5-flash`**, texto `2.0-flash`; tabela passa a incluir o **Groq**.

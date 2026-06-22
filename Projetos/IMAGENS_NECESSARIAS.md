@@ -8,7 +8,7 @@ troca o comando `\figph{...}` pela linha `\includegraphics` que está
 
 | # | Ficheiro sugerido | Onde (capítulo / figura) | O que deve mostrar | Como obter |
 |---|---|---|---|---|
-| 1 | `feubi.png` | Capa | Logótipo oficial da Faculdade de Engenharia da UBI | Site/manual de identidade da UBI |
+| 1 | `ubi-fe-di.png` | Capa | Logótipo oficial UBI · Faculdade de Engenharia · Departamento de Informática | Site/manual de identidade da UBI |
 | 2 | `cronograma.png` | Cap.3 · Fig. cronograma | Diagrama de Gantt das fases F1–F6 | Ferramenta de gestão de projeto, draw.io ou TikZ |
 | 3 | *(TikZ — já feito)* | Cap.5 · Arquitetura global | — | Já desenhado em TikZ no `cap5...tex` |
 | 4 | `fullstack.png` | Cap.5 · Fig. full-stack | Diagrama vertical camada-a-camada (existe esboço no teu PDF de estudo) | Redesenhar o diagrama do estudo inicial |

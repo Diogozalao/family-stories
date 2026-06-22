@@ -2,9 +2,10 @@
 %  CAPA / FOLHA DE ROSTO
 %  Estilo Universidade da Beira Interior — Faculdade de Engenharia.
 %
-%  Para inserir o logótipo oficial da FE-UBI, coloca o ficheiro
-%  "feubi.png" (ou .pdf) na pasta images/ e descomenta a linha
-%  \includegraphics indicada abaixo (apaga o \figph correspondente).
+%  LOGÓTIPO: coloca o ficheiro do logótipo oficial em
+%      images/ubi-fe-di.png
+%  Assim que o ficheiro existir, ele é usado automaticamente; enquanto
+%  não existir, é mostrado um placeholder (o documento compila na mesma).
 % =====================================================================
 \begin{titlepage}
 \centering
@@ -12,43 +13,34 @@
 
 \vspace*{0.6cm}
 {\Huge\bfseries Universidade da Beira Interior}\\[0.35cm]
-{\LARGE Faculdade de Engenharia}\\[0.15cm]
-{\Large Departamento de Informática}\\[1.3cm]
+{\Huge Departamento de Informática}\\[1.1cm]
 
-% --- Logótipo institucional ---
-% \includegraphics[width=0.32\textwidth]{feubi.png}
-\figph[5cm]{Logótipo oficial da Faculdade de Engenharia da UBI
-(ficheiro \texttt{images/feubi.png}).}
+% --- Logótipo institucional (FE-UBI / Departamento de Informática) ---
+\IfFileExists{ubi-fe-di.png}{%
+  \includegraphics[width=191pt]{ubi-fe-di.png}%
+}{%
+  \figph[5cm]{Logótipo oficial da Faculdade de Engenharia da UBI
+  (coloca o ficheiro \texttt{images/ubi-fe-di.png}).}%
+}
 
 \vspace{1.2cm}
 
-{\color{ubiblue}\rule{\linewidth}{1pt}}\\[0.5cm]
+{\color{ubiblue}\rule{\linewidth}{1pt}}\\[0.35cm]
 {\huge\bfseries Sistema de Geração Automática de Histórias
-Familiares com Inteligência Artificial Generativa}\\[0.45cm]
-{\large\itshape Uma plataforma multimodal para a reconstrução
-narrativa e documental do arquivo familiar}\\[0.4cm]
-{\color{ubiblue}\rule{\linewidth}{1pt}}\\[1.4cm]
+Familiares com Inteligência Artificial Generativa}\\[0.35cm]
+{\color{ubiblue}\rule{\linewidth}{1pt}}\\[0.9cm]
 
-{\Large\bfseries Relatório de Projeto Final de Licenciatura}\\[0.3cm]
-{\large Licenciatura em Engenharia Informática}\\[1.8cm]
+{\Large\bfseries Relatório de Projeto Final de Licenciatura}\\[0.25cm]
+{\large Licenciatura em Engenharia Informática}\\[1.1cm]
 
-\begin{minipage}{0.46\textwidth}
-\begin{flushleft}\large
-\textbf{Elaborado por:}\\[0.2cm]
-Diogo Dinis\\
-N.º 52374
-\end{flushleft}
-\end{minipage}
-\hfill
-\begin{minipage}{0.46\textwidth}
-\begin{flushright}\large
-\textbf{Orientadores:}\\[0.2cm]
-Professor Vasco Lopes\\
-Professor João Dias
-\end{flushright}
-\end{minipage}
+{\large\bfseries Elaborado por:}\\[0.25cm]
+{\large Diogo Dinis, n.º 52374}\\[1.1cm]
+
+{\large\bfseries Orientadores:}\\[0.25cm]
+{\large Professor Vasco Lopes}\\
+{\large Professor João Dias}
 
 \vfill
-{\large Covilhã, 11 de junho de 2026}
+{\large Covilhã, \today}
 \vspace*{0.4cm}
 \end{titlepage}
