@@ -21,11 +21,17 @@ import numpy as np
 import structlog
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+from backend.core.config import settings
+
 log = structlog.get_logger()
 
-TARGET_W = 1280
-TARGET_H = 720
-FPS      = 24
+# Frame size / fps are env-overridable so the render can be made lighter on a
+# memory-constrained host. Render's free tier (512MB) runs out of memory at
+# 720p; set VIDEO_WIDTH=854, VIDEO_HEIGHT=480, VIDEO_FPS=20 (or lower) there to
+# cut peak RAM and render time. Local dev keeps full 720p24 by default.
+TARGET_W = settings.VIDEO_WIDTH
+TARGET_H = settings.VIDEO_HEIGHT
+FPS      = settings.VIDEO_FPS
 
 # Per-clip motion & transition timing.
 KEN_BURNS_ZOOM     = 1.08   # Max zoom factor at the end of motion (subtle, cinematic).

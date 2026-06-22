@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     GROQ_MODEL:   str = "llama-3.3-70b-versatile"
     NARRATIVE_MAX_TOKENS: int = 3500
 
+    # M4 video render frame size / fps. Lower these on a memory-constrained
+    # host (Render free = 512MB runs out of memory at 720p): set
+    # VIDEO_WIDTH=854, VIDEO_HEIGHT=480, VIDEO_FPS=20 via env. Local dev keeps
+    # full 720p24 quality by default.
+    VIDEO_WIDTH:  int = 1280
+    VIDEO_HEIGHT: int = 720
+    VIDEO_FPS:    int = 24
+
     # Upload size limits (in megabytes).
     MAX_PHOTO_SIZE_MB:  int = 25
     MAX_GEDCOM_SIZE_MB: int = 100   # ample headroom for trees with thousands of persons
