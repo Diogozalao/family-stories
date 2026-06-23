@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Calendar, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, Loader2, MapPin, RefreshCw, Users } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import { useBuildTimeline, useTimeline } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
@@ -94,14 +94,39 @@ function EventRow({ ev }: { ev: TimelineEvent }) {
           <Calendar className="h-3.5 w-3.5" />
           <span>{dateLabel}</span>
         </div>
-        <p className="mt-0.5 font-medium">{ev.title ?? t("timeline.undated")}</p>
+
+        {/* Context chips: event type · family — so you know what this is about. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {ev.type && <span className="chip chip-accent capitalize">{ev.type}</span>}
+          {ev.family && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+              <Users className="h-3 w-3" /> {ev.family}
+            </span>
+          )}
+        </div>
+
+        <p className="mt-1.5 font-medium">{ev.title ?? t("timeline.undated")}</p>
+
+        {/* Who the event is about. */}
+        {ev.people && ev.people.length > 0 && (
+          <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
+            <span className="text-stone-400">{t("timeline.who")} </span>
+            {ev.people.join(", ")}
+          </p>
+        )}
+        {ev.location && (
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500 dark:text-stone-500">
+            <MapPin className="h-3 w-3" /> {ev.location}
+          </p>
+        )}
+
         {ev.description && (
-          <p className="mt-1 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
+          <p className="mt-1.5 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
             {ev.description}
           </p>
         )}
         {ev.media_file_id && (
-          <div className="relative mt-3 h-48 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+          <div className="relative mt-3 h-32 w-44 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
             <Photo
               mediaId={ev.media_file_id}
               className="h-full w-full object-cover"

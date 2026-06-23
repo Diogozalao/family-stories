@@ -3,13 +3,14 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, FolderKanban, Loader2, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, FolderKanban, Images, Loader2, Search, Sparkles } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useGenerateNarrative, useIndexFacts, usePersons, useProject, useStories,
-  useTemplates,
+  useGenerateNarrative, useIndexFacts, useMedia, usePersons, useProject,
+  useProjectMedia, useStories, useTemplates,
 } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
+import Photo from "../components/media/Photo";
 import type { Story } from "../lib/types";
 import { useGenerateDraft } from "../store/generateDraft";
 import { cn, initials } from "../lib/utils";
@@ -27,6 +28,12 @@ export default function GeneratePage() {
   const { data: templates } = useTemplates();
   const { data: persons } = usePersons();
   const { data: stories } = useStories();
+  // Photos to choose from: a project uses only the photos added to it; the
+  // internal site uses the whole library.
+  const { data: allMedia }     = useMedia();
+  const { data: projectMedia } = useProjectMedia(projectId);
+  const photos = ((projectId ? projectMedia : allMedia) ?? [])
+    .filter((m) => m.media_type !== "video");
   const gen = useGenerateNarrative();
   const index = useIndexFacts();
 
@@ -34,9 +41,17 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, patch, reset,
+    selectedIds, selectedMediaIds, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
+
+  const toggleMedia = (id: number) => {
+    patch({
+      selectedMediaIds: selectedMediaIds.includes(id)
+        ? selectedMediaIds.filter((x) => x !== id)
+        : [...selectedMediaIds, id],
+    });
+  };
 
   const isCustom = eventType === "custom";
 
@@ -110,6 +125,8 @@ export default function GeneratePage() {
         event_type: eventType,
         query: query.trim(),
         person_ids: selectedIds,
+        // Empty selection = use every available photo (previous behaviour).
+        media_ids: selectedMediaIds,
         project_id: projectId ?? undefined,
         custom_tone:      isCustom ? customTone.trim() || undefined      : undefined,
         custom_structure: isCustom ? customStructure.trim() || undefined : undefined,
@@ -289,6 +306,53 @@ export default function GeneratePage() {
             {(persons ?? []).length === 0 && (
               <p className="mt-4 text-sm text-stone-500">{t("family.noTree")}</p>
             )}
+
+            {/* ── Photo selection ─────────────────────────────────────── */}
+            <div className="mt-8 border-t border-stone-100 pt-6 dark:border-stone-800">
+              <h3 className="flex items-center gap-2 font-serif text-lg font-semibold tracking-tight">
+                <Images className="h-4 w-4" /> {t("generate.selectPhotos")}
+                {selectedMediaIds.length > 0 && (
+                  <span className="text-sm font-normal text-brand-600 dark:text-brand-400">
+                    · {selectedMediaIds.length}
+                  </span>
+                )}
+              </h3>
+              <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+                {t("generate.selectPhotosHint")}
+              </p>
+
+              {photos.length === 0 ? (
+                <p className="mt-4 text-sm text-stone-500">{t("generate.noPhotos")}</p>
+              ) : (
+                <div className="mt-4 grid max-h-[42vh] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
+                  {photos.map((m) => {
+                    const active = selectedMediaIds.includes(m.id);
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => toggleMedia(m.id)}
+                        className={cn(
+                          "group relative aspect-square overflow-hidden rounded-lg border-2 transition",
+                          active
+                            ? "border-brand-500 ring-2 ring-brand-200 dark:ring-brand-900/40"
+                            : "border-transparent hover:border-stone-300 dark:hover:border-stone-700",
+                        )}
+                        title={m.original_filename}
+                      >
+                        <Photo mediaId={m.id} alt={m.original_filename}
+                               className="h-full w-full object-cover" />
+                        {active && (
+                          <span className="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white shadow">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -354,6 +418,7 @@ export default function GeneratePage() {
               <Row label={t("generate.storyTitle")} value={title || "—"} />
               <Row label={t("generate.queryLabel")} value={query || "—"} />
               <Row label={t("generate.step2")} value={`${selectedIds.length} / ${persons?.length ?? 0}`} />
+              <Row label={t("generate.selectPhotos")} value={selectedMediaIds.length > 0 ? `${selectedMediaIds.length}` : t("family.allFamilies")} />
             </dl>
 
             <div className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-600 dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-400">

@@ -52,6 +52,11 @@ export interface TimelineEvent {
   title?: string | null;
   description?: string | null;
   media_file_id?: number | null;
+  type?: string | null;
+  location?: string | null;
+  person_ids?: number[] | null;
+  people?: string[] | null;
+  family?: string | null;
 }
 
 export interface Story {

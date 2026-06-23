@@ -5,12 +5,12 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, Network,
-  Pencil, Plus, ScrollText, Sparkles, Timer, UploadCloud,
+  Pencil, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
   User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useFamilies, useFamilyTree, useMedia, useProject, useProjectMedia,
+  useAddMediaToProject, useClearFamily, useFamilies, useFamilyTree, useMedia, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
   useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
@@ -465,6 +465,7 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
   const projectLabel = familyLabel;                 // bare project group label
   const SEP = " :: ";
   const upload = useUploadGedcom();
+  const clear  = useClearFamily();
   const { data: allFamilies } = useFamilies();
 
   // ``activeSub`` = the full label of the selected sub-family, or null for
@@ -520,6 +521,26 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
   // project label when viewing "All".
   const targetLabel = activeSub ?? projectLabel;
 
+  // Delete a whole tree so the user can re-import cleanly. ``label`` is a
+  // concrete sub-family; when omitted we wipe the current selection (a single
+  // sub-family, or — for "All" — every person in this project group).
+  const deleteTree = async (label?: string) => {
+    const targets = label
+      ? [label]
+      : activeSub
+      ? [activeSub]
+      : subFamilies.map((f) => f.label);          // "All" → every sub-family
+    if (targets.length === 0) return;
+    if (!confirm(t("family.confirmRemoveAll"))) return;
+    try {
+      for (const lbl of targets) await clear.mutateAsync(lbl);
+      toast.success(t("common.success"));
+      setActiveSub(null);
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
+
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -537,6 +558,16 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
               }}
             >
               <Download className="h-4 w-4" /><span>{t("family.exportGedcom")}</span>
+            </button>
+          )}
+          {persons.length > 0 && (
+            <button
+              className="btn btn-ghost text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              onClick={() => deleteTree()}
+              disabled={clear.isPending}
+            >
+              {clear.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              <span>{t("family.deleteTree")}</span>
             </button>
           )}
           <button className="btn btn-primary" onClick={open} disabled={upload.isPending}>
@@ -578,7 +609,8 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
           {subFamilies.map((f) => (
             <SubChip key={f.label} active={activeSub === f.label}
                      label={subDisplay(f.label)} count={f.count}
-                     onClick={() => setActiveSub(f.label)} />
+                     onClick={() => setActiveSub(f.label)}
+                     onDelete={() => deleteTree(f.label)} />
           ))}
         </div>
       )}
@@ -631,22 +663,31 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
 }
 
 function SubChip({
-  label, count, active, onClick,
-}: { label: string; count: number; active: boolean; onClick: () => void }) {
+  label, count, active, onClick, onDelete,
+}: { label: string; count: number; active: boolean; onClick: () => void; onDelete?: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
-        active
-          ? "border-brand-400 bg-brand-100 text-brand-800 dark:border-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
-          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300",
+    <div className={cn(
+      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
+      active
+        ? "border-brand-400 bg-brand-100 text-brand-800 dark:border-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+        : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300",
+    )}>
+      <button onClick={onClick} className="flex items-center gap-1.5">
+        <Users className="h-3 w-3" />
+        <span className="max-w-[12rem] truncate">{label}</span>
+        <span className="text-stone-500 dark:text-stone-500">· {count}</span>
+      </button>
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          className="ml-0.5 rounded-full p-0.5 text-stone-500 transition hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/40"
+          aria-label="Apagar esta árvore"
+          title="Apagar esta árvore"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
       )}
-    >
-      <Users className="h-3 w-3" />
-      <span className="max-w-[12rem] truncate">{label}</span>
-      <span className="text-stone-500 dark:text-stone-500">· {count}</span>
-    </button>
+    </div>
   );
 }
 

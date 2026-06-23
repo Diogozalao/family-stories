@@ -263,6 +263,7 @@ export default {
     viewList: "List",
     viewTree: "Tree",
     editTree: "Edit tree",
+    deleteTree: "Delete tree",
     exportGedcom: "Export GEDCOM",
     resetLayout: "Reset layout",
     editor: {
@@ -304,6 +305,7 @@ export default {
     subtitle: "Every event in chronological order.",
     empty: "The timeline is empty. Upload photos in",
     undated: "Undated",
+    who: "Who:",
   },
   projectDetail: {
     tabs: {
@@ -349,6 +351,9 @@ export default {
     queryLabel: "What should the story be about?",
     queryPlaceholder: "e.g. summers together and seaside picnics",
     selectPeople: "Select the people involved (optional)",
+    selectPhotos: "Photos to use",
+    selectPhotosHint: "Pick the photos that go into this story and its video. If you pick none, all available photos are used.",
+    noPhotos: "No photos available yet. Add some in the Library (or to the project).",
     generate: "Generate story",
     generating: "Writing the narrative…",
     generateVideo: "Then, make a documentary video",
@@ -400,7 +405,8 @@ export default {
   health: {
     database: "Database",
     ollama: "Ollama (local LLM)",
-    gemini: "Gemini (fallback)",
+    groq: "Groq (cloud text)",
+    gemini: "Gemini (vision + fallback)",
     redis: "Redis (queue)",
     chroma: "ChromaDB (RAG)",
     disk: "Disk space",

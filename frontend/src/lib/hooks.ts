@@ -510,6 +510,8 @@ export interface GenerateInput {
   event_type: string;
   query: string;
   person_ids: number[];
+  /** Optional explicit photo selection — empty means "use every photo". */
+  media_ids?: number[];
   project_id?: number | null;
   custom_tone?: string;
   custom_structure?: string;

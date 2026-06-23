@@ -109,9 +109,9 @@ o que se considerou em alternativa e a razão da opção tomada.
 \midrule
 FastAPI & Flask, Django & Assíncrono nativo, validação automática
 (Pydantic) e documentação interativa gerada. \\
-Ollama local + Gemini + Groq (cadeia de \emph{fallback}) & Apenas uma API
-comercial (GPT-4/Claude) & Privacidade e custo nulo em local; \emph{fallback}
-robusto na nuvem (Gemini) e rede de segurança grátis (Groq). \\
+Texto: Ollama (local) $\rightarrow$ Groq $\rightarrow$ Gemini; Visão: Gemini & Apenas uma API
+comercial (GPT-4/Claude) & Privacidade e custo nulo em local; texto na nuvem
+no Groq e visão no Gemini — quotas gratuitas separadas, sem competir entre si. \\
 RAG (\emph{retrieval}) & \emph{Fine-tuning}; sem \emph{grounding} & Não
 exige treino e ancora a geração em factos, mitigando alucinação. \\
 MoviePy + FFmpeg & APIs de vídeo IA (Runway/Pika) & Custo nulo, controlo
@@ -142,31 +142,32 @@ A decisão mais estruturante foi a \textbf{estratégia de IA híbrida}.
 Privilegia-se a inferência \textbf{local} via \textbf{Ollama} (executando
 o \emph{Llama~3.2~3B}) por três razões: \emph{privacidade} (os factos do
 arquivo não saem da máquina), \emph{custo} (nulo) e \emph{autonomia} (não
-depende de conectividade). Como \emph{fallback} principal recorre-se ao
-\textbf{Google Gemini~Flash} (\emph{2.0} para texto, \emph{2.5} para
-visão; o \emph{1.5} foi descontinuado), pois o ambiente de produção gratuito não dispõe de \textsc{gpu}
-para executar modelos locais. Para a análise visual das fotografias (M1)
-usa-se sempre o \textbf{Gemini Vision}, por ser a única via com
-capacidade multimodal madura na cadeia. Como \emph{segunda} rede de
-segurança \textbf{apenas para texto}, foi ainda integrado o \textbf{Groq}
-(modelos abertos em \emph{cloud}, camada gratuita generosa), acionado só
-quando o Gemini falha. Esta arquitetura é detalhada no
+depende de conectividade). Como o ambiente de produção gratuito não dispõe
+de \textsc{gpu} para executar modelos locais, a geração de \textbf{texto}
+na nuvem recorre, por esta ordem, ao \textbf{Groq} (modelos abertos
+\emph{Llama~3.3~70B}, camada gratuita generosa) e, só se este falhar, ao
+\textbf{Google Gemini~Flash}. Esta repartição é deliberada: a quota
+gratuita do Gemini fica \textbf{reservada para a análise visual} das
+fotografias (M1), que usa sempre o \textbf{Gemini Vision} (\emph{2.5-Flash};
+o \emph{1.5} foi descontinuado) por ser a única via com capacidade
+multimodal madura na cadeia. Assim, repartindo o texto (Groq) e a visão
+(Gemini) por dois serviços gratuitos distintos, evita-se esgotar a quota
+diária de um único fornecedor. Em ambiente local, o texto é servido
+primeiro pelo Ollama. Esta arquitetura é detalhada no
 \Cref{cap:implementacao}.
 
-\paragraph{Um fornecedor, não vários.} O sistema foi propositadamente
-desenhado para suportar \emph{múltiplos fornecedores de IA} — em teoria,
-poder-se-ia atribuir cada tarefa ao fornecedor que melhor a serve (um para
-visão, outro para texto, etc.). Optou-se, contudo, por concentrar a
-geração num \textbf{único fornecedor principal} (Gemini), por três
-motivos: \emph{(i)} simplicidade — cada fornecedor adicional implica mais
-uma credencial a gerir, mais código específico e mais pontos de falha;
-\emph{(ii)} suficiência — os modelos \emph{Flash} cobrem texto \emph{e}
-visão com qualidade adequada a custo de cêntimos; e \emph{(iii)} controlo
-de custos — um único ponto de faturação é mais fácil de vigiar (quota
-diária + orçamento). O \textbf{Ollama} (local) e o \textbf{Groq} (texto)
-não contradizem esta escolha: não são fornecedores ``paralelos'', mas sim
-\emph{camadas de resiliência} que apenas entram quando o caminho preferido
-falha.
+\paragraph{Repartir por tarefa, mantendo o custo nulo.} A atribuição de
+\textbf{texto ao Groq} e \textbf{visão ao Gemini} não é arbitrária: cada
+serviço tem uma camada gratuita com \emph{limites diários próprios}, pelo
+que separar as duas cargas por dois fornecedores \textbf{duplica, na
+prática, a capacidade gratuita} e evita que a análise de fotografias e a
+geração de narrativas compitam pela mesma quota. A complexidade adicional é
+contida: existe uma única abstração de cliente (\texttt{LLMClient}) que
+encapsula a cascata, pelo que o resto do sistema desconhece qual o
+fornecedor em uso. O \textbf{Ollama} (local) mantém-se como primeira opção
+para texto quando há \textsc{gpu}/\textsc{cpu} disponível, e o Gemini
+permanece como rede de segurança final para texto — garantindo que uma
+falha pontual de um fornecedor nunca impede a geração.
 
 \subsection{RAG: ChromaDB}
 

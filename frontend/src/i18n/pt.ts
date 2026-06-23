@@ -271,6 +271,7 @@ export default {
     viewList: "Lista",
     viewTree: "Árvore",
     editTree: "Editar árvore",
+    deleteTree: "Apagar árvore",
     exportGedcom: "Exportar GEDCOM",
     resetLayout: "Repor automático",
     editor: {
@@ -312,6 +313,7 @@ export default {
     subtitle: "Todos os eventos ordenados no tempo.",
     empty: "A linha temporal está vazia. Carrega fotografias em",
     undated: "Sem data",
+    who: "Quem:",
   },
   projectDetail: {
     tabs: {
@@ -357,6 +359,9 @@ export default {
     queryLabel: "Sobre o que queres que seja a história?",
     queryPlaceholder: "ex.: os verões em família e os piqueniques à beira-mar",
     selectPeople: "Seleciona as pessoas envolvidas (opcional)",
+    selectPhotos: "Fotografias a usar",
+    selectPhotosHint: "Escolhe as fotografias que entram nesta história e no vídeo. Se não escolheres nenhuma, são usadas todas as disponíveis.",
+    noPhotos: "Ainda não há fotografias disponíveis. Adiciona algumas na Biblioteca (ou ao projeto).",
     generate: "Gerar história",
     generating: "A gerar a narrativa…",
     generateVideo: "Depois, criar vídeo documental",
@@ -408,7 +413,8 @@ export default {
   health: {
     database: "Base de dados",
     ollama: "Ollama (LLM local)",
-    gemini: "Gemini (fallback)",
+    groq: "Groq (texto na nuvem)",
+    gemini: "Gemini (visão + fallback)",
     redis: "Redis (filas)",
     chroma: "ChromaDB (RAG)",
     disk: "Espaço em disco",

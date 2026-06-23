@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.auth import User, get_current_user
 from backend.core.database import get_db
-from backend.models.timeline import TimelineEvent
+from backend.models.timeline import Person, TimelineEvent
 from backend.modules.m2_temporal.processor import M2Processor
 
 router = APIRouter(prefix="/api/v1", tags=["timeline"])
@@ -43,6 +43,28 @@ async def get_timeline(
     )
     events = result.scalars().all()
 
+    # Resolve the person ids referenced by the events into names + family
+    # labels in one query, so each event can show *who* it is about and which
+    # family it belongs to (instead of an opaque "Casamento").
+    referenced: set[int] = set()
+    for e in events:
+        for pid in (e.person_ids or []):
+            referenced.add(pid)
+    people_by_id: dict[int, Person] = {}
+    if referenced:
+        rows = (await db.execute(
+            select(Person).where(Person.user_id == user.id, Person.id.in_(referenced))
+        )).scalars().all()
+        people_by_id = {p.id: p for p in rows}
+
+    def _people(ids) -> list[str]:
+        return [people_by_id[i].name for i in (ids or []) if i in people_by_id]
+
+    def _family(ids) -> str | None:
+        labels = {people_by_id[i].family_label for i in (ids or [])
+                  if i in people_by_id and people_by_id[i].family_label}
+        return ", ".join(sorted(labels)) if labels else None
+
     return [
         {
             "id":            e.id,
@@ -59,6 +81,9 @@ async def get_timeline(
             "location":      e.location,
             "media_file_id": e.media_file_id,
             "person_ids":    e.person_ids,
+            # Enriched, human-readable context for the timeline UI.
+            "people":        _people(e.person_ids),
+            "family":        _family(e.person_ids),
         }
         for e in events
     ]

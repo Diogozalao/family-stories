@@ -56,6 +56,14 @@ def _check_gemini() -> dict:
     return {"status": "ok", "configured": True}
 
 
+def _check_groq() -> dict:
+    # Primary cloud TEXT backend (narratives). Key-presence check only — a real
+    # call would spend the free quota.
+    if not settings.GROQ_API_KEY:
+        return {"status": "disabled", "detail": "GROQ_API_KEY not configured"}
+    return {"status": "ok", "configured": True, "model": settings.GROQ_MODEL}
+
+
 def _check_redis() -> dict:
     try:
         import redis
@@ -97,6 +105,7 @@ async def deep_health() -> dict:
     checks = {
         "database": await _check_database(),
         "ollama":   await _check_ollama(),
+        "groq":     _check_groq(),
         "gemini":   _check_gemini(),
         "redis":    _check_redis(),
         "chroma":   _check_chroma(),

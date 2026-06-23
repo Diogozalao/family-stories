@@ -8,6 +8,11 @@ class GenerateRequest(BaseModel):
     event_type:       str           = "default"
     query:            Optional[str] = None
     person_ids:       List[int]     = []
+    # Optional explicit photo selection. When non-empty, ONLY these media
+    # rows feed the narrative (and therefore the video); empty = use every
+    # available photo (the previous behaviour). Lets the user pick exactly
+    # which photos/documents go into a story.
+    media_ids:        List[int]     = []
     project_id:       Optional[int] = None
     # Only meaningful when ``event_type == "custom"``. Lets the user
     # supply their own tone + structure instead of one of the six

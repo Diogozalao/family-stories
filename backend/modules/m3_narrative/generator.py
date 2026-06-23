@@ -92,6 +92,7 @@ class NarrativeGenerator:
         event_type:       str  = "default",
         query:            str  = None,
         person_ids:       list = None,
+        media_ids:        list = None,
         project_id:       int  = None,
         custom_tone:      str  = None,
         custom_structure: str  = None,
@@ -136,6 +137,16 @@ class NarrativeGenerator:
             )
         all_media = media_result.scalars().all()
 
+        # Explicit photo selection overrides everything: when the user picked
+        # specific photos/documents in the wizard, the narrative — and the
+        # video built from it — use ONLY those, never the rest of the library.
+        if media_ids:
+            wanted = set(media_ids)
+            chosen = [m for m in all_media if m.id in wanted]
+            if chosen:
+                all_media = chosen
+                log.info("media_explicit_selection", selected=len(chosen))
+
         # ── RAG retrieval ────────────────────────────────────────────────
         # When the library is large and the user gave a focus, narrow the
         # photos down to the ones the RAG considers relevant to the theme
@@ -144,7 +155,7 @@ class NarrativeGenerator:
         # stub mode (no ChromaDB) ``search_media_ids`` returns [] and we
         # transparently keep every photo.
         focus_for_retrieval = (query or title or "").strip()
-        if focus_for_retrieval and len(all_media) > 12:
+        if focus_for_retrieval and not media_ids and len(all_media) > 12:
             try:
                 relevant_ids = set(self.rag.search_media_ids(
                     focus_for_retrieval, user_id, n_results=14))

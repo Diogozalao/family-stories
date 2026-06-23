@@ -20,6 +20,8 @@ interface GenerateDraft {
   customTone: string;
   customStructure: string;
   selectedIds: number[];
+  /** Explicitly chosen photo media ids; empty = use every available photo. */
+  selectedMediaIds: number[];
   mode: "sync" | "background";
   patch: (partial: Partial<GenerateDraftFields>) => void;
   reset: () => void;
@@ -35,6 +37,7 @@ const INITIAL: GenerateDraftFields = {
   customTone: "",
   customStructure: "",
   selectedIds: [],
+  selectedMediaIds: [],
   mode: "background",
 };
 

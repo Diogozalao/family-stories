@@ -116,6 +116,7 @@ async def generate_narrative(
             event_type       = payload.event_type,
             query            = payload.query,
             person_ids       = payload.person_ids,
+            media_ids        = payload.media_ids,
             project_id       = payload.project_id,
             custom_tone      = payload.custom_tone,
             custom_structure = payload.custom_structure,
