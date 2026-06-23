@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Download, Film, Loader2, Play, Plus, Sparkles, X } from "lucide-react";
+import { Download, Film, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useGenerateVideo, useStories, useVideos, videoUrl } from "../lib/hooks";
+import { useDeleteVideo, useGenerateVideo, useStories, useVideos, videoUrl } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { cn } from "../lib/utils";
 import type { Video } from "../lib/types";
@@ -47,7 +47,7 @@ export default function VideosPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (
-            <VideoCard key={v.id} video={v} onPlay={() => setPlaying(v)} />
+            <VideoCard key={v.id} video={v} onPlay={() => setPlaying(v)} onClosePlayer={() => setPlaying((p) => (p?.id === v.id ? null : p))} />
           ))}
         </div>
       )}
@@ -76,9 +76,19 @@ export default function VideosPage() {
   );
 }
 
-function VideoCard({ video, onPlay }: { video: Video; onPlay: () => void }) {
+function VideoCard({ video, onPlay, onClosePlayer }: { video: Video; onPlay: () => void; onClosePlayer: () => void }) {
   const { t } = useTranslation();
+  const del = useDeleteVideo();
   const ready = video.status === "completed" && !!video.filename;
+
+  const handleDelete = () => {
+    if (!confirm(t("videos.confirmDelete"))) return;
+    onClosePlayer();          // close the lightbox if this video is open
+    del.mutate(video.id, {
+      onSuccess: () => toast.success(t("common.success")),
+      onError: (err) => toast.error(extractErrorMessage(err)),
+    });
+  };
 
   return (
     <article className="card overflow-hidden">
@@ -94,6 +104,16 @@ function VideoCard({ video, onPlay }: { video: Video; onPlay: () => void }) {
             {video.status === "failed" ? t("common.error") : t("videos.processing")}
           </div>
         )}
+        {/* Delete — always available so stuck/failed renders can be cleared. */}
+        <button
+          onClick={handleDelete}
+          disabled={del.isPending}
+          className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/55 text-white/90 transition hover:bg-rose-600 disabled:opacity-50"
+          aria-label={t("videos.delete")}
+          title={t("videos.delete")}
+        >
+          {del.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+        </button>
       </div>
       <div className="p-4">
         <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-500">

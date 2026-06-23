@@ -334,6 +334,8 @@ export default {
     generating: "Rendering the video — this can take 1–2 minutes. Don't close the page.",
     done: "Video ready!",
     stillRendering: "The video is still rendering on the server — it'll show up here shortly.",
+    delete: "Delete video",
+    confirmDelete: "Are you sure you want to delete this video?",
   },
   generate: {
     title: "Generate a new story",

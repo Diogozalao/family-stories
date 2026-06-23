@@ -346,11 +346,17 @@ export function useClearFamily() {
 }
 
 // ── Family tree (DB-backed persons + relationships) ───────────────────────
-export function useFamilyTree(familyLabel?: string | null) {
+export function useFamilyTree(familyLabel?: string | null, group?: string | null) {
   return useQuery<FamilyTreeData>({
-    queryKey: ["tree", familyLabel ?? null],
+    // ``group`` matches a project label plus all its "label :: sub" trees;
+    // ``familyLabel`` is an exact single-tree match. They're mutually exclusive.
+    queryKey: ["tree", group ? `g:${group}` : familyLabel ?? null],
     queryFn: async () => {
-      const params = familyLabel ? { params: { family_label: familyLabel } } : {};
+      const params = group
+        ? { params: { group } }
+        : familyLabel
+        ? { params: { family_label: familyLabel } }
+        : {};
       return (await api.get("/api/v1/genealogy/tree", params)).data;
     },
   });
@@ -582,6 +588,15 @@ export function useGenerateVideo() {
       qc.invalidateQueries({ queryKey: ["videos"] });
       qc.invalidateQueries({ queryKey: ["tasks"] });
     },
+  });
+}
+
+export function useDeleteVideo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) =>
+      (await api.delete(`/api/v1/multimedia/videos/${id}`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["videos"] }),
   });
 }
 

@@ -45,16 +45,20 @@ async def get_timeline(
 
     return [
         {
-            "id":          e.id,
-            "date":        str(e.event_date) if e.event_date else None,
-            "confidence":  e.date_confidence,
-            "date_label":  e.date_label,
-            "type":        e.event_type,
-            "title":       e.title,
-            "description": e.description,
-            "location":    e.location,
-            "media_id":    e.media_file_id,
-            "person_ids":  e.person_ids,
+            "id":            e.id,
+            # Field names MUST match the frontend ``TimelineEvent`` type
+            # (event_date / media_file_id). They used to be ``date`` /
+            # ``media_id`` here, so every event arrived without a date
+            # (grouped under "—") and never showed its photo.
+            "event_date":    str(e.event_date) if e.event_date else None,
+            "confidence":    e.date_confidence,
+            "date_label":    e.date_label,
+            "type":          e.event_type,
+            "title":         e.title,
+            "description":   e.description,
+            "location":      e.location,
+            "media_file_id": e.media_file_id,
+            "person_ids":    e.person_ids,
         }
         for e in events
     ]

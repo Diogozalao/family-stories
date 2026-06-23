@@ -342,6 +342,8 @@ export default {
     generating: "A gerar o vídeo — pode demorar 1–2 minutos. Não feches a página.",
     done: "Vídeo gerado!",
     stillRendering: "O vídeo continua a ser gerado no servidor — vai aparecer aqui daqui a pouco.",
+    delete: "Apagar vídeo",
+    confirmDelete: "Tens a certeza que queres apagar este vídeo?",
   },
   generate: {
     title: "Gerar nova história",

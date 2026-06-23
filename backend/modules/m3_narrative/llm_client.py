@@ -5,15 +5,35 @@ from backend.core.config import settings
 log = structlog.get_logger()
 
 class LLMClient:
+    """Cliente de geração de TEXTO (narrativas) com cascata de backends.
+
+    Ordem de prioridade (texto):
+        1. Ollama  — local, grátis (llama3.2:3b). Usado em dev.
+        2. Groq    — nuvem, grátis (llama-3.3-70b). Backend de texto em produção.
+        3. Gemini  — último recurso para texto.
+
+    O **Gemini fica reservado para a VISÃO do M1** (análise de fotos): a sua
+    quota grátis é limitada, por isso não queremos gastá-la a gerar texto. Só
+    é usado para narrativas se o Ollama e o Groq falharem ambos.
+    """
+
     def __init__(self):
         self._ollama_ok = self._check_ollama()
-        if not self._ollama_ok:
+        self._groq_ok   = bool(settings.GROQ_API_KEY)
+        self._gemini    = None                      # configurado de forma preguiçosa
+        # Só preparamos o Gemini à cabeça se ele for mesmo o único backend de
+        # texto disponível (sem Ollama e sem Groq).
+        if not self._ollama_ok and not self._groq_ok:
             self._setup_gemini()
         log.info("llm_ready", backend=self.backend)
 
     @property
     def backend(self) -> str:
-        return "ollama" if self._ollama_ok else "gemini-fallback"
+        if self._ollama_ok:
+            return "ollama"
+        if self._groq_ok:
+            return "groq"
+        return "gemini-fallback"
 
     def _check_ollama(self) -> bool:
         try:
@@ -33,8 +53,11 @@ class LLMClient:
         self._gemini = genai.GenerativeModel(settings.GEMINI_TEXT_MODEL)
 
     def generate(self, prompt: str, max_tokens: int = 1500) -> str:
+        # Texto: Ollama → Groq → Gemini (ver docstring da classe).
         if self._ollama_ok:
             return self._ollama_generate(prompt, max_tokens)
+        if self._groq_ok:
+            return self._groq_generate(prompt, max_tokens)
         return self._gemini_generate(prompt, max_tokens)
 
     def _ollama_generate(self, prompt: str, max_tokens: int) -> str:
@@ -55,17 +78,56 @@ class LLMClient:
             return text
         except Exception as e:
             log.error("ollama_error", error=str(e))
+            # Fallback de texto: Groq primeiro, Gemini só em último caso.
+            if self._groq_ok:
+                return self._groq_generate(prompt, max_tokens, _prev_error=f"Ollama: {e}")
             self._setup_gemini()
             return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
 
-    def _gemini_generate(self, prompt: str, max_tokens: int, _ollama_error: str | None = None) -> str:
+    def _groq_generate(self, prompt: str, max_tokens: int, _prev_error: str | None = None) -> str:
+        """Gera texto via Groq (API compatível com OpenAI). Backend de texto
+        preferido na nuvem — modelo aberto grande (llama-3.3-70b), free tier.
+
+        Em caso de falha, recorre ao Gemini como último recurso (mesmo sendo
+        reservado para a visão, é melhor do que falhar a geração).
+        """
+        from groq import Groq
+
+        try:
+            log.info("llm_generating", backend="groq", model=settings.GROQ_MODEL)
+            client = Groq(api_key=settings.GROQ_API_KEY,
+                          timeout=settings.GEMINI_TIMEOUT)
+            resp = client.chat.completions.create(
+                model=settings.GROQ_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=0.7,
+            )
+            text = (resp.choices[0].message.content or "").strip()
+            if not text:
+                raise RuntimeError("resposta vazia do Groq")
+            log.info("llm_done", backend="groq", chars=len(text))
+            return text
+        except Exception as groq_exc:                       # noqa: BLE001
+            log.error("groq_error", error=str(groq_exc))
+            self._setup_gemini()
+            return self._gemini_generate(
+                prompt, max_tokens,
+                _ollama_error=_prev_error,
+                _groq_error=str(groq_exc),
+            )
+
+    def _gemini_generate(self, prompt: str, max_tokens: int,
+                         _ollama_error: str | None = None,
+                         _groq_error: str | None = None) -> str:
         import google.generativeai as genai
+
+        if self._gemini is None:
+            self._setup_gemini()
 
         cfg = genai.GenerationConfig(max_output_tokens=max_tokens, temperature=0.7)
         # Bound each call so a hanging/slow API doesn't keep the task spinning
-        # forever (it used to have no timeout, which is why a failing model
-        # looked like "takes ages, then errors"). One retry covers transient
-        # 5xx / network blips.
+        # forever. One retry covers transient 5xx / network blips.
         last_exc: Exception | None = None
         for attempt in (1, 2):
             try:
@@ -90,50 +152,14 @@ class LLMClient:
 
         log.error("gemini_error", error=str(last_exc))
 
-        # Última rede de segurança: Groq (modelos abertos, free tier generoso).
-        # Só entra quando o Gemini falha, e SÓ cobre texto — a visão do M1 não
-        # passa por aqui, mantém-se Gemini-only. Custo zero: serve apenas para o
-        # utilizador receber a narrativa mesmo numa falha pontual da nuvem
-        # principal. Ativa-se só se ``GROQ_API_KEY`` estiver configurada.
-        gemini_exc = last_exc
-        if settings.GROQ_API_KEY:
-            try:
-                return self._groq_generate(prompt, max_tokens)
-            except Exception as groq_exc:                   # noqa: BLE001
-                log.error("groq_error", error=str(groq_exc))
-                last_exc = groq_exc
-
-        # Todos os backends falharam — propaga para a tarefa ser marcada como
-        # ``failed`` em vez de guardar uma narrativa falsa.
-        details = f"Gemini ({settings.GEMINI_TEXT_MODEL}): {gemini_exc}"
-        if settings.GROQ_API_KEY and last_exc is not gemini_exc:
-            details += f"\nGroq ({settings.GROQ_MODEL}): {last_exc}"
+        # Todos os backends de texto falharam — propaga para a tarefa ser
+        # marcada como ``failed`` em vez de guardar uma narrativa falsa.
+        details = f"Gemini ({settings.GEMINI_TEXT_MODEL}): {last_exc}"
+        if _groq_error:
+            details = f"Groq ({settings.GROQ_MODEL}): {_groq_error}\n{details}"
         if _ollama_error:
             details = f"Ollama: {_ollama_error}\n{details}"
         raise LLMUnavailableError(details) from last_exc
-
-    def _groq_generate(self, prompt: str, max_tokens: int) -> str:
-        """Gera texto via Groq (API compatível com OpenAI). Rede de segurança.
-
-        Invocado apenas quando o Gemini falha. Usa um modelo aberto alojado
-        no Groq (free tier), pelo que não tem custo. Não é usado para visão.
-        """
-        from groq import Groq
-
-        log.info("llm_generating", backend="groq", model=settings.GROQ_MODEL)
-        client = Groq(api_key=settings.GROQ_API_KEY,
-                      timeout=settings.GEMINI_TIMEOUT)
-        resp = client.chat.completions.create(
-            model=settings.GROQ_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            temperature=0.7,
-        )
-        text = (resp.choices[0].message.content or "").strip()
-        if not text:
-            raise RuntimeError("resposta vazia do Groq")
-        log.info("llm_done", backend="groq", chars=len(text))
-        return text
 
     @staticmethod
     def _blocked_reason(response) -> str:
@@ -151,4 +177,4 @@ class LLMClient:
 
 
 class LLMUnavailableError(RuntimeError):
-    """Raised when both the local LLM and the Gemini fallback fail."""
+    """Raised when the local LLM, Groq and the Gemini fallback all fail."""

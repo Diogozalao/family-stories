@@ -9,7 +9,7 @@ import aiofiles
 import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, distinct, select
+from sqlalchemy import delete, distinct, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.auth import User, get_current_user
@@ -481,12 +481,23 @@ async def export_gedcom(
 @router.get("/genealogy/tree")
 async def get_tree(
     family_label: Optional[str] = Query(default=None),
+    group:        Optional[str] = Query(default=None, description="Project group: matches this label OR its 'group :: sub' sub-families"),
     db:           AsyncSession  = Depends(get_db),
     user:         User          = Depends(get_current_user),
 ):
-    """Return persons + relationships for the interactive tree / editor."""
+    """Return persons + relationships for the interactive tree / editor.
+
+    ``group`` lets a project show ALL its imported trees at once: it matches
+    the bare project label plus every ``"<project> :: <sub-family>"`` label,
+    so multiple GEDCOM files stay separable but can also be viewed together.
+    """
     pstmt = select(Person).where(Person.user_id == user.id)
-    if family_label:
+    if group:
+        pstmt = pstmt.where(or_(
+            Person.family_label == group,
+            Person.family_label.like(group + " :: %"),
+        ))
+    elif family_label:
         pstmt = pstmt.where(Person.family_label == family_label)
     persons = (await db.execute(pstmt.order_by(Person.name))).scalars().all()
     person_ids = {p.id for p in persons}

@@ -6,11 +6,11 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, Network,
   Pencil, Plus, ScrollText, Sparkles, Timer, UploadCloud,
-  User as UserIcon, X,
+  User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useFamilyTree, useMedia, useProject, useProjectMedia,
+  useAddMediaToProject, useFamilies, useFamilyTree, useMedia, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
   useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
@@ -462,24 +462,51 @@ function groupByYear(events: TimelineEvent[]): Record<string, TimelineEvent[]> {
 
 function FamilyTab({ familyLabel }: { familyLabel: string }) {
   const { t } = useTranslation();
-  const { data: tree, isLoading } = useFamilyTree(familyLabel);
+  const projectLabel = familyLabel;                 // bare project group label
+  const SEP = " :: ";
   const upload = useUploadGedcom();
+  const { data: allFamilies } = useFamilies();
+
+  // ``activeSub`` = the full label of the selected sub-family, or null for
+  // "All" (every tree imported into this project, viewed together).
+  const [activeSub, setActiveSub] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "tree">("tree");
   const [editorOpen, setEditorOpen] = useState(false);
 
+  // The list/persons of the current selection (a single sub-family, or the
+  // whole project group when "All" is active).
+  const { data: tree, isLoading } = useFamilyTree(
+    activeSub ?? undefined,
+    activeSub ? undefined : projectLabel,
+  );
   const persons = tree?.persons ?? [];
 
-  // Any GEDCOM imported here is tagged with this project's label, so it
-  // stays isolated from the global library and from other projects.
+  // Sub-families that belong to THIS project: the bare project label plus any
+  // "<project> :: <sub>" labels. Keeps each imported GEDCOM in its own group
+  // so multiple trees never merge into one.
+  const subFamilies = (allFamilies ?? [])
+    .filter((f): f is { label: string; count: number } =>
+      !!f.label && (f.label === projectLabel || f.label.startsWith(projectLabel + SEP)));
+  const subDisplay = (label: string) =>
+    label === projectLabel ? t("family.unlabeled") : label.slice(projectLabel.length + SEP.length);
+
+  // Each imported file lands in its own sub-group, named after the file, so
+  // it stays isolated from the project's other trees (and other projects).
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
+    const stem = files[0].name
+      .replace(/\.(ged|gedcom)$/i, "").replace(/[_-]+/g, " ").trim() || "Árvore";
+    const sub = `${projectLabel}${SEP}${stem}`.slice(0, 120);
     try {
-      const r = await upload.mutateAsync({ file: files[0], familyLabel });
-      toast.success(`${r.message ?? t("common.success")}`);
+      const r = await upload.mutateAsync({ file: files[0], familyLabel: sub });
+      toast.success(`${r.message ?? t("common.success")}`, {
+        description: subDisplay(sub),
+      });
+      setActiveSub(sub);
     } catch (err) {
       toast.error(extractErrorMessage(err));
     }
-  }, [upload, familyLabel, t]);
+  }, [upload, projectLabel, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -488,6 +515,10 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
     noClick: true,
     noKeyboard: true,
   });
+
+  // Label used by the editor / export: the selected sub-family, or the bare
+  // project label when viewing "All".
+  const targetLabel = activeSub ?? projectLabel;
 
   return (
     <>
@@ -501,7 +532,7 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
             <button
               className="btn btn-ghost"
               onClick={async () => {
-                try { await downloadGedcom(familyLabel); }
+                try { await downloadGedcom(targetLabel); }
                 catch (err) { toast.error(extractErrorMessage(err)); }
               }}
             >
@@ -516,7 +547,8 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
       </div>
 
       <p className="mb-4 text-xs text-stone-500 dark:text-stone-500">
-        A família deste projeto («{familyLabel}») é independente da Biblioteca e dos outros projetos.
+        A família deste projeto («{projectLabel}») é independente da Biblioteca e dos outros projetos.
+        Cada ficheiro GEDCOM importado fica no seu próprio grupo.
       </p>
 
       <div
@@ -537,13 +569,29 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
         </p>
       </div>
 
+      {/* Sub-family chips — keep each imported tree separate. */}
+      {subFamilies.length > 1 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <SubChip active={activeSub === null} label={t("family.allFamilies")}
+                   count={subFamilies.reduce((s, f) => s + f.count, 0)}
+                   onClick={() => setActiveSub(null)} />
+          {subFamilies.map((f) => (
+            <SubChip key={f.label} active={activeSub === f.label}
+                     label={subDisplay(f.label)} count={f.count}
+                     onClick={() => setActiveSub(f.label)} />
+          ))}
+        </div>
+      )}
+
       <div className="mb-4 flex w-fit gap-1 rounded-xl border border-stone-200 p-1 text-sm dark:border-stone-800">
         <button onClick={() => setView("list")} className={cn("rounded-lg px-3 py-1.5", view === "list" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-600 dark:text-stone-400")}>{t("family.viewList")}</button>
         <button onClick={() => setView("tree")} className={cn("rounded-lg px-3 py-1.5", view === "tree" ? "bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-900" : "text-stone-600 dark:text-stone-400")}>{t("family.viewTree")}</button>
       </div>
 
       {view === "tree" ? (
-        <FamilyTree familyLabel={familyLabel} />
+        activeSub
+          ? <FamilyTree familyLabel={activeSub} />
+          : <FamilyTree group={projectLabel} />
       ) : isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
@@ -576,9 +624,29 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
       )}
 
       {editorOpen && (
-        <FamilyEditor familyLabel={familyLabel} onClose={() => setEditorOpen(false)} />
+        <FamilyEditor familyLabel={targetLabel} onClose={() => setEditorOpen(false)} />
       )}
     </>
+  );
+}
+
+function SubChip({
+  label, count, active, onClick,
+}: { label: string; count: number; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
+        active
+          ? "border-brand-400 bg-brand-100 text-brand-800 dark:border-brand-700 dark:bg-brand-900/40 dark:text-brand-200"
+          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300",
+      )}
+    >
+      <Users className="h-3 w-3" />
+      <span className="max-w-[12rem] truncate">{label}</span>
+      <span className="text-stone-500 dark:text-stone-500">· {count}</span>
+    </button>
   );
 }
 

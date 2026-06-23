@@ -45,10 +45,23 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       # ── App config ────────────────────────────────────────
+      # M1 vision model. NOTE: gemini-1.5-flash is discontinued (404) — the
+      # photo analysis silently failed in production with it. 2.5-flash is the
+      # current fast vision model.
       - key: GEMINI_MODEL
-        value: gemini-1.5-flash
+        value: gemini-2.5-flash
       - key: NARRATIVE_MAX_TOKENS
         value: "3500"
+      # ── M4 video render: keep it inside the 512MB free tier ──────────────
+      # MoviePy at 720p runs the instance out of memory, so every render got
+      # stuck on "A processar" forever. 480p@20fps fits comfortably. Lower
+      # further (640x360) if OOM still happens.
+      - key: VIDEO_WIDTH
+        value: "854"
+      - key: VIDEO_HEIGHT
+        value: "480"
+      - key: VIDEO_FPS
+        value: "20"
       # The frontend's deployed origin — used by the CORS middleware.
       # Set this after the first Vercel deploy gives you the URL.
       - key: CORS_ORIGINS
