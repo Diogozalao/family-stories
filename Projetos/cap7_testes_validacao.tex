@@ -155,7 +155,21 @@ na resolução de datas (M2) que faltava importar \texttt{UTC}. Foi ainda
 endurecida a resiliência a \emph{cold starts} do alojamento gratuito: um
 \emph{upload} ou geração cuja resposta se perca por o servidor estar a
 ``acordar'' deixa de surgir como ``Network Error'' bruto — a interface
-reverifica o estado e recupera de forma transparente. Globalmente, o
+reverifica o estado e recupera de forma transparente, e um \emph{ping} de
+\emph{wake} precede os \emph{uploads} para o servidor estar acordado antes
+do pedido pesado.
+
+Dois defeitos adicionais merecem nota. Primeiro, a \textbf{Linha Temporal}
+apresentava todos os eventos como ``sem data'' e sem fotografia: a
+\textsc{api} devolvia os campos \texttt{date}/\texttt{media\_id} enquanto o
+\emph{frontend} lia \texttt{event\_date}/\texttt{media\_file\_id} — um
+desalinhamento de nomes que esvaziava a vista; alinhados os nomes, a linha
+passou a posicionar corretamente os eventos e a mostrar, por evento, a
+família e as pessoas envolvidas. Segundo, a \textbf{geração de vídeo} ficava
+indefinidamente ``A processar'' em produção: a montagem a 720p excedia os
+$\approx$512~MB do plano gratuito (\emph{out-of-memory}); baixar a resolução
+para $854\times480$ resolveu, e foi adicionada a possibilidade de
+\textbf{eliminar vídeos} para limpar \emph{renders} falhados. Globalmente, o
 sistema cumpre os requisitos funcionais essenciais (\rf{1}--\rf{13}),
 produzindo narrativas e vídeos coerentes a partir de arquivos familiares
 reais.

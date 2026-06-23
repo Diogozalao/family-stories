@@ -125,6 +125,21 @@ entre o acervo), apresentada como \emph{avatar} na lista e \textbf{nos nós da
 \emph{interoperabilidade} com o formato standard — um inverso do
 \emph{parser} de importação.
 
+\textbf{Isolamento de múltiplas árvores.} Importar vários ficheiros GEDCOM
+levantava um problema subtil: as exportações genealógicas reiniciam quase
+sempre os identificadores em \texttt{@I1@} por ficheiro, pelo que a
+deduplicação por \texttt{(user\_id, gedcom\_id)} fazia a segunda família
+\emph{sobrescrever} a primeira, fundindo árvores sem relação. A solução foi
+\textbf{prefixar o \texttt{gedcom\_id} persistido com a etiqueta da família}
+(\texttt{"<família>::<id>"}; sem etiqueta, um \emph{id} de lote único), de
+modo que reimportar a \emph{mesma} família continua idempotente mas famílias
+distintas nunca colidem. Sobre este mecanismo, cada \textbf{projeto} mantém
+a sua família isolada e, dentro dele, cada GEDCOM importado fica num
+\textbf{sub-grupo próprio} (nomeado pelo ficheiro), alternável por
+\emph{chips} — uma vista por sub-família ou todas em conjunto (parâmetro
+\texttt{group} na \textsc{api}, que casa a etiqueta do projeto e as suas
+sub-etiquetas).
+
 \section{Módulo M3 --- Geração Narrativa}
 \label{sec:impl_m3}
 
@@ -136,41 +151,41 @@ O M3 é o módulo de IA generativa central. Combina três componentes: um
 
 O \texttt{LLMClient} implementa uma \textbf{cadeia de \emph{fallback} de
 três níveis} para a geração de texto: privilegia a inferência local via
-\emph{Ollama} (Llama~3.2~3B); se esta não estiver disponível, recorre ao
-\emph{Gemini~Flash} (nuvem, motor principal em produção); e, se o Gemini
-falhar, há ainda uma última rede de segurança no \emph{Groq} (modelos
-abertos em \emph{cloud}, camada gratuita), acionada apenas quando
-configurada e \emph{só para texto} --- a análise visual (M1) mantém-se
-\emph{Gemini-only}, por o Groq não oferecer visão equivalente. O
-\Cref{lst:llm} mostra o coração desta lógica: se a inferência local falhar
-\emph{durante} a geração, há \emph{fallback} em tempo de execução; só
-quando \emph{todos} os níveis falham é lançada uma exceção que marca a
+\emph{Ollama} (Llama~3.2~3B); se esta não estiver disponível --- como
+sucede no alojamento gratuito, sem \textsc{gpu} --- recorre ao \emph{Groq}
+(modelos abertos \emph{Llama~3.3~70B}, camada gratuita), que é o
+\textbf{motor de texto na nuvem}; e só se o Groq falhar entra o
+\emph{Gemini~Flash} como última rede de segurança. Esta ordem é
+\textbf{deliberada}: a quota gratuita do Gemini fica \textbf{reservada para
+a análise visual} (M1), que se mantém \emph{Gemini-only} por o Groq não
+oferecer visão equivalente. Reparte-se assim o texto (Groq) e a visão
+(Gemini) por dois serviços gratuitos distintos, evitando que compitam pela
+mesma quota diária. O \Cref{lst:llm} mostra o coração desta lógica: se um
+nível falhar \emph{durante} a geração, há \emph{fallback} em tempo de
+execução; só quando \emph{todos} falham é lançada uma exceção que marca a
 tarefa como falhada --- evitando guardar uma narrativa falsa.
 
 \begin{lstlisting}[language=Python,caption={Cliente LLM com cadeia de
-\emph{fallback} de três níveis (Ollama $\rightarrow$ Gemini $\rightarrow$
-Groq) em tempo de execução (\texttt{llm\_client.py}).},label={lst:llm}]
+\emph{fallback} de três níveis para texto (Ollama $\rightarrow$ Groq
+$\rightarrow$ Gemini); o Gemini fica reservado para a visão
+(\texttt{llm\_client.py}).},label={lst:llm}]
 def generate(self, prompt: str, max_tokens: int = 1500) -> str:
     if self._ollama_ok:                            # 1. local (privacidade)
         return self._ollama_generate(prompt, max_tokens)
-    return self._gemini_generate(prompt, max_tokens)  # 2. nuvem
+    if self._groq_ok:                              # 2. Groq (texto na nuvem)
+        return self._groq_generate(prompt, max_tokens)
+    return self._gemini_generate(prompt, max_tokens)  # 3. ultimo recurso
 
-def _ollama_generate(self, prompt: str, max_tokens: int) -> str:
+def _groq_generate(self, prompt, max_tokens, _prev_error=None) -> str:
     try:
-        response = ollama_client.generate(
-            model=settings.OLLAMA_MODEL, prompt=prompt, options={...})
-        return response.response.strip()
-    except Exception as e:                         # Ollama falhou em runtime
+        resp = Groq(api_key=settings.GROQ_API_KEY).chat.completions.create(
+            model=settings.GROQ_MODEL, messages=[{"role": "user",
+            "content": prompt}], max_tokens=max_tokens, temperature=0.7)
+        return resp.choices[0].message.content.strip()
+    except Exception as groq_exc:                  # Groq falhou -> Gemini
         self._setup_gemini()
-        return self._gemini_generate(prompt, max_tokens, _ollama_error=str(e))
-
-def _gemini_generate(self, prompt, max_tokens, _ollama_error=None) -> str:
-    try:
-        return self._gemini.generate_content(prompt, ...).text  # 2. Gemini
-    except Exception as exc:
-        if settings.GROQ_API_KEY:                  # 3. Groq (so' texto)
-            return self._groq_generate(prompt, max_tokens)
-        raise LLMUnavailableError(...)             # todos falharam -> falha
+        return self._gemini_generate(prompt, max_tokens,
+                                     _groq_error=str(groq_exc))
 \end{lstlisting}
 
 \subsection{Retrieval-Augmented Generation com degradação graciosa}
@@ -278,13 +293,37 @@ estudo inicial identificou como o desafio técnico central do M4
 (\Cref{sub:geracao_video}): cada fotografia visível exatamente durante a
 sua narração.
 
+\subsection{Ancoragem nas fotografias e seleção pelo utilizador}
+\label{sub:selecao_fotos}
+
+A narrativa \textbf{não} se baseia apenas na árvore e nas notas que o
+utilizador escreve: o construtor de contexto (\texttt{\_build\_events\_from\_media})
+incorpora, para cada fotografia, a \textbf{descrição gerada pela visão}, o
+\textsc{ocr} (texto de documentos, como certidões), o cenário, a emoção, as
+\emph{tags} e \emph{quem aparece} na imagem. São estes factos visuais que
+ancoram o texto a momentos concretos --- e, por via da segmentação em cenas
+descrita acima, determinam também a \textbf{ordem das imagens no vídeo}.
+
+Por defeito, são consideradas todas as fotografias disponíveis (ou, numa
+biblioteca grande, as que o \textsc{rag} julga relevantes ao tema). Foi
+acrescentada a possibilidade de o utilizador \textbf{escolher explicitamente
+quais as fotografias} que entram numa história, diretamente no assistente de
+geração: a lista de \texttt{media\_ids} selecionados é enviada ao gerador,
+que restringe o contexto a essas imagens (saltando o \emph{retrieval}
+automático). Como a narrativa alimenta a segmentação em cenas, esta escolha
+propaga-se ao vídeo. O mecanismo funciona tanto no acervo geral como
+\emph{dentro de um projeto} (onde a seleção se limita às fotografias do
+projeto), dando ao utilizador controlo curatorial sobre o produto final.
+
 \section{Módulo M4 --- Geração Multimédia}
 \label{sec:impl_m4}
 
 O M4 converte uma narrativa num \textbf{vídeo documental} MP4 (H.264,
 $1280\times720$, 24~fps por defeito --- a resolução e os \emph{frames}/segundo
 são parametrizáveis por variável de ambiente, permitindo aliviar a memória em
-ambientes restritos, \Cref{sec:limitacoes}). O \texttt{M4Processor} orquestra a
+ambientes restritos, \Cref{sec:limitacoes}; em produção usa-se $854\times480$
+a 20~fps, pois a 720p o \emph{render} excedia os 512~MB e deixava o vídeo
+preso indefinidamente em processamento). O \texttt{M4Processor} orquestra a
 seleção cronológica das fotografias, a síntese de voz da narrativa e a montagem
 do vídeo, mantendo apenas espaço de trabalho temporário no disco (as
 fotografias e o vídeo final vivem no \emph{Storage}). A montagem corre numa

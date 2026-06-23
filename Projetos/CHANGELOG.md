@@ -19,20 +19,18 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 >   para não esgotar a quota gratuita). O parágrafo "Um fornecedor, não vários"
 >   foi substituído por "Repartir por tarefa, mantendo o custo nulo".
 
-> **Ainda por escrever (features novas desta sessão — dão pontos no relatório):**
-> - **[Adição]** `cap6...tex` §M3 — **seleção de fotografias** no assistente de
->   geração: o utilizador escolhe que fotos entram na narrativa (e, por arrasto,
->   no vídeo); confirma também que as narrativas **já** usam descrição/OCR/quem
->   aparece das fotos (não só a árvore).
-> - **[Adição]** `cap6...tex` §M2 — **Projeto→Família** com sub-famílias
->   separadas por ficheiro GEDCOM (param `group` na API) + namespacing de
->   `gedcom_id` por família (evita colisão de `@I1@` entre ficheiros).
-> - **[Correção]** `cap7...tex` — **bug da Linha Temporal** (API devolvia
->   `date`/`media_id`, frontend lia `event_date`/`media_file_id` → eventos sem
->   data/foto); timeline passou a mostrar família + pessoas do evento.
-> - **[Adição]** `cap6/cap7` §M4 — resolução de vídeo **parametrizável**
->   (854×480@20 em produção) para caber nos 512MB do Render free (os vídeos
->   ficavam presos em "A processar" por OOM a 720p).
+> **Já escrito por mim no `.tex`** (confirma/copia no Overleaf):
+> - **[Reescrita]** `cap6...tex` §M3 "Cliente LLM híbrido" — prosa **e** código
+>   atualizados para o routing novo (Ollama→Groq→Gemini; Gemini reservado p/ visão).
+> - **[Adição]** `cap6...tex` §M3 nova subsecção "Ancoragem nas fotografias e
+>   seleção pelo utilizador" (`\ref{sub:selecao_fotos}`) — narrativas usam
+>   descrição/OCR/quem-aparece das fotos + o utilizador escolhe `media_ids`.
+> - **[Adição]** `cap6...tex` §M2 par. "Isolamento de múltiplas árvores" —
+>   namespacing de `gedcom_id` por família + Projeto→Família com sub-grupos.
+> - **[Adição]** `cap6...tex` §M4 — produção usa 854×480@20 (720p dava OOM).
+> - **[Adição/Correção]** `cap7...tex` §"Resultados e Bugs" — bug da Linha
+>   Temporal (date/media_id ≠ event_date/media_file_id) + OOM dos vídeos +
+>   apagar vídeos + wake-ping nos uploads.
 
 ## 2026-06-22 — Capa: design FE-UBI + logótipo
 
