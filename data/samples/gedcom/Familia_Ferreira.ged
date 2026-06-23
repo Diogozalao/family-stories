@@ -1,0 +1,188 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 23 JUN 2026
+1 NOTE Familia Ferreira — cinco geracoes do Alentejo (Evora e Beja). Cada pessoa tem uma descricao rica na nota: caracter, profissao, contexto historico e episodios de vida. Adapta as datas e nomes a tua familia real.
+0 @I1@ INDI
+1 NAME Anselmo /Ferreira/
+1 SEX M
+1 BIRT
+2 DATE 14 AUG 1890
+2 PLAC Reguengos de Monsaraz, Evora, Portugal
+1 DEAT
+2 DATE 3 FEB 1968
+2 PLAC Reguengos de Monsaraz, Evora, Portugal
+1 OCCU Seareiro e pastor
+1 NOTE Trisavo, fundador do ramo alentejano. Nasceu numa casa caiada de branco perto de Monsaraz, filho de assalariados rurais. Desde menino guardou rebanhos na planicie e aprendeu o cante alentejano com os ceifeiros.
+2 CONT Homem alto, queimado pelo sol e de mao calejada, era respeitado pela honestidade: emprestava graos aos vizinhos nos anos de seca e nunca cobrava juros. Conhecia cada azinheira da herdade pelo nome.
+2 CONT Casou com Custodia em 1915 e viveu sempre da terra, atravessando a Republica e a guerra. Cantava como ponto num grupo coral e morreu aos 77 anos, debaixo da figueira do quintal numa tarde de verao.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Custodia /Rosa/
+1 SEX F
+1 BIRT
+2 DATE 7 DEC 1894
+2 PLAC Mourao, Evora, Portugal
+1 DEAT
+2 DATE 19 MAY 1981
+2 PLAC Reguengos de Monsaraz, Evora, Portugal
+1 OCCU Ceifeira e dona de casa
+1 NOTE Trisavo. Filha de jornaleiros de Mourao, comecou a ceifar aos onze anos ao lado da mae. Pequena de estatura mas de genio forte, comandava a casa e a eira com a mesma firmeza.
+2 CONT Era curandeira reconhecida na aldeia: sabia ervas, fazia mezinhas e benzia o mal-disposto. As mulheres da terra batiam-lhe a porta para partos e maleitas.
+2 CONT Teve cinco filhos, dos quais sobreviveram quatro. Ficou viuva em 1968 e passou a velhice a fiar la e a contar contos de encantamentos aos netos. Morreu aos 86 anos.
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Joaquim /Ferreira/
+1 SEX M
+1 BIRT
+2 DATE 25 MAR 1920
+2 PLAC Reguengos de Monsaraz, Evora, Portugal
+1 DEAT
+2 DATE 11 OCT 1995
+2 PLAC Beja, Portugal
+1 OCCU Funcionario dos Correios
+1 NOTE Bisavo. Segundo filho de Anselmo e Custodia, foi o primeiro a sair da lavoura. Aprendeu a ler com o padre da aldeia e, com esse trunfo raro, entrou para os Correios, chegando a carteiro-chefe em Beja.
+2 CONT De bicicleta preta e saco a tiracolo, conhecia toda a gente nas voltas que dava pelos montes alentejanos. Trazia noticias, lia cartas aos analfabetos e era figura querida da regiao.
+2 CONT Casou com Idalina em 1944, em plena guerra mundial, e mudou-se para a cidade de Beja. Apaixonado por radio, ouvia as emissoes a noite. Reformou-se em 1985 e morreu de avc aos 75 anos.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Idalina /Caeiro/
+1 SEX F
+1 BIRT
+2 DATE 2 JUN 1924
+2 PLAC Vidigueira, Beja, Portugal
+1 DEAT
+2 DATE 30 JAN 2012
+2 PLAC Beja, Portugal
+1 OCCU Cozinheira
+1 NOTE Bisavo, esposa de Joaquim. Filha de vinhateiros da Vidigueira, ganhou fama como cozinheira de casamentos e festas: as suas migas, acordas e ensopados de borrego enchiam mesas de toda a regiao.
+2 CONT Generosa e trabalhadora, nunca deixou ninguem sair de sua casa sem comer. Guardava as receitas de cabeca e media tudo a olho. Tinha mao para os doces de amendoa do convento.
+2 CONT Casou com Joaquim em 1944 e criou tres filhos com o ordenado curto dos Correios e muita imaginacao. Ficou viuva em 1995 e morreu aos 87 anos, rodeada de netos e bisnetos.
+1 FAMS @F2@
+0 @I5@ INDI
+1 NAME Mariana /Ferreira/
+1 SEX F
+1 BIRT
+2 DATE 18 SEP 1946
+2 PLAC Beja, Portugal
+1 DEAT
+2 DATE 4 APR 2021
+2 PLAC Evora, Portugal
+1 OCCU Professora primaria
+1 EDUC Magisterio Primario de Beja
+1 NOTE Avo. Filha mais velha de Joaquim e Idalina, realizou o sonho da mae de ter um curso: formou-se professora e ensinou a ler a varias geracoes de criancas em aldeias do Alentejo, muitas vezes em escolas isoladas.
+2 CONT Idealista e firme, lutou para que as raparigas continuassem a estudar. Levava livros e leite as escolas mais pobres. Era exigente mas adorada pelos antigos alunos, que a visitavam ja adultos.
+2 CONT Casou com Sebastiao em 1970 e mudou-se para Evora. Apaixonada por historia local, escreveu um caderno sobre a aldeia dos pais. Morreu aos 74 anos, deixando uma biblioteca aos netos.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I6@ INDI
+1 NAME Vitor /Ferreira/
+1 SEX M
+1 BIRT
+2 DATE 23 JUL 1949
+2 PLAC Beja, Portugal
+1 OCCU Mecanico e empresario
+1 NOTE Avo-tio, irmao de Mariana. Engenhoso com as maos, abriu uma oficina de tratores em Beja nos anos 70, no auge da mecanizacao agricola do Alentejo, e transformou-a numa pequena empresa de maquinas.
+2 CONT Trabalhador incansavel e brincalhao, era o contador de anedotas da familia. Emigrou alguns anos para Franca, onde juntou dinheiro para o negocio, e voltou com um sotaque afrancesado que nunca largou.
+2 CONT Vive ainda em Beja, ja reformado, a tratar de uma horta e a jogar as cartas no cafe. Tem dois filhos que continuam a oficina.
+1 FAMC @F2@
+0 @I7@ INDI
+1 NAME Sebastiao /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 9 JAN 1944
+2 PLAC Estremoz, Evora, Portugal
+1 DEAT
+2 DATE 16 NOV 2018
+2 PLAC Evora, Portugal
+1 OCCU Canteiro e marmorista
+1 NOTE Avo, marido de Mariana. Natural de Estremoz, a terra dos marmores, seguiu o oficio do pai e tornou-se mestre marmorista. As suas pecas em marmore rosa decoram igrejas e jardins de todo o Alentejo.
+2 CONT Calmo e meticuloso, media tudo duas vezes antes de cortar. Tinha as maos brancas do po da pedra e um orgulho enorme na arte. Ensinou o oficio a varios aprendizes.
+2 CONT Casou com Mariana em 1970 e foi um marido devotado. Tocava viola nas tertulias e gostava de touradas. Morreu aos 74 anos de doenca respiratoria ligada ao po de pedra.
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Teresa /Ferreira Lopes/
+1 SEX F
+1 BIRT
+2 DATE 12 MAY 1973
+2 PLAC Evora, Portugal
+1 OCCU Enologa
+1 EDUC Universidade de Evora
+1 NOTE Mae. Filha de Mariana e Sebastiao, cresceu entre os livros da mae e as pedras do pai e escolheu o vinho como caminho. Formou-se em Enologia na Universidade de Evora e e enologa numa adega de referencia do Alentejo.
+2 CONT Sensorial e perfecionista, prova vinhos como quem le poesia e ja venceu premios internacionais com os seus tintos. Defende as castas autoctones e a recuperacao de vinhas velhas.
+2 CONT Conheceu Andre numa vindima em 1999 e casaram em 2002. Concilia a adega com a familia e leva os filhos a apanhar uvas todos os setembros, para que conhecam a terra dos avos.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I9@ INDI
+1 NAME Andre /Marques/
+1 SEX M
+1 BIRT
+2 DATE 27 OCT 1971
+2 PLAC Montemor-o-Novo, Evora, Portugal
+1 OCCU Veterinario
+1 EDUC Universidade de Evora
+1 NOTE Pai. Natural de Montemor-o-Novo, filho de criadores de gado bravo, e veterinario especializado em equinos e bovinos. Acompanha coudelarias e ganadarias por todo o Alentejo e Ribatejo.
+2 CONT Pratico e bem-humorado, e madrugador por habito de campo e cavaleiro nas horas vagas. Conhece de cor as linhagens dos cavalos lusitanos da regiao.
+2 CONT Casou com Teresa em 2002 depois de a conhecer numa vindima. E um pai presente que ensina os filhos a andar a cavalo e a respeitar os animais. Sonha ter uma pequena coudelaria propria.
+1 FAMS @F4@
+0 @I10@ INDI
+1 NAME Goncalo /Marques Ferreira/
+1 SEX M
+1 BIRT
+2 DATE 8 AUG 2003
+2 PLAC Evora, Portugal
+1 OCCU Estudante de Medicina Veterinaria
+1 EDUC Universidade de Evora
+1 NOTE Filho mais velho de Teresa e Andre, segue as pisadas do pai e estuda Medicina Veterinaria em Evora. Cresceu entre cavalos e vinhas e sente-se profundamente alentejano.
+2 CONT Sereno e responsavel, monta a cavalo desde os cinco anos e ja ajuda o pai nas visitas as ganadarias. Toca cavaquinho e canta no grupo coral da universidade, mantendo viva a tradicao do cante.
+2 CONT Representa, com a irma Ines, a quinta geracao desta arvore dos Ferreira.
+1 FAMC @F4@
+0 @I11@ INDI
+1 NAME Ines /Marques Ferreira/
+1 SEX F
+1 BIRT
+2 DATE 2 MAR 2007
+2 PLAC Evora, Portugal
+1 OCCU Estudante
+1 NOTE Filha mais nova de Teresa e Andre. Curiosa e faladora, herdou o nariz fino da mae para os aromas e diz que quer ser enologa. Passa as vindimas na adega a provar mostos com a mae.
+2 CONT Apaixonada por musica, toca piano e organiza as fotografias da familia em albuns. E a neta que mais perguntava a bisavo Idalina pelas receitas antigas, hoje guardadas num caderno seu.
+2 CONT Fecha, com o irmao Goncalo, a quinta geracao retratada nesta arvore.
+1 FAMC @F4@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 12 SEP 1915
+2 PLAC Reguengos de Monsaraz, Evora, Portugal
+1 CHIL @I3@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 MARR
+2 DATE 6 FEB 1944
+2 PLAC Beja, Portugal
+1 CHIL @I5@
+1 CHIL @I6@
+0 @F3@ FAM
+1 HUSB @I7@
+1 WIFE @I5@
+1 MARR
+2 DATE 25 APR 1970
+2 PLAC Beja, Portugal
+1 CHIL @I8@
+0 @F4@ FAM
+1 HUSB @I9@
+1 WIFE @I8@
+1 MARR
+2 DATE 14 SEP 2002
+2 PLAC Evora, Portugal
+1 CHIL @I10@
+1 CHIL @I11@
+0 TRLR

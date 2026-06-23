@@ -1,0 +1,249 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 23 JUN 2026
+1 NOTE Familia Pereira — cinco geracoes do Norte de Portugal (Amarante e Porto). Cada pessoa traz uma descricao detalhada na nota: personalidade, profissao, contexto historico e factos de vida. Edita livremente para a tua familia real.
+0 @I1@ INDI
+1 NAME Joaquim /Pereira/
+1 SEX M
+1 BIRT
+2 DATE 3 MAR 1888
+2 PLAC Teloes, Amarante, Porto, Portugal
+1 DEAT
+2 DATE 12 NOV 1961
+2 PLAC Amarante, Porto, Portugal
+1 OCCU Lavrador e viticultor
+1 NOTE Trisavo paterno, o patriarca da familia. Nasceu numa casa de granito na freguesia de Teloes, o mais velho de sete irmaos, e cedo aprendeu a trabalhar as vinhas de vinho verde nas encostas do rio Tamega.
+2 CONT Homem de poucas palavras mas de palavra firme, era conhecido na aldeia por nunca faltar a uma feira em Amarante e por saber ler o ceu para prever a chuva. Plantou os socalcos de vinha que a familia ainda hoje recorda.
+2 CONT Casou com Rosa Tavares em 1912 e juntos atravessaram a I Republica, a I Guerra e a ditadura. Tocava concertina nas vindimas e gostava de contar historias dos almocreves que cruzavam a serra. Morreu aos 73 anos, na cama onde nascera.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Rosa /Tavares/
+1 SEX F
+1 BIRT
+2 DATE 21 JUN 1892
+2 PLAC Penafiel, Porto, Portugal
+1 DEAT
+2 DATE 4 FEB 1979
+2 PLAC Amarante, Porto, Portugal
+1 OCCU Tecedeira e dona de casa
+1 NOTE Trisavo paterna. Filha de um moleiro de Penafiel, aprendeu a tecer linho em tear de pe antes dos doze anos e fazia o enxoval de meia aldeia.
+2 CONT Mulher devota e de riso facil, criou seis filhos com mao de ferro e coracao mole. Rezava o terco todas as noites e guardava as receitas de doces conventuais num caderno que passou as netas.
+2 CONT Ficou viuva em 1961 e viveu mais dezoito anos rodeada de netos, a quem contava lendas de mouras encantadas do Marao. Morreu serenamente aos 86 anos, num inverno rigoroso.
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Augusto /Pereira/
+1 SEX M
+1 BIRT
+2 DATE 9 JAN 1914
+2 PLAC Amarante, Porto, Portugal
+1 DEAT
+2 DATE 27 AUG 1991
+2 PLAC Porto, Portugal
+1 OCCU Ferroviario (chefe de estacao)
+1 NOTE Bisavo paterno. Primeiro filho varao de Joaquim e Rosa, foi tambem o primeiro da familia a deixar a terra: entrou nos Caminhos de Ferro aos dezanove anos e subiu de guarda-freios a chefe da estacao de Campanha, no Porto.
+2 CONT Orgulhoso da farda e do relogio de bolso da companhia, era pontual ao minuto e nunca perdeu um comboio em quarenta anos de servico. Mudou-se para o Porto em 1938, onde criou a familia num predio da Rua de Costa Cabral.
+2 CONT Apaixonado por futebol, foi socio do clube desde jovem e levava os filhos ao estadio. Reformou-se em 1979 e dedicou os ultimos anos a horta de fim de semana em Valongo. Morreu de enfarte aos 77 anos.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Beatriz /Pereira/
+1 SEX F
+1 BIRT
+2 DATE 30 OCT 1916
+2 PLAC Amarante, Porto, Portugal
+1 DEAT
+2 DATE 15 MAR 2003
+2 PLAC Amarante, Porto, Portugal
+1 OCCU Costureira
+1 NOTE Bisavo-tia, irma de Augusto. Ao contrario do irmao, nunca quis sair de Amarante. Abriu uma pequena oficina de costura junto a ponte de Sao Goncalo, onde vestiu noivas de tres geracoes.
+2 CONT Mulher alegre e faladora, era a memoria viva da familia e quem juntava todos no Natal. Bordava a ponto-cruz os nomes dos sobrinhos em lencos que ainda se guardam.
+2 CONT Casou tarde, aos 24 anos, com Manuel Sousa, e teve um unico filho. Viveu quase 87 anos e morreu na casa de familia, lucida ate ao fim.
+1 FAMC @F1@
+1 FAMS @F6@
+0 @I5@ INDI
+1 NAME Conceicao /Moreira/
+1 SEX F
+1 BIRT
+2 DATE 14 FEB 1918
+2 PLAC Marco de Canaveses, Porto, Portugal
+1 DEAT
+2 DATE 2 DEC 1999
+2 PLAC Porto, Portugal
+1 OCCU Modista
+1 NOTE Bisavo paterna, esposa de Augusto. Filha de comerciantes do Marco de Canaveses, conheceu o marido numa romaria de Sao Joao e casou com ele em 1938.
+2 CONT Elegante e de gosto apurado, tinha um atelie de modista em casa e cosia os vestidos das senhoras da vizinhanca. Falava um pouco de frances, aprendido em revistas, e sonhava conhecer Paris.
+2 CONT Gestora habil do orcamento familiar, foi ela quem garantiu que os dois filhos estudassem. Adorava cinema e nao perdia as estreias no Aguia d'Ouro. Ficou viuva em 1991 e morreu aos 81 anos, oito anos depois do marido.
+1 FAMS @F2@
+0 @I6@ INDI
+1 NAME Fernando /Pereira/
+1 SEX M
+1 BIRT
+2 DATE 5 JUL 1942
+2 PLAC Porto, Portugal
+1 DEAT
+2 DATE 19 JAN 2018
+2 PLAC Porto, Portugal
+1 OCCU Engenheiro mecanico
+1 EDUC Faculdade de Engenharia da Universidade do Porto
+1 NOTE Avo paterno. Nascido ja no Porto, foi o orgulho academico da familia: tirou Engenharia Mecanica na Universidade do Porto, sendo o primeiro Pereira a ter um curso superior.
+2 CONT Trabalhou numa fabrica de maquinas-ferramenta em Rio Tinto, onde chegou a diretor de producao. Metodico e curioso, montava radios nos tempos livres e foi dos primeiros do bairro a ter automovel.
+2 CONT Conheceu Helena Castro num baile de finalistas em Braga e casaram em 1969. Foi um pai presente, que ensinava matematica aos filhos a noite. Reformou-se em 2007 e morreu de doenca prolongada aos 75 anos.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I7@ INDI
+1 NAME Gloria /Pereira/
+1 SEX F
+1 BIRT
+2 DATE 11 APR 1945
+2 PLAC Porto, Portugal
+1 OCCU Professora do ensino secundario
+1 EDUC Faculdade de Letras da Universidade do Porto
+1 NOTE Avo-tia, irma de Fernando. Professora de Portugues e Latim durante quarenta anos, marcou geracoes de alunos numa escola de Matosinhos. Solteira por opcao, dizia que tinha centenas de filhos nas salas de aula.
+2 CONT Intelectual e viajada, percorreu a Europa de comboio nas ferias e tem uma biblioteca de milhares de livros. Foi militante pela liberdade nos anos 70 e guarda recortes de jornais do 25 de Abril.
+2 CONT Aos oitenta e poucos anos continua autonoma, escreve poesia e e a cronista oficiosa da familia, sempre pronta a corrigir datas e nomes.
+1 FAMC @F2@
+0 @I8@ INDI
+1 NAME Manuel /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 22 MAR 1913
+2 PLAC Amarante, Porto, Portugal
+1 DEAT
+2 DATE 8 JUL 1989
+2 PLAC Amarante, Porto, Portugal
+1 OCCU Carpinteiro e marceneiro
+1 NOTE Marido de Beatriz. Mestre carpinteiro de Amarante, fez moveis e altares para igrejas de toda a regiao do Tamega. As suas arcas de castanho ainda se encontram em muitas casas.
+2 CONT Homem paciente e bem-disposto, ensinava o oficio a rapazes da terra de graca. Tocava bombo na banda filarmonica local e era figura certa nas festas de Sao Goncalo.
+2 CONT Casou com Beatriz em 1940 e foram um casal inseparavel. Morreu aos 76 anos, deixando a oficina ao genro.
+1 FAMS @F6@
+0 @I15@ INDI
+1 NAME Jorge /Sousa/
+1 SEX M
+1 BIRT
+2 DATE 3 SEP 1941
+2 PLAC Amarante, Porto, Portugal
+1 DEAT
+2 DATE 27 DEC 2019
+2 PLAC Vila Real, Portugal
+1 OCCU Funcionario bancario
+1 NOTE Primo-avo, filho unico de Beatriz e Manuel. Saiu de Amarante para gerir um balcao bancario em Vila Real, onde fez vida. Calculista e conservador, era o consultor financeiro informal de toda a familia.
+2 CONT Colecionava moedas antigas e selos, paixao que herdou do pai. Casou mas nao teve filhos, pelo que o ramo dos Sousa se fechou nele. Morreu aos 78 anos.
+1 FAMC @F6@
+0 @I9@ INDI
+1 NAME Helena /Castro/
+1 SEX F
+1 BIRT
+2 DATE 28 SEP 1947
+2 PLAC Braga, Portugal
+1 OCCU Enfermeira
+1 NOTE Avo paterna, esposa de Fernando. Bracarense de gema, filha de um tipografo, formou-se enfermeira no Hospital de Sao Marcos e trabalhou em maternidades durante decadas, tendo ajudado a nascer centenas de bebes.
+2 CONT Carinhosa e energica, e o pilar afetivo da familia e a melhor cozinheira de bacalhau a Gomes de Sa que os netos conhecem. Conserva o sotaque minhoto e o gosto pelas romarias.
+2 CONT Casou com Fernando em 1969 e ficou viuva em 2018. Aos quase oitenta anos cuida do jardim, faz tricot para os bisnetos e nao falha o almoco de domingo.
+1 FAMS @F3@
+0 @I10@ INDI
+1 NAME Ines /Pereira/
+1 SEX F
+1 BIRT
+2 DATE 3 MAR 1972
+2 PLAC Porto, Portugal
+1 OCCU Medica cardiologista
+1 EDUC Instituto de Ciencias Biomedicas Abel Salazar
+1 NOTE Mae. Filha mais velha de Fernando e Helena, herdou a disciplina do pai e a vocacao para cuidar da mae. Formou-se em Medicina no ICBAS e especializou-se em cardiologia, exercendo num hospital central do Porto.
+2 CONT Determinada e organizada, conciliou uma carreira exigente com a familia. Corre meias-maratonas, fala ingles e espanhol e ja apresentou trabalhos em congressos internacionais.
+2 CONT Conheceu Rui Almeida na faculdade, em comissoes de praxe, e casaram em 1998. E a ponte entre as geracoes mais velhas e os filhos, e quem digitaliza as fotografias antigas da familia.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I11@ INDI
+1 NAME Joel /Pereira/
+1 SEX M
+1 BIRT
+2 DATE 17 DEC 1975
+2 PLAC Porto, Portugal
+1 OCCU Arquiteto
+1 EDUC Faculdade de Arquitetura da Universidade do Porto
+1 NOTE Tio, irmao de Ines. Arquiteto formado pela Escola do Porto, trabalha em reabilitacao de casas antigas e tem um atelie na Foz. Sensivel e criativo, e o artista da familia.
+2 CONT Fotografa a preto e branco, anda de bicicleta pela cidade e e fa de jazz. Vive entre o Porto e projetos no estrangeiro, e ainda nao constituiu familia.
+2 CONT E o tio divertido que leva os sobrinhos a museus e lhes ensina a desenhar. Restaurou a casa de vinha dos trisavos em Teloes, devolvendo-a a familia.
+1 FAMC @F3@
+0 @I12@ INDI
+1 NAME Rui /Almeida/
+1 SEX M
+1 BIRT
+2 DATE 2 AUG 1970
+2 PLAC Vila Nova de Gaia, Porto, Portugal
+1 OCCU Advogado
+1 EDUC Faculdade de Direito da Universidade de Coimbra
+1 NOTE Pai. Natural de Vila Nova de Gaia, filho de um funcionario das caves do vinho do Porto. Formou-se em Direito em Coimbra e e socio de uma sociedade de advogados na Baixa portuense, especializado em direito comercial.
+2 CONT Falador e sociavel, adora discutir politica e historia ao jantar. Apaixonado pelo vinho do Porto, mantem uma pequena garrafeira e conhece todas as castas do Douro.
+2 CONT Casou com Ines em 1998 e e um pai dedicado que nunca falta aos jogos e concertos dos filhos. Joga padel ao sabado e sonha reformar-se numa quinta no Douro.
+1 FAMS @F4@
+0 @I13@ INDI
+1 NAME Tomas /Almeida Pereira/
+1 SEX M
+1 BIRT
+2 DATE 21 MAY 2001
+2 PLAC Porto, Portugal
+1 OCCU Estudante de Engenharia Informatica
+1 EDUC Universidade da Beira Interior
+1 NOTE Filho mais velho de Ines e Rui, da geracao mais nova da familia. Curioso e tecnologico desde crianca, desmontava brinquedos para perceber como funcionavam. Estuda Engenharia Informatica na Covilha.
+2 CONT Programador entusiasta, joga em equipa de eSports e e o suporte informatico de toda a familia, incluindo a bisavo Helena. Fala ingles fluente e ja fez um Erasmus na Holanda.
+2 CONT E ele quem esta a digitalizar a arvore genealogica da familia, motivado pelas historias da tia-avo Gloria.
+1 FAMC @F4@
+0 @I14@ INDI
+1 NAME Carolina /Almeida Pereira/
+1 SEX F
+1 BIRT
+2 DATE 6 OCT 2004
+2 PLAC Porto, Portugal
+1 OCCU Estudante
+1 NOTE Filha mais nova de Ines e Rui. Extrovertida e artistica, herdou o olhar do tio Joel: pinta, faz teatro amador e canta num coro juvenil. Sonha estudar Belas-Artes.
+2 CONT Proxima da avo Helena, com quem cozinha aos domingos, e a neta que mais pergunta pelas historias antigas. Apaixonada por viagens, ja encheu um caderno com bilhetes e fotografias.
+2 CONT Representa, com o irmao Tomas, a quinta geracao dos Pereira retratada nesta arvore.
+1 FAMC @F4@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 18 MAY 1912
+2 PLAC Amarante, Porto, Portugal
+1 CHIL @I3@
+1 CHIL @I4@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I5@
+1 MARR
+2 DATE 22 SEP 1938
+2 PLAC Marco de Canaveses, Porto, Portugal
+1 CHIL @I6@
+1 CHIL @I7@
+0 @F3@ FAM
+1 HUSB @I6@
+1 WIFE @I9@
+1 MARR
+2 DATE 14 JUN 1969
+2 PLAC Braga, Portugal
+1 CHIL @I10@
+1 CHIL @I11@
+0 @F4@ FAM
+1 HUSB @I12@
+1 WIFE @I10@
+1 MARR
+2 DATE 9 SEP 1998
+2 PLAC Porto, Portugal
+1 CHIL @I13@
+1 CHIL @I14@
+0 @F6@ FAM
+1 HUSB @I8@
+1 WIFE @I4@
+1 MARR
+2 DATE 5 OCT 1940
+2 PLAC Amarante, Porto, Portugal
+1 CHIL @I15@
+0 TRLR

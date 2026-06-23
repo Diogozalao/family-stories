@@ -1,0 +1,127 @@
+0 HEAD
+1 SOUR LivingMemory
+2 NAME Living Memory
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+0 @I1@ INDI
+1 NAME Diogo /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 28 FEB 2005
+2 PLAC Alverca do Ribatejo
+1 NOTE tem 21 anos, nasceu em Alverca do Ribatejo, gosta de praticar Judo e estuda Engenharia informárica, este nos seus tempos livres gosta de ir a cafés e falar com pessoas. Termina a licenciatura este ano e está agora  a realizar o projeto de curso
+1 FAMS @F7@
+1 FAMC @F1@
+0 @I2@ INDI
+1 NAME Augusto /Dinis/
+1 SEX M
+1 FAMS @F1@
+1 FAMC @F2@
+0 @I3@ INDI
+1 NAME Célia Lopes /Dinis/
+1 SEX F
+1 FAMS @F1@
+1 FAMC @F3@
+0 @I4@ INDI
+1 NAME José /Dinis/
+1 SEX M
+1 FAMS @F2@
+0 @I5@ INDI
+1 NAME Túlia /Dinis/
+1 SEX F
+1 FAMS @F2@
+0 @I6@ INDI
+1 NAME Herculano /Lopes/
+1 SEX M
+1 FAMS @F3@
+0 @I7@ INDI
+1 NAME Alzira /lopes/
+1 SEX F
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Sofia Lopes /Dinis/
+1 FAMC @F1@
+0 @I9@ INDI
+1 NAME Marta /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 28 FEB 2005
+2 PLAC Oeiras
+1 NOTE Estuda na UBI, CPRI - é conhecida como mujito e faz parte de uma tuna no qual o naipe dele é o estandarte. Ela gosta de fazer coisas marotas com o Diogo o seu namorado e deve passar os seu próximos dois anos na Turquia porque tem um sonho de ir para um campo de refugiados
+1 FAMS @F7@
+0 @I10@ INDI
+1 NAME Zé /Dinis/
+1 FAMS @F6@
+1 FAMC @F2@
+0 @I11@ INDI
+1 NAME Quistina /Dinis/
+1 FAMS @F5@
+1 FAMC @F2@
+0 @I12@ INDI
+1 NAME João José /Lopes/
+1 FAMS @F4@
+1 FAMC @F3@
+0 @I13@ INDI
+1 NAME Carolina Moreira /Lopes/
+1 FAMC @F4@
+0 @I14@ INDI
+1 NAME João Miguel /Lopes/
+1 FAMC @F4@
+0 @I15@ INDI
+1 NAME Eduardo /Dinis/
+1 FAMC @F6@
+0 @I16@ INDI
+1 NAME Leonor Dominges /Dinis/
+1 FAMC @F5@
+0 @I17@ INDI
+1 NAME Lena /Dinis/
+1 SEX F
+1 FAMS @F6@
+0 @I18@ INDI
+1 NAME Jorge /Domingues/
+1 SEX M
+1 FAMS @F5@
+0 @I19@ INDI
+1 NAME Guilherme /Dinis/
+1 SEX M
+1 FAMC @F6@
+0 @I20@ INDI
+1 NAME Filipe Dinis /Domingues/
+1 SEX M
+1 FAMC @F5@
+0 @F1@ FAM
+1 HUSB @I2@
+1 WIFE @I3@
+1 CHIL @I1@
+1 CHIL @I8@
+0 @F2@ FAM
+1 HUSB @I4@
+1 WIFE @I5@
+1 CHIL @I2@
+1 CHIL @I10@
+1 CHIL @I11@
+0 @F3@ FAM
+1 HUSB @I6@
+1 WIFE @I7@
+1 CHIL @I3@
+1 CHIL @I12@
+0 @F4@ FAM
+1 HUSB @I12@
+1 CHIL @I13@
+1 CHIL @I14@
+0 @F5@ FAM
+1 HUSB @I18@
+1 WIFE @I11@
+1 CHIL @I16@
+1 CHIL @I20@
+0 @F6@ FAM
+1 HUSB @I10@
+1 WIFE @I17@
+1 CHIL @I19@
+1 CHIL @I15@
+0 @F7@ FAM
+1 HUSB @I1@
+1 WIFE @I9@
+0 TRLR

@@ -1,0 +1,209 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 23 JUN 2026
+1 NOTE Familia Nogueira — cinco geracoes da Beira Alta (Tondela e Viseu). A linhagem fecha-se na quinta geracao, com Marta Nogueira casada com Diogo Rebelo. Cada pessoa traz uma descricao detalhada na nota.
+0 @I1@ INDI
+1 NAME Casimiro /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 12 OCT 1882
+2 PLAC Tondela, Viseu, Portugal
+1 DEAT
+2 DATE 5 JAN 1959
+2 PLAC Tondela, Viseu, Portugal
+1 OCCU Moleiro e lavrador
+1 NOTE Trisavo, raiz da familia Nogueira. Nasceu junto a um moinho de agua no rio Dao, que herdou do pai e tocou a vida inteira. Branqueava o po da farinha nas sobrancelhas e media o cereal dos vizinhos com uma honestidade lendaria.
+2 CONT Homem religioso e madrugador, abria o moinho antes do sol e fechava-o com as Trindades. Plantava centeio e milho nas leiras da encosta e fazia o seu proprio vinho do Dao numa adega de pedra.
+2 CONT Casou com Aurora em 1908 e teve com ela uma vida dura mas tranquila, atravessando a monarquia, a Republica e a guerra. Morreu aos 76 anos, no inverno, junto ao moinho que era a sua vida.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Aurora /Pais/
+1 SEX F
+1 BIRT
+2 DATE 30 NOV 1886
+2 PLAC Santa Comba Dao, Viseu, Portugal
+1 DEAT
+2 DATE 22 AUG 1971
+2 PLAC Tondela, Viseu, Portugal
+1 OCCU Dona de casa e padeira
+1 NOTE Trisavo. Filha de pequenos proprietarios de Santa Comba Dao, casou com o moleiro Casimiro aos 21 anos. Fazia o pao de toda a aldeia no forno comunitario e o cheiro da sua broa anunciava os domingos.
+2 CONT Mulher firme e poupada, guardava as moedas num pucaro escondido e foi ela quem segurou a casa nos anos magros. Sabia rezas, ladainhas e remedios de ervas da serra do Caramulo.
+2 CONT Teve quatro filhos e perdeu um ainda bebe. Ficou viuva em 1959 e viveu mais doze anos com o filho Albano, contando aos netos historias do tempo dos lobos. Morreu aos 84 anos.
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Albano /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 4 MAR 1910
+2 PLAC Tondela, Viseu, Portugal
+1 DEAT
+2 DATE 17 DEC 1992
+2 PLAC Viseu, Portugal
+1 OCCU Carpinteiro de carros de bois
+1 NOTE Bisavo. Filho varao de Casimiro e Aurora, nao quis ficar no moinho e fez-se carpinteiro: construia e reparava carros de bois, cangas e rodados para os lavradores de toda a Beira.
+2 CONT Habilidoso e teimoso, dizia que uma roda bem feita durava trinta anos, e as suas duravam. Cheirava a serradura e a oleo, e tinha sempre um lapis atras da orelha. Foi dos primeiros da terra a comprar uma radio a valvulas.
+2 CONT Casou com Deolinda em 1936 e mudou-se para os arredores de Viseu quando o oficio comecou a escassear, reconvertendo-se a marcenaria. Morreu aos 82 anos, ainda com a oficina aberta.
+1 FAMC @F1@
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Deolinda /Amaral/
+1 SEX F
+1 BIRT
+2 DATE 8 SEP 1914
+2 PLAC Mortagua, Viseu, Portugal
+1 DEAT
+2 DATE 11 JUN 2003
+2 PLAC Viseu, Portugal
+1 OCCU Bordadeira
+1 NOTE Bisavo, esposa de Albano. Natural de Mortagua, era bordadeira de maos de fada: fazia enxovais, toalhas de altar e os famosos lencos de namorados com versos e flores que vendia nas feiras.
+2 CONT Doce mas determinada, ensinou as filhas e netas a bordar e guardava cada peca num bau de cedro. Cantava ao bordar e sabia de cor dezenas de quadras populares.
+2 CONT Casou com Albano em 1936 e teve tres filhos. Ficou viuva em 1992 e passou a velhice a bordar para os bisnetos. Morreu aos 88 anos, deixando o bau de bordados a neta mais velha.
+1 FAMS @F2@
+0 @I5@ INDI
+1 NAME Henrique /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 19 JUN 1939
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 28 FEB 2017
+2 PLAC Viseu, Portugal
+1 OCCU Professor de educacao fisica
+1 EDUC Instituto Nacional de Educacao Fisica, Lisboa
+1 NOTE Avo. Filho mais velho de Albano e Deolinda, foi atleta de juventude e fez-se professor de educacao fisica, ensinando ginastica e atletismo em escolas de Viseu durante quatro decadas.
+2 CONT Energico e disciplinado, treinava as equipas de andebol da escola e levava os alunos a competicoes. Madrugava para correr e ate aos setenta anos nadava no rio. Era o tio que organizava os jogos nas festas de familia.
+2 CONT Casou com Lucinda em 1965 e teve um filho, Paulo. Apaixonado por desporto e por historia local, colecionava medalhas e recortes. Morreu aos 77 anos, depois de uma vida ativa.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I6@ INDI
+1 NAME Cesaltina /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 14 JAN 1942
+2 PLAC Viseu, Portugal
+1 DEAT
+2 DATE 9 SEP 2020
+2 PLAC Lisboa, Portugal
+1 OCCU Funcionaria publica
+1 NOTE Avo-tia, irma de Henrique. Saiu da Beira jovem para trabalhar numa reparticao de financas em Lisboa, onde fez carreira. Foi a primeira mulher da familia a viver sozinha na capital, o que deu que falar na aldeia.
+2 CONT Independente e culta, ia ao teatro, lia muito e nunca casou, dizendo que a liberdade era o seu luxo. Mandava prendas da cidade aos sobrinhos e cartas cheias de noticias.
+2 CONT Reformada, voltava todos os veroes a Viseu. Morreu em Lisboa aos 78 anos, deixando a sua biblioteca e o gosto pela leitura ao sobrinho-neto.
+1 FAMC @F2@
+0 @I7@ INDI
+1 NAME Lucinda /Pinho/
+1 SEX F
+1 BIRT
+2 DATE 3 APR 1943
+2 PLAC Nelas, Viseu, Portugal
+1 OCCU Farmaceutica
+1 EDUC Faculdade de Farmacia da Universidade de Coimbra
+1 NOTE Avo, esposa de Henrique. Natural de Nelas, terra de vinhos, formou-se em Farmacia em Coimbra numa epoca em que poucas mulheres chegavam a universidade, e teve farmacia propria em Viseu durante anos.
+2 CONT Meticulosa e atenta, conhecia os males e os remedios de meia cidade e dava conselhos de saude a quem entrava na botica. Conciliou a profissao com a familia com uma organizacao admiravel.
+2 CONT Casou com Henrique em 1965 e ficou viuva em 2017. Aos mais de oitenta anos mantem-se lucida e ativa, cuida das suas plantas medicinais e e a guardia da memoria da familia Nogueira.
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Paulo /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 27 NOV 1967
+2 PLAC Viseu, Portugal
+1 OCCU Engenheiro agronomo
+1 EDUC Universidade de Tras-os-Montes e Alto Douro
+1 NOTE Pai de Marta. Filho unico de Henrique e Lucinda, juntou o amor da familia a terra com a ciencia: formou-se Engenheiro Agronomo em Vila Real e trabalha na modernizacao das vinhas e pomares da regiao do Dao.
+2 CONT Pratico e ponderado, recuperou a velha adega de pedra do trisavo Casimiro e voltou a fazer vinho do Dao em familia. Anda de botas no campo durante a semana e prova vinhos ao fim de semana.
+2 CONT Casou com Fatima em 1993 e teve duas filhas. E um pai presente e dedicado, que ensinou as filhas a podar videiras e a respeitar a natureza. Sonha deixar a quinta restaurada a familia.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I9@ INDI
+1 NAME Fatima /Coelho/
+1 SEX F
+1 BIRT
+2 DATE 15 MAY 1969
+2 PLAC Viseu, Portugal
+1 OCCU Educadora de infancia
+1 EDUC Escola Superior de Educacao de Viseu
+1 NOTE Mae de Marta. Viseense, filha de comerciantes, e educadora de infancia ha mais de trinta anos e dirige um jardim de infancia na cidade. Centenas de criancas passaram pelas suas maos.
+2 CONT Paciente, alegre e criativa, transforma cartao e tinta em mundos inteiros para os mais pequenos. Em casa e o coracao afetivo da familia e quem organiza os almocos de domingo com a sogra Lucinda.
+2 CONT Casou com Paulo em 1993 e criou as duas filhas entre as vinhas e a cidade. Adora artesanato e leva as filhas a feiras de tradicoes da Beira.
+1 FAMS @F4@
+0 @I10@ INDI
+1 NAME Marta /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 8 MAY 1995
+2 PLAC Viseu, Portugal
+1 OCCU Arquiteta paisagista
+1 EDUC Instituto Superior de Agronomia, Lisboa
+1 NOTE Marta e a figura em que esta arvore se fecha: a quinta e ultima geracao dos Nogueira aqui registada. Filha mais velha de Paulo e Fatima, cresceu entre as vinhas do Dao e os bordados da bisavo Deolinda.
+2 CONT Sensivel a paisagem desde crianca, formou-se Arquiteta Paisagista em Lisboa e dedica-se a recuperar jardins historicos e a desenhar espacos verdes que respeitam a terra. Voltou a Beira para ficar perto da familia.
+2 CONT Conheceu Diogo Rebelo na faculdade e casou com ele em 2021, numa cerimonia na adega de pedra do trisavo Casimiro. E ela quem agora guarda o bau de bordados e a memoria de cinco geracoes da familia Nogueira.
+1 FAMC @F4@
+1 FAMS @F5@
+0 @I13@ INDI
+1 NAME Rodrigo /Nogueira/
+1 SEX M
+1 BIRT
+2 DATE 21 OCT 1998
+2 PLAC Viseu, Portugal
+1 OCCU Musico e professor de musica
+1 EDUC Conservatorio Regional de Viseu
+1 NOTE Irmao de Marta, da quinta geracao. Filho mais novo de Paulo e Fatima, herdou o ouvido musical da familia que ja vinha das cantorias da trisavo Aurora. Estudou no conservatorio e e professor de guitarra e violino.
+2 CONT Boemio e sonhador, toca em grupos de musica tradicional da Beira e anima as festas de familia. Gravou as historias e cantigas da avo Lucinda para nao se perderem.
+2 CONT Vive em Viseu, perto dos pais, e e o tio divertido e barulhento que enche a casa de musica nos domingos.
+1 FAMC @F4@
+0 @I11@ INDI
+1 NAME Diogo /Rebelo/
+1 SEX M
+1 BIRT
+2 DATE 2 FEB 1993
+2 PLAC Aveiro, Portugal
+1 OCCU Engenheiro do ambiente
+1 EDUC Universidade de Aveiro
+1 NOTE Marido de Marta. Natural de Aveiro, filho de professores, e Engenheiro do Ambiente e trabalha em projetos de requalificacao de rios e zonas verdes. Foi assim que se cruzou com o mundo de Marta.
+2 CONT Calmo, ambientalista convicto e amante de caminhadas, conheceu Marta num projeto academico sobre paisagem e nunca mais se separaram. Adaptou-se depressa as tradicoes da Beira e a fazer vinho com o sogro Paulo.
+2 CONT Casou com Marta em 2021 na adega da familia. Com este casamento fecha-se a arvore dos Nogueira aqui registada, na quinta geracao.
+1 FAMS @F5@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 20 MAY 1908
+2 PLAC Tondela, Viseu, Portugal
+1 CHIL @I3@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 MARR
+2 DATE 11 OCT 1936
+2 PLAC Tondela, Viseu, Portugal
+1 CHIL @I5@
+1 CHIL @I6@
+0 @F3@ FAM
+1 HUSB @I5@
+1 WIFE @I7@
+1 MARR
+2 DATE 7 AUG 1965
+2 PLAC Viseu, Portugal
+1 CHIL @I8@
+0 @F4@ FAM
+1 HUSB @I8@
+1 WIFE @I9@
+1 MARR
+2 DATE 18 SEP 1993
+2 PLAC Viseu, Portugal
+1 CHIL @I10@
+1 CHIL @I13@
+0 @F5@ FAM
+1 HUSB @I11@
+1 WIFE @I10@
+1 MARR
+2 DATE 12 JUN 2021
+2 PLAC Tondela, Viseu, Portugal
+0 TRLR
