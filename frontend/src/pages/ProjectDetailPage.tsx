@@ -17,6 +17,7 @@ import {
 } from "../lib/hooks";
 import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
+import PhotoViewer from "../components/media/PhotoViewer";
 import FamilyTree from "../components/family/FamilyTree";
 import FamilyEditor from "../components/family/FamilyEditor";
 import { cn, initials } from "../lib/utils";
@@ -111,6 +112,7 @@ function PhotosTab({ projectId }: { projectId: number }) {
   const { data: photos, isLoading } = useProjectMedia(projectId);
   const remove = useRemoveMediaFromProject();
   const [picker, setPicker] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const items = photos ?? [];
 
@@ -144,12 +146,13 @@ function PhotosTab({ projectId }: { projectId: number }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {items.map((m) => (
+          {items.map((m, idx) => (
             <div key={m.id} className="group relative aspect-square overflow-hidden rounded-xl border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900">
               <Photo
                 mediaId={m.id}
                 alt={m.original_filename}
-                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                onClick={() => setViewerIndex(idx)}
+                className="h-full w-full cursor-zoom-in object-cover transition duration-500 group-hover:scale-105"
               />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
                 <p className="line-clamp-4 text-xs leading-snug text-white/95">
@@ -176,6 +179,15 @@ function PhotosTab({ projectId }: { projectId: number }) {
           projectId={projectId}
           alreadyIn={items.map((m) => m.id)}
           onClose={() => setPicker(false)}
+        />
+      )}
+
+      {viewerIndex !== null && items[viewerIndex] && (
+        <PhotoViewer
+          items={items}
+          index={viewerIndex}
+          onChange={setViewerIndex}
+          onClose={() => setViewerIndex(null)}
         />
       )}
     </>

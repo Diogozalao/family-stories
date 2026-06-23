@@ -146,7 +146,11 @@ export function useSetMediaPersons() {
   return useMutation({
     mutationFn: async (input: { id: number; person_ids: number[] }) =>
       (await api.put(`/api/v1/media/${input.id}/persons`, { person_ids: input.person_ids })).data as MediaFile,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
+      // Project photo/timeline tabs read project-scoped media — refresh them too.
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
   });
 }
 
@@ -160,6 +164,7 @@ export function useUpdateMedia() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["media"] });
       qc.invalidateQueries({ queryKey: ["timeline"] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 }

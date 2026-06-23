@@ -1,16 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import {
-  ChevronLeft, ChevronRight, Loader2, Sparkles, Trash2, UploadCloud, X,
-} from "lucide-react";
+import { Loader2, Sparkles, Trash2, UploadCloud } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import Photo from "../components/media/Photo";
-import { useBuildTimeline, useDeletePhoto, useMedia, usePersons, useReanalyzePhotos, useSetMediaPersons, useUpdateMedia, useUploadPhoto } from "../lib/hooks";
-import { photoUrl } from "../lib/photo";
+import PhotoViewer from "../components/media/PhotoViewer";
+import { useBuildTimeline, useDeletePhoto, useMedia, useReanalyzePhotos, useUploadPhoto } from "../lib/hooks";
 import { extractErrorMessage } from "../lib/api";
-import { cn, formatBytes } from "../lib/utils";
+import { formatBytes } from "../lib/utils";
 import type { MediaFile } from "../lib/types";
 
 export default function LibraryPage() {
@@ -203,7 +201,7 @@ export default function LibraryPage() {
       </section>
 
       {viewerIndex !== null && items[viewerIndex] && (
-        <Viewer
+        <PhotoViewer
           items={items}
           index={viewerIndex}
           onChange={setViewerIndex}
@@ -214,161 +212,3 @@ export default function LibraryPage() {
   );
 }
 
-function Viewer({
-  items,
-  index,
-  onChange,
-  onClose,
-}: {
-  items: MediaFile[];
-  index: number;
-  onChange: (i: number) => void;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const cur = items[index];
-  const prev = () => onChange((index - 1 + items.length) % items.length);
-  const next = () => onChange((index + 1) % items.length);
-
-  const updateMedia = useUpdateMedia();
-  const buildTimeline = useBuildTimeline();
-  const [dateInput, setDateInput] = useState<string>(cur.date_taken?.slice(0, 10) ?? "");
-
-  // Reset the date field whenever the viewer moves to another photo.
-  useEffect(() => {
-    setDateInput(cur.date_taken?.slice(0, 10) ?? "");
-  }, [cur.id, cur.date_taken]);
-
-  const saveDate = async () => {
-    try {
-      await updateMedia.mutateAsync({ id: cur.id, date_taken: dateInput || "" });
-      // Re-sync the timeline so the new date shows up there too (best-effort).
-      await buildTimeline.mutateAsync().catch(() => {});
-      toast.success(t("common.success"));
-    } catch (err) {
-      toast.error(extractErrorMessage(err));
-    }
-  };
-  const dateChanged = (cur.date_taken?.slice(0, 10) ?? "") !== dateInput;
-
-  // Tag which family members appear in this photo.
-  const { data: persons } = usePersons();
-  const setPersons = useSetMediaPersons();
-  const [tagged, setTagged] = useState<number[]>(cur.person_ids ?? []);
-  useEffect(() => { setTagged(cur.person_ids ?? []); }, [cur.id, cur.person_ids]);
-  const togglePerson = (pid: number) => {
-    const updated = tagged.includes(pid) ? tagged.filter((x) => x !== pid) : [...tagged, pid];
-    setTagged(updated);
-    setPersons.mutate(
-      { id: cur.id, person_ids: updated },
-      { onError: (err) => toast.error(extractErrorMessage(err)) },
-    );
-  };
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "ArrowRight") next();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  });
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 backdrop-blur animate-fade-in">
-      <button
-        onClick={onClose}
-        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-        aria-label="Close"
-      >
-        <X className="h-5 w-5" />
-      </button>
-
-      {items.length > 1 && (
-        <>
-          <button
-            onClick={prev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white hover:bg-white/20"
-            aria-label="Previous"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            onClick={next}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2.5 text-white hover:bg-white/20"
-            aria-label="Next"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </>
-      )}
-
-      <div className="flex max-h-[92vh] max-w-[95vw] flex-col">
-        <img
-          src={photoUrl(cur.id)}
-          alt={cur.original_filename}
-          className="max-h-[78vh] max-w-[95vw] rounded-xl object-contain animate-scale-in"
-        />
-        <div className="mt-3 flex items-center justify-between gap-4 text-xs text-white/80">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-medium text-white/95">{cur.original_filename}</p>
-            <div className="mt-0.5 flex flex-wrap gap-x-2 text-white/60">
-              {cur.date_taken && <span>{new Date(cur.date_taken).toLocaleString()}</span>}
-              {cur.ai_setting && <span>· {cur.ai_setting}</span>}
-            </div>
-            {cur.ai_description && (
-              <p className="mt-2 line-clamp-2 max-w-3xl text-[11px] italic text-white/70">
-                {cur.ai_description}
-              </p>
-            )}
-            <div className="mt-3 flex items-center gap-2">
-              <label className="text-[11px] text-white/60">{t("library.dateLabel")}</label>
-              <input
-                type="date"
-                value={dateInput}
-                onChange={(e) => setDateInput(e.target.value)}
-                onKeyDown={(e) => e.stopPropagation()}
-                className="rounded-md border border-white/20 bg-white/10 px-2 py-1 text-xs text-white [color-scheme:dark]"
-              />
-              {dateChanged && (
-                <button
-                  onClick={saveDate}
-                  disabled={updateMedia.isPending || buildTimeline.isPending}
-                  className="inline-flex items-center gap-1 rounded-md bg-white/15 px-2 py-1 text-xs text-white hover:bg-white/25"
-                >
-                  {(updateMedia.isPending || buildTimeline.isPending)
-                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                    : null}
-                  {t("library.saveDate")}
-                </button>
-              )}
-            </div>
-            {(persons ?? []).length > 0 && (
-              <div className="mt-3">
-                <p className="mb-1 text-[11px] text-white/60">{t("library.peopleInPhoto")}</p>
-                <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
-                  {(persons ?? []).map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => togglePerson(p.id)}
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[11px] transition",
-                        tagged.includes(p.id)
-                          ? "border-brand-400 bg-brand-500/30 text-white"
-                          : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10",
-                      )}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <span className="shrink-0 rounded-full bg-white/10 px-2.5 py-1">{index + 1} / {items.length}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
