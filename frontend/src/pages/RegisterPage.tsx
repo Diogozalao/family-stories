@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { AtSign, Eye, EyeOff, Loader2, User as UserIcon, UserPlus } from "lucide-react";
+import { AtSign, Check, Eye, EyeOff, Loader2, User as UserIcon, UserPlus, X } from "lucide-react";
 import { useRegister } from "../lib/hooks";
 import { useAuthStore } from "../store/auth";
 import { extractErrorMessage } from "../lib/api";
@@ -40,10 +40,19 @@ export default function RegisterPage() {
 
   if (token) return <Navigate to="/" replace />;
 
-  const pwTooShort   = password.length > 0 && password.length < 8;
+  // Password policy: length + at least one upper, one lower and one digit.
+  // Each rule is surfaced live below the field so the user knows exactly
+  // what's missing instead of guessing after a rejected submit.
+  const pwRules = [
+    { key: "passwordReqLength", ok: password.length >= 8 },
+    { key: "passwordReqUpper",  ok: /[A-Z]/.test(password) },
+    { key: "passwordReqLower",  ok: /[a-z]/.test(password) },
+    { key: "passwordReqDigit",  ok: /[0-9]/.test(password) },
+  ];
+  const pwValid      = pwRules.every((r) => r.ok);
   const emailInvalid = email.length > 0 && !EMAIL_RE.test(email);
   const nameTooShort = username.length > 0 && username.trim().length < 2;
-  const canSubmit    = username.trim().length >= 2 && EMAIL_RE.test(email) && password.length >= 8;
+  const canSubmit    = username.trim().length >= 2 && EMAIL_RE.test(email) && pwValid;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,9 +176,22 @@ export default function RegisterPage() {
               {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
-          <p className={`mt-2 text-xs ${pwTooShort ? "text-rose-600" : "text-stone-500 dark:text-stone-500"}`}>
-            {t("auth.passwordHint")}
-          </p>
+          <ul className="mt-2.5 space-y-1" aria-label={t("auth.passwordReqTitle")}>
+            <li className="mb-1 text-xs font-medium text-stone-500 dark:text-stone-500">
+              {t("auth.passwordReqTitle")}
+            </li>
+            {pwRules.map((r) => (
+              <li
+                key={r.key}
+                className={`flex items-center gap-1.5 text-xs ${
+                  r.ok ? "text-emerald-600 dark:text-emerald-400" : "text-stone-500 dark:text-stone-500"
+                }`}
+              >
+                {r.ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5 text-stone-400" />}
+                <span>{t(`auth.${r.key}`)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <button

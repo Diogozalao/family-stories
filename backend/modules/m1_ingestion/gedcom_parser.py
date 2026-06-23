@@ -22,6 +22,17 @@ from backend.models.timeline import Person, Relationship
 log = structlog.get_logger()
 
 
+def display_gedcom_id(gedcom_id: Optional[str]) -> Optional[str]:
+    """Strip the per-family namespace from a stored gedcom_id for display.
+
+    Persisted ids look like ``"Dinis::I1"`` (see ``gedcom_to_database``);
+    the user only ever wants to see the raw ``"I1"``.
+    """
+    if gedcom_id and "::" in gedcom_id:
+        return gedcom_id.split("::", 1)[1]
+    return gedcom_id
+
+
 class GEDCOMParser:
     """
     Parser GEDCOM implementado de raiz para máximo controlo.
@@ -234,8 +245,23 @@ async def gedcom_to_database(
     from backend.core.config import settings
     from backend.modules.m2_temporal.family_graph import FamilyGraph
 
+    import uuid as _uuid
+
     parser = GEDCOMParser()
     data   = parser.parse(file_path)
+
+    # Namespace the *persisted* gedcom_id so two different GEDCOM files never
+    # collide on the ``(user_id, gedcom_id)`` unique index. Genealogy exports
+    # almost always restart their ids at ``@I1@`` per file, so importing a
+    # second family would otherwise UPDATE (overwrite) the first family's
+    # people — silently merging unrelated trees. The label is the natural,
+    # stable namespace: re-importing the SAME labelled family stays idempotent;
+    # an unlabelled import gets a one-off batch id so it can never clobber an
+    # existing tree. The raw id is kept for display (see ``display_gedcom_id``).
+    namespace = (family_label or "").strip() or f"f{_uuid.uuid4().hex[:8]}"
+
+    def _scoped(raw_gid: str) -> str:
+        return f"{namespace}::{raw_gid}"
 
     # Track entries the parser saw but had no usable ``NAME`` tag — these are
     # silently skipped below, and historically that left users wondering why
@@ -256,7 +282,7 @@ async def gedcom_to_database(
     # For a tree with hundreds of individuals this is the difference between
     # a few hundred milliseconds and tens of seconds.
     incoming_gedcom_ids = [
-        indi["gedcom_id"] for indi in data["individuals"].values() if indi.get("name")
+        _scoped(indi["gedcom_id"]) for indi in data["individuals"].values() if indi.get("name")
     ]
     existing_by_gedcom_id: dict[str, Person] = {}
     if incoming_gedcom_ids:
@@ -277,7 +303,7 @@ async def gedcom_to_database(
             continue
 
         notes_text = " ".join(indi.get("notes", []))
-        person = existing_by_gedcom_id.get(indi["gedcom_id"])
+        person = existing_by_gedcom_id.get(_scoped(indi["gedcom_id"]))
 
         if person:
             person.name         = indi["name"]
@@ -299,7 +325,7 @@ async def gedcom_to_database(
                 birth_date   = indi.get("birth_date"),
                 death_date   = indi.get("death_date"),
                 birth_place  = indi.get("birth_place"),
-                gedcom_id    = indi["gedcom_id"],
+                gedcom_id    = _scoped(indi["gedcom_id"]),
                 notes        = notes_text or None,
                 family_label = family_label,
             )

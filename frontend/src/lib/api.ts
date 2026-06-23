@@ -64,6 +64,38 @@ export function isLostResponse(err: unknown): boolean {
 }
 
 /**
+ * Ping the backend until it answers, so a cold-started free-tier server is
+ * awake *before* we send a heavy, non-idempotent request (a file upload).
+ *
+ * The "Network Error on the first try, works after a page reload" symptom is
+ * exactly this: Render spins the instance down when idle, and the very first
+ * request that hits a sleeping server is dropped mid-flight while it boots
+ * (~30–60 s). Reloading "fixed" it only because that failed request had
+ * already woken the server. Pinging the public ``/healthz`` first absorbs the
+ * boot delay on a cheap, idempotent GET, so the real upload then lands on an
+ * awake server and succeeds on the first attempt.
+ *
+ * Resolves as soon as any HTTP response comes back (even an error status means
+ * the server is up). Gives up quietly after ``maxWaitMs`` so the caller can
+ * still attempt the request — the existing lost-response recovery remains a
+ * second safety net.
+ */
+export async function wakeBackend(maxWaitMs = 75_000): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    try {
+      // Bare axios (no interceptors/auth) — a 401 here must not trip the
+      // global sign-out path, and the health probe needs no token.
+      await axios.get(`${API_BASE}/healthz`, { timeout: 8000 });
+      return;                                  // 2xx → awake
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response) return;   // any status → awake
+      await new Promise((r) => setTimeout(r, 3000));         // no response → still booting
+    }
+  }
+}
+
+/**
  * Download the family tree as a GEDCOM (.ged) file. Goes through the axios
  * instance so the auth token is attached, then triggers a browser download.
  */

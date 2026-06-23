@@ -38,7 +38,14 @@ export default function FamilyPage() {
   const onDrop = useCallback((files: File[]) => {
     if (!files.length) return;
     setPendingFile(files[0]);
-    setLabelInput("");
+    // Pre-fill the family label from the file name so each import lands in its
+    // own group by default — keeps multiple trees cleanly separated instead of
+    // piling several unlabelled families together. The user can still edit it.
+    const stem = files[0].name
+      .replace(/\.(ged|gedcom)$/i, "")
+      .replace(/[_-]+/g, " ")
+      .trim();
+    setLabelInput(stem.slice(0, 120));
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({

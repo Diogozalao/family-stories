@@ -41,10 +41,10 @@ export default function DashboardPage() {
             <Sparkles className="h-3 w-3" /> Living Memory
           </span>
           <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            {t("dashboard.heroTitle", { name: displayName })}
+            {t(isEmpty ? "dashboard.heroTitleFirst" : "dashboard.heroTitle", { name: displayName })}
           </h2>
           <p className="mt-3 text-[15px] text-stone-600 dark:text-stone-300">
-            {t("dashboard.heroSub")}
+            {t(isEmpty ? "dashboard.heroSubFirst" : "dashboard.heroSub")}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/generate" className="btn btn-accent">

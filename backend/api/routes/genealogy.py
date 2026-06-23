@@ -19,7 +19,7 @@ from backend.core.rate_limit import limiter
 from backend.core.upload_validator import validate_gedcom
 from backend.models.media import MediaFile
 from backend.models.timeline import Person, Relationship
-from backend.modules.m1_ingestion.gedcom_parser import gedcom_to_database
+from backend.modules.m1_ingestion.gedcom_parser import display_gedcom_id, gedcom_to_database
 
 ALLOWED_KINDS = {"pai", "mãe", "cônjuge"}
 
@@ -94,7 +94,7 @@ def _person_dict(p: Person) -> dict:
         "death_date":   str(p.death_date.date()) if p.death_date else None,
         "birth_place":  p.birth_place,
         "notes":        p.notes,
-        "gedcom_id":    p.gedcom_id,
+        "gedcom_id":    display_gedcom_id(p.gedcom_id),
         "family_label": p.family_label,
         "tree_x":       p.tree_x,
         "tree_y":       p.tree_y,
@@ -220,7 +220,7 @@ async def list_persons(
             "birth_date":   str(p.birth_date.date()) if p.birth_date else None,
             "birth_place":  p.birth_place,
             "death_date":   str(p.death_date.date()) if p.death_date else None,
-            "gedcom_id":    p.gedcom_id,
+            "gedcom_id":    display_gedcom_id(p.gedcom_id),
             "notes":        p.notes,
             "family_label": p.family_label,
         }
@@ -270,7 +270,7 @@ async def get_person(
         "birth_date":  str(person.birth_date.date()) if person.birth_date else None,
         "birth_place": person.birth_place,
         "death_date":  str(person.death_date.date()) if person.death_date else None,
-        "gedcom_id":   person.gedcom_id,
+        "gedcom_id":   display_gedcom_id(person.gedcom_id),
         "notes":       person.notes,
         "relatives":   context.get("relatives", []),
     }

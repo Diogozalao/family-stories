@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, API_BASE, isLostResponse } from "./api";
+import { api, API_BASE, isLostResponse, wakeBackend } from "./api";
 import { supabase } from "./supabase";
 import type {
   FamilyTreeData, HealthCheck, MediaFile, NarrativeTemplate, Person, Project, Story,
@@ -168,6 +168,7 @@ export function useUploadPhoto() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (file: File) => {
+      await wakeBackend();           // absorb cold-start before the upload
       const form = new FormData();
       form.append("file", file);
       const { data } = await api.post("/api/v1/upload", form, {
@@ -294,6 +295,11 @@ export function useUploadGedcom() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { file: File; familyLabel?: string }) => {
+      // Make sure the (possibly cold-started) backend is awake before we send
+      // the multipart import — otherwise the first request is dropped while
+      // the server boots and surfaces as a "Network Error" that only a page
+      // reload seemed to fix. See ``wakeBackend``.
+      await wakeBackend();
       const form = new FormData();
       form.append("file", input.file);
       if (input.familyLabel) form.append("family_label", input.familyLabel);

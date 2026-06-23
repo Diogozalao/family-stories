@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  CheckCircle2, Eye, EyeOff, KeyRound, Loader2, ShieldAlert,
+  Check, CheckCircle2, Eye, EyeOff, KeyRound, Loader2, ShieldAlert, X,
 } from "lucide-react";
 import AuthShell from "../components/auth/AuthShell";
 import LandingHeader from "../components/landing/LandingHeader";
@@ -47,9 +47,16 @@ export default function ResetPasswordPage() {
     };
   }, []);
 
-  const tooShort  = pw.length > 0 && pw.length < 8;
+  // Same password policy as the registration form.
+  const pwRules = [
+    { label: "Pelo menos 8 caracteres",     ok: pw.length >= 8 },
+    { label: "Uma letra maiúscula (A–Z)",   ok: /[A-Z]/.test(pw) },
+    { label: "Uma letra minúscula (a–z)",   ok: /[a-z]/.test(pw) },
+    { label: "Um número (0–9)",             ok: /[0-9]/.test(pw) },
+  ];
+  const pwValid   = pwRules.every((r) => r.ok);
   const mismatch  = confirm.length > 0 && confirm !== pw;
-  const canSubmit = sessionState === "ready" && pw.length >= 8 && confirm === pw;
+  const canSubmit = sessionState === "ready" && pwValid && confirm === pw;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,12 +132,23 @@ export default function ResetPasswordPage() {
                     {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                <p className={cn(
-                  "mt-1.5 text-xs",
-                  tooShort ? "text-rose-600" : "text-stone-500 dark:text-stone-500",
-                )}>
-                  Mínimo 8 caracteres
-                </p>
+                <ul className="mt-2 space-y-1">
+                  <li className="mb-1 text-xs font-medium text-stone-500 dark:text-stone-500">
+                    A palavra-passe deve conter:
+                  </li>
+                  {pwRules.map((r) => (
+                    <li
+                      key={r.label}
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs",
+                        r.ok ? "text-emerald-600 dark:text-emerald-400" : "text-stone-500 dark:text-stone-500",
+                      )}
+                    >
+                      {r.ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5 text-stone-400" />}
+                      <span>{r.label}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
               <div>

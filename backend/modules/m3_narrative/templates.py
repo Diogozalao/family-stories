@@ -64,6 +64,22 @@ GROUNDING_RULES = """REGRAS DE FIDELIDADE AOS FACTOS (OBRIGATÓRIAS — têm pri
   descrição, deixa-a influenciar a cena; se uma pessoa tem nota, honra-a."""
 
 
+ORIGINALITY_RULES = """REGRAS DE ORIGINALIDADE (escreve algo NOVO, não um molde):
+- PROIBIDO recorrer a clichés e imagens gastas. Evita, entre outros:
+  "o cheiro a pão acabado de cozer", "molduras de cartão", "um sol cor de
+  cobre/dourado", "o tempo parou", "como se fosse ontem", "guardado para
+  sempre no coração", "memórias preciosas", "uma lágrima escorreu".
+- Cada narrativa deve abrir de forma diferente — nunca comeces sempre pela
+  mesma fórmula (ex.: "A casa dos avós…", "Era uma vez…", "Tudo começou…").
+- Ancora-te no CONCRETO e ESPECÍFICO dos factos reais (nomes, lugares, datas,
+  o que as fotografias mostram) em vez de sentimentos genéricos. Um pormenor
+  verdadeiro e inesperado vale mais do que três frases bonitas e vazias.
+- Varia o ritmo das frases (umas curtas, outras longas). Não encadeies
+  parágrafos todos com a mesma estrutura.
+- Deixa os factos moldarem a forma da história; não force todos os factos a
+  caber — escolhe os que constroem uma cena viva e distinta desta família."""
+
+
 NARRATIVE_TEMPLATES = {
 
     "default": {

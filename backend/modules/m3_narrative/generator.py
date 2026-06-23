@@ -11,9 +11,11 @@ from backend.models.timeline import Person, Relationship, TimelineEvent
 from backend.modules.m2_temporal.family_graph import FamilyGraph
 from backend.modules.m3_narrative.llm_client import LLMClient, LLMUnavailableError
 from backend.modules.m3_narrative.rag_system import RAGSystem
+from backend.modules.m3_narrative.pt_pt import count_brasileirismos, pt_pt_postprocess
 from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
     NARRATIVE_TEMPLATES,
+    ORIGINALITY_RULES,
     get_template,
 )
 
@@ -184,6 +186,9 @@ class NarrativeGenerator:
         # stop the model from inventing relatives/relationships and from
         # narrating to an undefined "tu" (the two biggest quality complaints).
         prompt += "\n\n" + GROUNDING_RULES
+        # ...and the originality rules, which push the model off its default
+        # clichés towards a fresh, concrete narrative for *this* family.
+        prompt += "\n\n" + ORIGINALITY_RULES
 
         # The templates are written in Portuguese; we steer the LLM with a
         # short suffix that overrides the output language when the caller
@@ -219,6 +224,18 @@ class NarrativeGenerator:
                 "The LLM returned an empty or trivially short response — "
                 "treating as a generation failure."
             )
+
+        # ── pt-PT safety net ─────────────────────────────────────────────
+        # Instruction alone doesn't keep Llama/Gemini from drifting into
+        # Brazilian Portuguese, so mechanically correct the common tells
+        # (vocabulary + "auxiliar + gerúndio") on the final text. No-op for
+        # English narratives.
+        if lang_code == "pt":
+            before = count_brasileirismos(narrative_text)
+            narrative_text, fixed = pt_pt_postprocess(narrative_text)
+            if fixed:
+                log.info("pt_pt_corrected",
+                         title=title, tells_before=before, substitutions=fixed)
 
         # ── Scene segmentation ───────────────────────────────────────────
         # Pair each paragraph of prose with the photos that illustrate it,
