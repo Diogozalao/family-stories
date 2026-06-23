@@ -4,15 +4,16 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, Network,
-  Pencil, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
+  ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, MapPin,
+  Network, Pencil, Play, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
   User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useClearFamily, useFamilies, useFamilyTree, useMedia, useProject, useProjectMedia,
+  useAddMediaToProject, useClearFamily, useDeleteVideo, useFamilies, useFamilyTree, useMedia,
+  usePersons, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
-  useUploadGedcom, useUploadPhoto,
+  useUploadGedcom, useUploadPhoto, videoUrl,
 } from "../lib/hooks";
 import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
@@ -150,8 +151,13 @@ function PhotosTab({ projectId }: { projectId: number }) {
                 alt={m.original_filename}
                 className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
-                <p className="truncate text-xs text-white/95">{m.original_filename}</p>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
+                <p className="line-clamp-4 text-xs leading-snug text-white/95">
+                  {m.ai_description || (
+                    <span className="italic text-white/70">Sem descrição — analisa na Biblioteca.</span>
+                  )}
+                </p>
+                <p className="mt-1 truncate text-[10px] text-white/60">{m.original_filename}</p>
               </div>
               <button
                 onClick={() => handleRemove(m.id)}
@@ -346,19 +352,36 @@ function PhotoPickerModal({
 
 function TimelineTab({ projectId }: { projectId: number }) {
   const { data: media, isLoading } = useProjectMedia(projectId);
+  const { data: persons } = usePersons();
+
+  // Resolve who appears in each photo (media.person_ids) into names + family,
+  // so the project timeline shows the same context as the global one.
+  const personById = useMemo(() => {
+    const m = new Map<number, { name: string; family_label?: string | null }>();
+    for (const p of persons ?? []) m.set(p.id, { name: p.name, family_label: p.family_label });
+    return m;
+  }, [persons]);
 
   // The project timeline is built ONLY from the project's own photos —
   // each photo becomes a dated event. This keeps it scoped to the project
   // instead of mixing in the user's whole (global) timeline.
   const events: TimelineEvent[] = useMemo(
-    () => (media ?? []).map((m) => ({
-      id: m.id,
-      event_date: m.date_taken ?? m.created_at ?? null,
-      title: m.ai_setting || m.original_filename,
-      description: m.ai_description ?? null,
-      media_file_id: m.id,
-    })),
-    [media],
+    () => (media ?? []).map((m) => {
+      const who = (m.person_ids ?? []).map((id) => personById.get(id)).filter(Boolean) as
+        { name: string; family_label?: string | null }[];
+      const families = [...new Set(who.map((p) => p.family_label).filter(Boolean))] as string[];
+      return {
+        id: m.id,
+        event_date: m.date_taken ?? m.created_at ?? null,
+        title: m.ai_setting || (m.ai_description ? m.ai_description.split(/[.!?]/)[0] : null) || "Fotografia",
+        description: m.ai_description ?? null,
+        location: m.location_name ?? null,
+        media_file_id: m.id,
+        people: who.map((p) => p.name),
+        family: families.length ? families.join(", ") : null,
+      };
+    }),
+    [media, personById],
   );
 
   const grouped = useMemo(() => groupByYear(events), [events]);
@@ -426,14 +449,29 @@ function TimelineRow({ ev }: { ev: TimelineEvent }) {
           <Calendar className="h-3.5 w-3.5" />
           <span>{dateLabel}</span>
         </div>
-        <p className="mt-0.5 font-medium">{ev.title ?? t("timeline.undated")}</p>
+        {ev.family && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+            <Users className="h-3 w-3" /> {ev.family}
+          </span>
+        )}
+        <p className="mt-1 font-medium">{ev.title ?? t("timeline.undated")}</p>
+        {ev.people && ev.people.length > 0 && (
+          <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
+            <span className="text-stone-400">{t("timeline.who")} </span>{ev.people.join(", ")}
+          </p>
+        )}
+        {ev.location && (
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500 dark:text-stone-500">
+            <MapPin className="h-3 w-3" /> {ev.location}
+          </p>
+        )}
         {ev.description && (
-          <p className="mt-1 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
+          <p className="mt-1.5 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
             {ev.description}
           </p>
         )}
         {ev.media_file_id && (
-          <div className="relative mt-3 h-48 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
+          <div className="relative mt-3 h-32 w-44 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
             <Photo mediaId={ev.media_file_id} className="h-full w-full object-cover" />
           </div>
         )}
@@ -743,8 +781,20 @@ function StoriesTab({ projectId }: { projectId: number }) {
 // ── Videos Tab ────────────────────────────────────────────────────────────
 
 function VideosTab({ projectId }: { projectId: number }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useProjectVideos(projectId);
+  const del = useDeleteVideo();
+  const [playing, setPlaying] = useState<{ id: number; filename?: string | null } | null>(null);
   const videos = data ?? [];
+
+  const handleDelete = (id: number) => {
+    if (!confirm(t("videos.confirmDelete"))) return;
+    setPlaying((p) => (p?.id === id ? null : p));
+    del.mutate(id, {
+      onSuccess: () => toast.success(t("common.success")),
+      onError: (err) => toast.error(extractErrorMessage(err)),
+    });
+  };
 
   if (isLoading) return <div className="skeleton h-40 rounded-2xl" />;
   if (videos.length === 0) {
@@ -756,22 +806,60 @@ function VideosTab({ projectId }: { projectId: number }) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {videos.map((v) => (
-        <Link
-          key={v.id}
-          to="/videos"
-          className="card group overflow-hidden transition hover:-translate-y-0.5 hover:shadow-lift"
-        >
-          <div className="aspect-video bg-gradient-to-br from-stone-800 to-stone-900" />
-          <div className="p-4">
-            <p className="truncate font-medium">{v.filename ?? `Vídeo #${v.id}`}</p>
-            <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
-              {v.status === "completed" ? "Pronto" : v.status === "processing" ? "A processar" : "Falhou"}
-            </p>
-          </div>
-        </Link>
-      ))}
-    </div>
+    <>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {videos.map((v) => {
+          const ready = v.status === "completed" && !!v.filename;
+          return (
+            <article key={v.id} className="card overflow-hidden">
+              <div className="relative aspect-video bg-gradient-to-br from-stone-800 to-stone-900">
+                {ready ? (
+                  <button onClick={() => setPlaying(v)} className="group absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-lift transition group-hover:scale-105">
+                      <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
+                    </span>
+                  </button>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
+                    {v.status === "failed" ? t("common.error") : t("videos.processing")}
+                  </div>
+                )}
+                <button
+                  onClick={() => handleDelete(v.id)}
+                  disabled={del.isPending}
+                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/55 text-white/90 transition hover:bg-rose-600 disabled:opacity-50"
+                  aria-label={t("videos.delete")}
+                  title={t("videos.delete")}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-4">
+                <p className="truncate font-medium">{v.filename ?? `#${v.id}`}</p>
+                <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
+                  {v.status === "completed" ? "Pronto" : v.status === "processing" ? "A processar" : "Falhou"}
+                </p>
+                {ready && (
+                  <a href={videoUrl(v.filename!)} download
+                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+                    <Download className="h-3.5 w-3.5" /> {t("videos.download")}
+                  </a>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      {playing && playing.filename && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 p-4 backdrop-blur" onClick={() => setPlaying(null)}>
+          <button onClick={() => setPlaying(null)} className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" aria-label={t("common.close")}>
+            <X className="h-5 w-5" />
+          </button>
+          <video key={playing.id} src={videoUrl(playing.filename)} controls autoPlay
+                 className="max-h-[85vh] max-w-[95vw] rounded-xl shadow-lift" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+    </>
   );
 }
