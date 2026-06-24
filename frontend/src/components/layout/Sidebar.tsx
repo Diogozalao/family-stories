@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
   BookOpen, Clapperboard, Clock, FolderKanban, Home, Images,
-  ListChecks, Settings, Sparkles, Users, X,
+  Settings, Sparkles, Users, X,
 } from "lucide-react";
 import Logo from "../brand/Logo";
 import { cn } from "../../lib/utils";
@@ -33,7 +33,9 @@ export default function Sidebar({
     { to: "/generate", icon: <Sparkles     className="h-[18px] w-[18px]" />, label: t("nav.generate"), accent: true },
     { to: "/stories",  icon: <BookOpen     className="h-[18px] w-[18px]" />, label: t("nav.stories") },
     { to: "/videos",   icon: <Clapperboard className="h-[18px] w-[18px]" />, label: t("nav.videos") },
-    { to: "/tasks",    icon: <ListChecks   className="h-[18px] w-[18px]" />, label: t("nav.tasks") },
+    // "Tarefas" intentionally hidden from the nav: generation runs synchronously,
+    // so the task queue is always empty for end users. Backend infra is kept
+    // (route still reachable at /tasks) for the report's background-jobs section.
     { to: "/settings", icon: <Settings     className="h-[18px] w-[18px]" />, label: t("nav.settings") },
   ];
 

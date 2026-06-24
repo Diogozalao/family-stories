@@ -282,4 +282,7 @@ async def list_project_videos(
         .where(VideoOutput.project_id == project_id, VideoOutput.user_id == user.id)
         .order_by(VideoOutput.created_at.desc())
     )
-    return result.scalars().all()
+    # Same serialiser as the global listing → identical shape (size_mb,
+    # download_url, poster_media_id) so the shared VideoCard works in both.
+    from backend.api.routes.multimedia import serialize_videos
+    return await serialize_videos(db, result.scalars().all(), user.id)

@@ -4,20 +4,23 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Calendar, Check, Download, FileUp, Film, Images, Loader2, MapPin,
-  Network, Pencil, Play, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
+  ArrowLeft, Check, Download, FileUp, Film, Images, Loader2,
+  Network, Pencil, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
   User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useClearFamily, useDeleteVideo, useFamilies, useFamilyTree, useMedia,
+  useAddMediaToProject, useClearFamily, useDeleteStory, useFamilies, useFamilyTree, useMedia,
   usePersons, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
-  useUploadGedcom, useUploadPhoto, videoUrl,
+  useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
 import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
 import PhotoViewer from "../components/media/PhotoViewer";
+import VideoCard from "../components/media/VideoCard";
+import StoryCard from "../components/narrative/StoryCard";
+import TimelineList from "../components/timeline/TimelineList";
 import FamilyTree from "../components/family/FamilyTree";
 import PersonGallery from "../components/family/PersonGallery";
 import FamilyEditor from "../components/family/FamilyEditor";
@@ -398,9 +401,6 @@ function TimelineTab({ projectId }: { projectId: number }) {
     [media, personById],
   );
 
-  const grouped = useMemo(() => groupByYear(events), [events]);
-  const years = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -419,95 +419,7 @@ function TimelineTab({ projectId }: { projectId: number }) {
     );
   }
 
-  return (
-    <div className="relative">
-      <div aria-hidden className="absolute left-[11px] top-2 bottom-2 w-px bg-stone-200 dark:bg-stone-800 md:left-[91px]" />
-      <div className="space-y-10">
-        {years.map((y) => (
-          <div key={y}>
-            <div className="mb-4 flex items-center gap-3">
-              <span className="relative z-10 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-[11px] font-semibold text-white md:ml-[78px]">
-                •
-              </span>
-              <h3 className="font-serif text-2xl font-semibold tracking-tight">{y}</h3>
-            </div>
-            <div className="space-y-3">
-              {grouped[y].map((ev) => (
-                <TimelineRow key={ev.id} ev={ev} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TimelineRow({ ev }: { ev: TimelineEvent }) {
-  const { t } = useTranslation();
-  const d = ev.event_date ? new Date(ev.event_date) : null;
-  const dateLabel = d
-    ? d.toLocaleDateString(undefined, { day: "2-digit", month: "short" })
-    : t("timeline.undated");
-
-  return (
-    <div className="flex gap-4 md:gap-6">
-      <div className="hidden md:block w-20 pt-4 text-right text-xs font-medium text-stone-500 dark:text-stone-500">
-        {dateLabel}
-      </div>
-      <div className="relative flex pt-3 md:pt-4">
-        <span className="mt-1.5 inline-flex h-2.5 w-2.5 rounded-full border-2 border-white bg-brand-400 shadow-soft dark:border-stone-950" />
-      </div>
-      <div className="flex-1 card-soft p-4">
-        <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-500 md:hidden">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>{dateLabel}</span>
-        </div>
-        {ev.family && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-300">
-            <Users className="h-3 w-3" /> {ev.family}
-          </span>
-        )}
-        <p className="mt-1 font-medium">{ev.title ?? t("timeline.undated")}</p>
-        {ev.people && ev.people.length > 0 && (
-          <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
-            <span className="text-stone-400">{t("timeline.who")} </span>{ev.people.join(", ")}
-          </p>
-        )}
-        {ev.location && (
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-stone-500 dark:text-stone-500">
-            <MapPin className="h-3 w-3" /> {ev.location}
-          </p>
-        )}
-        {ev.description && (
-          <p className="mt-1.5 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
-            {ev.description}
-          </p>
-        )}
-        {ev.media_file_id && (
-          <div className="relative mt-3 h-32 w-44 overflow-hidden rounded-lg border border-stone-200 dark:border-stone-800">
-            <Photo mediaId={ev.media_file_id} className="h-full w-full object-cover" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function groupByYear(events: TimelineEvent[]): Record<string, TimelineEvent[]> {
-  const out: Record<string, TimelineEvent[]> = {};
-  for (const ev of events) {
-    const y = ev.event_date ? new Date(ev.event_date).getFullYear().toString() : "—";
-    (out[y] ??= []).push(ev);
-  }
-  for (const y of Object.keys(out)) {
-    out[y].sort((a, b) => {
-      const da = a.event_date ? +new Date(a.event_date) : 0;
-      const db = b.event_date ? +new Date(b.event_date) : 0;
-      return db - da;
-    });
-  }
-  return out;
+  return <TimelineList events={events} />;
 }
 
 // ── Family Tab ─────────────────────────────────────────────────────────────
@@ -762,9 +674,19 @@ function SubChip({
 // ── Stories Tab ────────────────────────────────────────────────────────────
 
 function StoriesTab({ projectId }: { projectId: number }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useProjectStories(projectId);
+  const del = useDeleteStory();
   const navigate = useNavigate();
   const stories = data ?? [];
+
+  const handleDelete = (id: number) => {
+    if (!window.confirm(`${t("common.confirm")}?`)) return;
+    del.mutate(id, {
+      onSuccess: () => toast.success(t("common.success")),
+      onError: (err) => toast.error(extractErrorMessage(err)),
+    });
+  };
 
   if (isLoading) return <div className="skeleton h-40 rounded-2xl" />;
   if (stories.length === 0) {
@@ -785,24 +707,7 @@ function StoriesTab({ projectId }: { projectId: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {stories.map((s) => (
-        <Link
-          key={s.id}
-          to={`/stories/${s.id}`}
-          className="card group p-5 transition hover:-translate-y-0.5 hover:shadow-lift"
-        >
-          <div className="flex items-center gap-2 text-xs">
-            <span className="chip chip-accent">{s.event_type}</span>
-            <span className="text-stone-500 dark:text-stone-500">
-              {new Date(s.created_at).toLocaleDateString()}
-            </span>
-          </div>
-          <h3 className="mt-3 font-serif text-xl font-semibold leading-snug tracking-tight line-clamp-2">
-            {s.title}
-          </h3>
-          <p className="mt-2 text-sm text-stone-600 line-clamp-3 dark:text-stone-400">
-            {(s.narrative ?? "").slice(0, 220)}…
-          </p>
-        </Link>
+        <StoryCard key={s.id} story={s} onDelete={() => handleDelete(s.id)} />
       ))}
     </div>
   );
@@ -811,20 +716,8 @@ function StoriesTab({ projectId }: { projectId: number }) {
 // ── Videos Tab ────────────────────────────────────────────────────────────
 
 function VideosTab({ projectId }: { projectId: number }) {
-  const { t } = useTranslation();
   const { data, isLoading } = useProjectVideos(projectId);
-  const del = useDeleteVideo();
-  const [playing, setPlaying] = useState<{ id: number; filename?: string | null } | null>(null);
   const videos = data ?? [];
-
-  const handleDelete = (id: number) => {
-    if (!confirm(t("videos.confirmDelete"))) return;
-    setPlaying((p) => (p?.id === id ? null : p));
-    del.mutate(id, {
-      onSuccess: () => toast.success(t("common.success")),
-      onError: (err) => toast.error(extractErrorMessage(err)),
-    });
-  };
 
   if (isLoading) return <div className="skeleton h-40 rounded-2xl" />;
   if (videos.length === 0) {
@@ -836,60 +729,10 @@ function VideosTab({ projectId }: { projectId: number }) {
   }
 
   return (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {videos.map((v) => {
-          const ready = v.status === "completed" && !!v.filename;
-          return (
-            <article key={v.id} className="card overflow-hidden">
-              <div className="relative aspect-video bg-gradient-to-br from-stone-800 to-stone-900">
-                {ready ? (
-                  <button onClick={() => setPlaying(v)} className="group absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-lift transition group-hover:scale-105">
-                      <Play className="h-5 w-5 translate-x-0.5" fill="currentColor" />
-                    </span>
-                  </button>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
-                    {v.status === "failed" ? t("common.error") : t("videos.processing")}
-                  </div>
-                )}
-                <button
-                  onClick={() => handleDelete(v.id)}
-                  disabled={del.isPending}
-                  className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/55 text-white/90 transition hover:bg-rose-600 disabled:opacity-50"
-                  aria-label={t("videos.delete")}
-                  title={t("videos.delete")}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="p-4">
-                <p className="truncate font-medium">{v.filename ?? `#${v.id}`}</p>
-                <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
-                  {v.status === "completed" ? "Pronto" : v.status === "processing" ? "A processar" : "Falhou"}
-                </p>
-                {ready && (
-                  <a href={videoUrl(v.filename!)} download
-                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
-                    <Download className="h-3.5 w-3.5" /> {t("videos.download")}
-                  </a>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
-
-      {playing && playing.filename && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 p-4 backdrop-blur" onClick={() => setPlaying(null)}>
-          <button onClick={() => setPlaying(null)} className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" aria-label={t("common.close")}>
-            <X className="h-5 w-5" />
-          </button>
-          <video key={playing.id} src={videoUrl(playing.filename)} controls autoPlay
-                 className="max-h-[85vh] max-w-[95vw] rounded-xl shadow-lift" onClick={(e) => e.stopPropagation()} />
-        </div>
-      )}
-    </>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {videos.map((v) => (
+        <VideoCard key={v.id} video={v} />
+      ))}
+    </div>
   );
 }

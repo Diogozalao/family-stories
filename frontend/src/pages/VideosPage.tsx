@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Download, Film, Loader2, Play, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Film, Loader2, Plus, Sparkles, X } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
-import { useDeleteVideo, useGenerateVideo, useStories, useVideos, videoUrl } from "../lib/hooks";
+import VideoCard from "../components/media/VideoCard";
+import { useGenerateVideo, useStories, useVideos } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 import { cn } from "../lib/utils";
-import type { Video } from "../lib/types";
 
 export default function VideosPage() {
   const { t } = useTranslation();
   const { data, isLoading } = useVideos();
-  const [playing, setPlaying] = useState<Video | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const videos = data ?? [];
@@ -47,111 +46,14 @@ export default function VideosPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((v) => (
-            <VideoCard key={v.id} video={v} onPlay={() => setPlaying(v)} onClosePlayer={() => setPlaying((p) => (p?.id === v.id ? null : p))} />
+            <VideoCard key={v.id} video={v} />
           ))}
-        </div>
-      )}
-
-      {playing && playing.filename && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/90 backdrop-blur animate-fade-in p-4">
-          <button
-            onClick={() => setPlaying(null)}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <video
-            key={playing.id}
-            src={videoUrl(playing.filename)}
-            controls
-            autoPlay
-            className="max-h-[85vh] max-w-[95vw] rounded-xl shadow-lift animate-scale-in"
-          />
         </div>
       )}
 
       {pickerOpen && <StoryPicker onClose={() => setPickerOpen(false)} />}
     </>
   );
-}
-
-function VideoCard({ video, onPlay, onClosePlayer }: { video: Video; onPlay: () => void; onClosePlayer: () => void }) {
-  const { t } = useTranslation();
-  const del = useDeleteVideo();
-  const ready = video.status === "completed" && !!video.filename;
-
-  const handleDelete = () => {
-    if (!confirm(t("videos.confirmDelete"))) return;
-    onClosePlayer();          // close the lightbox if this video is open
-    del.mutate(video.id, {
-      onSuccess: () => toast.success(t("common.success")),
-      onError: (err) => toast.error(extractErrorMessage(err)),
-    });
-  };
-
-  return (
-    <article className="card overflow-hidden">
-      <div className="relative aspect-video bg-gradient-to-br from-stone-800 to-stone-900">
-        {ready ? (
-          <button onClick={onPlay} className="group absolute inset-0 flex items-center justify-center">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-stone-900 shadow-lift transition group-hover:scale-105">
-              <Play className="h-6 w-6 translate-x-0.5" fill="currentColor" />
-            </span>
-          </button>
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-white/60">
-            {video.status === "failed" ? t("common.error") : t("videos.processing")}
-          </div>
-        )}
-        {/* Delete — always available so stuck/failed renders can be cleared. */}
-        <button
-          onClick={handleDelete}
-          disabled={del.isPending}
-          className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-stone-950/55 text-white/90 transition hover:bg-rose-600 disabled:opacity-50"
-          aria-label={t("videos.delete")}
-          title={t("videos.delete")}
-        >
-          {del.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-        </button>
-      </div>
-      <div className="p-4">
-        <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-500">
-          <StatusChip status={video.status} />
-          {video.photos_used !== null && video.photos_used !== undefined && (
-            <span>{t("videos.photos", { count: video.photos_used })}</span>
-          )}
-          {video.size_mb !== null && video.size_mb !== undefined && (
-            <span>· {t("videos.size", { size: video.size_mb.toFixed(1) })}</span>
-          )}
-        </div>
-        <p className="mt-1 truncate font-medium">{video.filename ?? `#${video.id}`}</p>
-        {ready && (
-          <a
-            href={videoUrl(video.filename!)}
-            download
-            className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
-          >
-            <Download className="h-3.5 w-3.5" />
-            {t("videos.download")}
-          </a>
-        )}
-        {video.error_message && (
-          <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{video.error_message}</p>
-        )}
-      </div>
-    </article>
-  );
-}
-
-function StatusChip({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    processing: { label: "A processar", cls: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300" },
-    completed:  { label: "Pronto",      cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
-    failed:     { label: "Falhou",      cls: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300" },
-  };
-  const m = map[status] ?? { label: status, cls: "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300" };
-  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${m.cls}`}>{m.label}</span>;
 }
 
 function StoryPicker({ onClose }: { onClose: () => void }) {

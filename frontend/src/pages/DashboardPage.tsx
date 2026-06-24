@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  ArrowRight, Camera, Clock, Film, Image as ImageIcon, Images, Loader2,
+  ArrowRight, Camera, Clock, Film, Image as ImageIcon, Images,
   Network, Sparkles, Upload, Wand2,
 } from "lucide-react";
 
 import Photo from "../components/media/Photo";
-import { useMedia, usePersons, useStories, useTasks, useVideos } from "../lib/hooks";
+import { useMedia, usePersons, useStories, useVideos } from "../lib/hooks";
 import { useAuthStore } from "../store/auth";
 
 export default function DashboardPage() {
@@ -18,12 +18,10 @@ export default function DashboardPage() {
   const { data: persons } = usePersons();
   const { data: stories } = useStories();
   const { data: videos }  = useVideos();
-  const { data: tasks }   = useTasks();
 
   const recentPhotos   = (media   ?? []).slice(0, 8);
   const recentStories  = (stories ?? []).slice(0, 3);
   const isEmpty        = (media?.length ?? 0) === 0 && (persons?.length ?? 0) === 0 && (stories?.length ?? 0) === 0;
-  const runningTasks   = (tasks ?? []).filter((t) => t.state === "pending" || t.state === "running").slice(0, 4);
 
   const stats = [
     { label: t("dashboard.photos"),  value: media?.length   ?? 0, icon: Images,   to: "/library",  tone: "brand"   as const },
@@ -129,48 +127,20 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Activity & running tasks */}
-        <div className="space-y-6">
-          <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-500">
-              {t("dashboard.runningTasks")}
-            </h3>
-            <div className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
-              {runningTasks.length === 0 ? (
-                <p className="text-sm text-stone-500 dark:text-stone-500">{t("dashboard.noRunningTasks")}</p>
-              ) : (
-                <ul className="space-y-3">
-                  {runningTasks.map((task) => (
-                    <li key={task.id} className="flex items-center gap-3 text-sm">
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand-500" />
-                      <span className="flex-1 truncate">
-                        <span className="font-medium capitalize">{task.kind}</span>
-                        <span className="ml-2 text-stone-500">· {task.state}</span>
-                      </span>
-                      <Link to="/tasks" className="text-xs text-brand-600 hover:underline">
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-500">
-              {t("dashboard.recentActivity")}
-            </h3>
-            <ActivityFeed
-              media={media   ?? []}
-              stories={stories ?? []}
-              videos={videos ?? []}
-              emptyLabel={t("dashboard.activityEmpty")}
-              labelPhoto={(name) => t("dashboard.activityPhoto", { name })}
-              labelStory={(title) => t("dashboard.activityStory", { title })}
-              labelVideo={t("dashboard.activityVideo")}
-            />
-          </div>
+        {/* Recent activity */}
+        <div>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-500">
+            {t("dashboard.recentActivity")}
+          </h3>
+          <ActivityFeed
+            media={media   ?? []}
+            stories={stories ?? []}
+            videos={videos ?? []}
+            emptyLabel={t("dashboard.activityEmpty")}
+            labelPhoto={(name) => t("dashboard.activityPhoto", { name })}
+            labelStory={(title) => t("dashboard.activityStory", { title })}
+            labelVideo={t("dashboard.activityVideo")}
+          />
         </div>
       </section>
 

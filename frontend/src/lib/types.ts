@@ -96,6 +96,7 @@ export interface Video {
   error_message?: string | null;
   created_at: string;
   download_url?: string | null;
+  poster_media_id?: number | null;
 }
 
 export type TaskState = "pending" | "running" | "done" | "failed";

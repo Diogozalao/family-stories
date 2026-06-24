@@ -134,6 +134,45 @@ async def download_video(
     return RedirectResponse(url=signed, status_code=302)
 
 
+async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict]:
+    """Serialise ``VideoOutput`` rows into the API shape used by the frontend.
+
+    Shared by the global and the per-project video listings so both return
+    the *same* fields (the project route used to leak raw ORM columns like
+    ``file_size_mb`` and had no poster). The poster is the first photo of the
+    story's first scene — a real frame instead of a grey rectangle.
+    """
+    story_ids = {v.story_id for v in videos if v.story_id}
+    poster_by_story: dict[int, int] = {}
+    if story_ids:
+        rows = (await db.execute(
+            select(Story.id, Story.scenes).where(
+                Story.id.in_(story_ids), Story.user_id == user_id
+            )
+        )).all()
+        for sid, scenes in rows:
+            for sc in (scenes or []):
+                pids = (sc or {}).get("photo_ids") or []
+                if pids:
+                    poster_by_story[sid] = pids[0]
+                    break
+
+    return [
+        {
+            "id":              v.id,
+            "story_id":        v.story_id,
+            "filename":        v.filename,
+            "size_mb":         v.file_size_mb,
+            "photos_used":     v.photos_used,
+            "status":          v.status,
+            "created_at":      str(v.created_at),
+            "download_url":    f"/api/v1/multimedia/video/{v.filename}" if v.filename else None,
+            "poster_media_id": poster_by_story.get(v.story_id),
+        }
+        for v in videos
+    ]
+
+
 @router.get("/videos")
 async def list_videos(
     db:   AsyncSession = Depends(get_db),
@@ -145,20 +184,7 @@ async def list_videos(
         .where(VideoOutput.user_id == user.id)
         .order_by(VideoOutput.created_at.desc())
     )
-    videos = result.scalars().all()
-    return [
-        {
-            "id":           v.id,
-            "story_id":     v.story_id,
-            "filename":     v.filename,
-            "size_mb":      v.file_size_mb,
-            "photos_used":  v.photos_used,
-            "status":       v.status,
-            "created_at":   str(v.created_at),
-            "download_url": f"/api/v1/multimedia/video/{v.filename}" if v.filename else None,
-        }
-        for v in videos
-    ]
+    return await serialize_videos(db, result.scalars().all(), user.id)
 
 
 @router.get("/status/{video_id}")
