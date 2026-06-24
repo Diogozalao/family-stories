@@ -9,7 +9,7 @@ import aiofiles
 import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, distinct, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.auth import User, get_current_user
@@ -43,6 +43,7 @@ class PersonCreate(BaseModel):
     birth_place:  Optional[str] = None
     notes:        Optional[str] = None
     family_label: Optional[str] = None
+    project_id:   Optional[int] = None
 
 
 class PersonUpdate(BaseModel):
@@ -83,6 +84,7 @@ class BulkRelationship(BaseModel):
 class BulkTreeRequest(BaseModel):
     persons:       list[BulkPerson]       = []
     relationships: list[BulkRelationship] = []
+    project_id:    Optional[int]          = None
 
 
 def _person_dict(p: Person) -> dict:
@@ -102,24 +104,43 @@ def _person_dict(p: Person) -> dict:
     }
 
 
-async def _graph_from_db(db: AsyncSession, user_id):
+def _scope_persons(stmt, user_id, project_id):
+    """Apply the user + project boundary to a Person query.
+
+    ``project_id`` set → that project's people only; ``None`` → the global
+    Family (people with no project). This is what keeps a project's family
+    fully isolated from the Library/global Family and from other projects.
+    """
+    stmt = stmt.where(Person.user_id == user_id)
+    if project_id is not None:
+        return stmt.where(Person.project_id == project_id)
+    return stmt.where(Person.project_id.is_(None))
+
+
+async def _graph_from_db(db: AsyncSession, user_id, project_id=None):
     """Build the family graph from the DB (persons + relationships), in memory.
 
     The DB (Supabase) is the source of truth. The on-disk JSON cache is
     unreliable on Render's free tier — the disk is **ephemeral** and wiped on
     every restart/deploy, so reading it would return an empty graph (relatives
     and visualisation vanishing after a restart). Read paths build from here so
-    the tree, kinship and notes are always present.
+    the tree, kinship and notes are always present. Scoped to ``project_id``
+    (or the global family when None).
     """
     from backend.modules.m2_temporal.family_graph import FamilyGraph
 
-    persons = (await db.execute(select(Person).where(Person.user_id == user_id))).scalars().all()
+    persons = (await db.execute(_scope_persons(select(Person), user_id, project_id))).scalars().all()
+    person_ids = {p.id for p in persons}
     rels    = (await db.execute(select(Relationship).where(Relationship.user_id == user_id))).scalars().all()
 
     graph = FamilyGraph()
     for p in persons:
         graph.add_person(p)
     for r in rels:
+        # Only edges between two in-scope people — never bridge into another
+        # project or the global family.
+        if r.from_person_id not in person_ids or r.to_person_id not in person_ids:
+            continue
         graph.add_relation(r.from_person_id, r.to_person_id, r.kind)
         if r.kind in ("pai", "mãe"):
             graph.add_relation(r.to_person_id, r.from_person_id, "filho de")
@@ -156,6 +177,7 @@ async def upload_gedcom(
     request:      Request,
     file:         UploadFile = File(...),
     family_label: str | None = Form(default=None),
+    project_id:   int | None = Form(default=None),
     db:           AsyncSession = Depends(get_db),
     user:         User         = Depends(get_current_user),
 ):
@@ -186,7 +208,8 @@ async def upload_gedcom(
     log.info("gedcom_uploaded", filename=file.filename, size=validated.size,
              user_id=str(user.id), family_label=label)
 
-    result = await gedcom_to_database(dest_path, db, user_id=user.id, family_label=label)
+    result = await gedcom_to_database(dest_path, db, user_id=user.id,
+                                      family_label=label, project_id=project_id)
 
     return {
         "message":      "Family tree imported successfully",
@@ -198,25 +221,17 @@ async def upload_gedcom(
 
 @router.get("/genealogy/persons")
 async def list_persons(
-    family_label: str | None = Query(default=None, description="Optional filter by exact family group"),
-    group:        str | None = Query(default=None, description="Project group: this label OR its 'group :: sub' sub-families"),
+    family_label: str | None = Query(default=None, description="Optional filter by exact sub-family label"),
+    project_id:   int | None = Query(default=None, description="Project scope; omit for the global Family"),
     db:           AsyncSession = Depends(get_db),
     user:         User         = Depends(get_current_user),
 ):
-    """Return every person imported from the caller's GEDCOM files.
-
-    ``family_label`` filters to one exact tree. ``group`` scopes to a whole
-    project — the bare project label plus every ``"<project> :: <sub>"`` —
-    so the project's person pickers never show people from other projects or
-    from the global library.
+    """Return the caller's people, scoped to ``project_id`` (or the global
+    Family when omitted). ``family_label`` further filters to one sub-tree
+    within that scope.
     """
-    stmt = select(Person).where(Person.user_id == user.id)
-    if group:
-        stmt = stmt.where(or_(
-            Person.family_label == group,
-            Person.family_label.like(group + " :: %"),
-        ))
-    elif family_label:
+    stmt = _scope_persons(select(Person), user.id, project_id)
+    if family_label:
         stmt = stmt.where(Person.family_label == family_label)
     stmt = stmt.order_by(Person.family_label.nulls_last(), Person.name)
 
@@ -238,18 +253,18 @@ async def list_persons(
 
 @router.get("/genealogy/families")
 async def list_families(
+    project_id: int | None = Query(default=None, description="Project scope; omit for the global Family"),
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """Return the distinct family labels owned by the caller, with counts.
+    """Return the distinct family labels (with counts) within the scope.
 
-    Powers the "tabs/chips" filter in the Family page that lets the user
-    flip between trees imported from different GEDCOM files.
+    Powers the "chips" filter that flips between trees imported from
+    different GEDCOM files — scoped to a project or the global Family.
     """
     from sqlalchemy import func
     rows = (await db.execute(
-        select(Person.family_label, func.count(Person.id))
-        .where(Person.user_id == user.id)
+        _scope_persons(select(Person.family_label, func.count(Person.id)), user.id, project_id)
         .group_by(Person.family_label)
         .order_by(Person.family_label.nulls_last())
     )).all()
@@ -269,7 +284,7 @@ async def get_person(
     if not person:
         raise HTTPException(status_code=404, detail="Person not found")
 
-    graph   = await _graph_from_db(db, user.id)
+    graph   = await _graph_from_db(db, user.id, person.project_id)
     context = graph.get_family_context(person_id)
 
     return {
@@ -286,11 +301,13 @@ async def get_person(
 
 @router.get("/genealogy/graph")
 async def get_graph(
+    project_id: int | None = Query(default=None),
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """Return the caller's complete family graph (for visualisation)."""
-    graph = await _graph_from_db(db, user.id)
+    """Return the caller's family graph (for visualisation), scoped to a
+    project or the global Family."""
+    graph = await _graph_from_db(db, user.id, project_id)
 
     return {
         "nodes":   [{"id": n, **graph.graph.nodes[n]} for n in graph.graph.nodes],
@@ -302,12 +319,17 @@ async def get_graph(
 
 @router.delete("/genealogy/persons")
 async def clear_persons(
-    family_label: str | None = Query(default=None, description="Drop only this group; omit to wipe everything"),
+    family_label: str | None = Query(default=None, description="Drop only this sub-family; omit to wipe the whole scope"),
+    project_id:   int | None = Query(default=None, description="Project scope; omit for the global Family"),
     db:           AsyncSession = Depends(get_db),
     user:         User         = Depends(get_current_user),
 ):
-    """Remove imported persons. Wipes only one tree if ``family_label`` is set."""
+    """Remove imported persons within the scope (project or global)."""
     stmt = delete(Person).where(Person.user_id == user.id)
+    if project_id is not None:
+        stmt = stmt.where(Person.project_id == project_id)
+    else:
+        stmt = stmt.where(Person.project_id.is_(None))
     if family_label:
         stmt = stmt.where(Person.family_label == family_label)
     await db.execute(stmt)
@@ -334,6 +356,7 @@ async def create_person(
     """Create a person by hand (no GEDCOM needed)."""
     person = Person(
         user_id      = user.id,
+        project_id   = payload.project_id,
         name         = payload.name.strip(),
         sex          = (payload.sex or None),
         birth_date   = _parse_date(payload.birth_date),
@@ -488,24 +511,15 @@ async def export_gedcom(
 
 @router.get("/genealogy/tree")
 async def get_tree(
-    family_label: Optional[str] = Query(default=None),
-    group:        Optional[str] = Query(default=None, description="Project group: matches this label OR its 'group :: sub' sub-families"),
+    family_label: Optional[str] = Query(default=None, description="Filter to one sub-family within the scope"),
+    project_id:   Optional[int] = Query(default=None, description="Project scope; omit for the global Family"),
     db:           AsyncSession  = Depends(get_db),
     user:         User          = Depends(get_current_user),
 ):
-    """Return persons + relationships for the interactive tree / editor.
-
-    ``group`` lets a project show ALL its imported trees at once: it matches
-    the bare project label plus every ``"<project> :: <sub-family>"`` label,
-    so multiple GEDCOM files stay separable but can also be viewed together.
-    """
-    pstmt = select(Person).where(Person.user_id == user.id)
-    if group:
-        pstmt = pstmt.where(or_(
-            Person.family_label == group,
-            Person.family_label.like(group + " :: %"),
-        ))
-    elif family_label:
+    """Return persons + relationships for the interactive tree / editor,
+    scoped to a project (``project_id``) or the global Family."""
+    pstmt = _scope_persons(select(Person), user.id, project_id)
+    if family_label:
         pstmt = pstmt.where(Person.family_label == family_label)
     persons = (await db.execute(pstmt.order_by(Person.name))).scalars().all()
     person_ids = {p.id for p in persons}
@@ -540,6 +554,7 @@ async def bulk_tree(
             continue
         person = Person(
             user_id      = user.id,
+            project_id   = payload.project_id,
             name         = bp.name.strip(),
             sex          = (bp.sex or None),
             birth_date   = _parse_date(bp.birth_date),

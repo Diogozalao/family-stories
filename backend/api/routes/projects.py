@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.auth import User, get_current_user
 from backend.core.database import get_db
+from backend.core.supabase_storage import delete_object
 from backend.models.media import MediaFile
 from backend.models.narrative import Story
 from backend.models.project import Project, ProjectMedia
@@ -56,7 +57,7 @@ async def _get_or_404(db: AsyncSession, project_id: int, user_id) -> Project:
 
 async def _serialize(db: AsyncSession, project: Project) -> dict:
     photos_count = (await db.execute(
-        select(func.count()).select_from(ProjectMedia).where(ProjectMedia.project_id == project.id)
+        select(func.count()).select_from(MediaFile).where(MediaFile.project_id == project.id)
     )).scalar_one()
 
     stories_count = (await db.execute(
@@ -135,10 +136,12 @@ async def update_project(
     if payload.description is not None:
         project.description = payload.description
     if payload.cover_media_id is not None:
+        # The cover must be one of THIS project's (isolated) photos.
         is_member = (await db.execute(
-            select(ProjectMedia.id).where(
-                ProjectMedia.project_id == project_id,
-                ProjectMedia.media_id   == payload.cover_media_id,
+            select(MediaFile.id).where(
+                MediaFile.id         == payload.cover_media_id,
+                MediaFile.project_id == project_id,
+                MediaFile.user_id    == user.id,
             )
         )).scalar_one_or_none()
         if not is_member:
@@ -173,10 +176,11 @@ async def list_project_media(
     user:       User         = Depends(get_current_user),
 ):
     await _get_or_404(db, project_id, user.id)
+    # Isolated: a project's photos are the media stamped with its project_id
+    # (uploaded straight into the project), never the global Library.
     result = await db.execute(
         select(MediaFile)
-        .join(ProjectMedia, ProjectMedia.media_id == MediaFile.id)
-        .where(ProjectMedia.project_id == project_id, MediaFile.user_id == user.id)
+        .where(MediaFile.project_id == project_id, MediaFile.user_id == user.id)
         .order_by(MediaFile.date_taken.desc().nullslast(), MediaFile.created_at.desc())
     )
     return result.scalars().all()
@@ -242,12 +246,22 @@ async def remove_media_from_project(
     user:       User         = Depends(get_current_user),
 ):
     project = await _get_or_404(db, project_id, user.id)
-    await db.execute(
-        delete(ProjectMedia).where(
-            ProjectMedia.project_id == project_id,
-            ProjectMedia.media_id   == media_id,
+    # A project photo is project-only, so "remove from project" deletes it
+    # (it isn't kept in the Library). The Storage object is best-effort cleaned.
+    media = (await db.execute(
+        select(MediaFile).where(
+            MediaFile.id == media_id,
+            MediaFile.user_id == user.id,
+            MediaFile.project_id == project_id,
         )
-    )
+    )).scalar_one_or_none()
+    if media is not None:
+        if media.file_path:
+            try:
+                await delete_object(media.file_path)
+            except Exception as exc:                       # never fail the removal
+                log.warning("project_media_storage_delete_swallowed", key=media.file_path, error=str(exc))
+        await db.delete(media)
     if project.cover_media_id == media_id:
         project.cover_media_id = None
     await db.commit()

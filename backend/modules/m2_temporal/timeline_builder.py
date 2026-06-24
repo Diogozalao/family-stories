@@ -47,6 +47,7 @@ class TimelineBuilder:
         result = await db.execute(
             select(MediaFile).where(
                 MediaFile.user_id    == user_id,
+                MediaFile.project_id.is_(None),   # global timeline only — project photos stay in their project
                 MediaFile.status     == ProcessingStatus.COMPLETED,
                 MediaFile.media_type.in_([MediaType.PHOTO, MediaType.VIDEO, MediaType.DOCUMENT]),
             )

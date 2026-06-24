@@ -230,6 +230,7 @@ async def gedcom_to_database(
     db: AsyncSession,
     user_id,
     family_label: str | None = None,
+    project_id: int | None = None,
 ) -> dict:
     """
     Lê ficheiro GEDCOM e guarda pessoas na BD para o ``user_id`` indicado.
@@ -316,10 +317,13 @@ async def gedcom_to_database(
             # importing without a label keeps the existing grouping.
             if family_label:
                 person.family_label = family_label
+            if project_id is not None:
+                person.project_id = project_id
             persons_updated += 1
         else:
             person = Person(
                 user_id      = user_id,
+                project_id   = project_id,   # None = global Family; set = project-only.
                 name         = indi["name"],
                 sex          = indi.get("sex"),
                 birth_date   = indi.get("birth_date"),
@@ -376,6 +380,7 @@ async def gedcom_to_database(
                 from backend.models.timeline import ConfidenceLevel, TimelineEvent
                 marr_event = TimelineEvent(
                     user_id         = user_id,
+                    project_id      = project_id,
                     event_date      = fam["marr_date"],
                     date_confidence = ConfidenceLevel.HIGH,
                     date_label      = fam["marr_date"].strftime("%d/%m/%Y") if fam["marr_date"] else None,

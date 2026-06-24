@@ -106,7 +106,7 @@ export default function FamilyPage() {
   const handleClearLabel = async (label: string | null) => {
     if (!confirm(t(label ? "family.confirmRemoveLabel" : "family.confirmRemoveAll", { label }))) return;
     try {
-      await clear.mutateAsync(label ?? undefined);
+      await clear.mutateAsync({ familyLabel: label ?? undefined });
       toast.success(t("common.success"));
       if (activeLabel === (label ?? UNLABELED)) setActiveLabel("");
     } catch (err) {

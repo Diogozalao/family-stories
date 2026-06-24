@@ -35,10 +35,14 @@ async def get_timeline(
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """Return the caller's timeline, chronologically ordered."""
+    """Return the caller's GLOBAL timeline, chronologically ordered.
+
+    Project events (``project_id`` set) are excluded — they belong only to
+    their project's own timeline tab, not the global one.
+    """
     result = await db.execute(
         select(TimelineEvent)
-        .where(TimelineEvent.user_id == user.id)
+        .where(TimelineEvent.user_id == user.id, TimelineEvent.project_id.is_(None))
         .order_by(TimelineEvent.sort_order)
     )
     events = result.scalars().all()

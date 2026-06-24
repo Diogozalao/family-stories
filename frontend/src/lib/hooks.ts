@@ -172,16 +172,24 @@ export function useUpdateMedia() {
 export function useUploadPhoto() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    // ``projectId`` uploads the photo straight into a project (isolated from
+    // the Library); omitted = global Library.
+    mutationFn: async (input: File | { file: File; projectId?: number | null }) => {
+      const file = input instanceof File ? input : input.file;
+      const projectId = input instanceof File ? undefined : input.projectId;
       await wakeBackend();           // absorb cold-start before the upload
       const form = new FormData();
       form.append("file", file);
+      if (projectId != null) form.append("project_id", String(projectId));
       const { data } = await api.post("/api/v1/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["media"] });
+      qc.invalidateQueries({ queryKey: ["projects"] });
+    },
   });
 }
 
@@ -291,14 +299,14 @@ export function useRemoveMediaFromProject() {
 }
 
 // ── Genealogy ───────────────────────────────────────────────────────────
-export function usePersons(group?: string | null) {
+export function usePersons(projectId?: number | null) {
   return useQuery<Person[]>({
-    // ``group`` scopes the people to a project (its label + sub-families).
-    // Omitted = every person the user owns (global Family page, dashboard…).
-    queryKey: ["persons", group ?? null],
+    // ``projectId`` scopes to that project's isolated family; omitted = the
+    // global Family (people with no project).
+    queryKey: ["persons", projectId ?? "global"],
     queryFn: async () => {
       try {
-        const params = group ? { params: { group } } : {};
+        const params = projectId != null ? { params: { project_id: projectId } } : {};
         return (await api.get("/api/v1/genealogy/persons", params)).data;
       } catch {
         return [];
@@ -310,7 +318,7 @@ export function usePersons(group?: string | null) {
 export function useUploadGedcom() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { file: File; familyLabel?: string }) => {
+    mutationFn: async (input: { file: File; familyLabel?: string; projectId?: number | null }) => {
       // Make sure the (possibly cold-started) backend is awake before we send
       // the multipart import — otherwise the first request is dropped while
       // the server boots and surfaces as a "Network Error" that only a page
@@ -319,6 +327,7 @@ export function useUploadGedcom() {
       const form = new FormData();
       form.append("file", input.file);
       if (input.familyLabel) form.append("family_label", input.familyLabel);
+      if (input.projectId != null) form.append("project_id", String(input.projectId));
       // 5-minute ceiling for very large trees — the backend usually finishes
       // in seconds with the session pooler, but the previous timeout (none)
       // surfaced confusing "Network Error" toasts when the browser itself
@@ -337,19 +346,24 @@ export function useUploadGedcom() {
   });
 }
 
-export function useFamilies() {
+export function useFamilies(projectId?: number | null) {
   return useQuery<{ label: string | null; count: number }[]>({
-    queryKey: ["families"],
-    queryFn: async () => (await api.get("/api/v1/genealogy/families")).data,
+    queryKey: ["families", projectId ?? "global"],
+    queryFn: async () => {
+      const params = projectId != null ? { params: { project_id: projectId } } : {};
+      return (await api.get("/api/v1/genealogy/families", params)).data;
+    },
   });
 }
 
 export function useClearFamily() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (familyLabel?: string) => {
-      const params = familyLabel ? { params: { family_label: familyLabel } } : {};
-      const { data } = await api.delete("/api/v1/genealogy/persons", params);
+    mutationFn: async (input?: { familyLabel?: string; projectId?: number | null }) => {
+      const params: Record<string, unknown> = {};
+      if (input?.familyLabel) params.family_label = input.familyLabel;
+      if (input?.projectId != null) params.project_id = input.projectId;
+      const { data } = await api.delete("/api/v1/genealogy/persons", { params });
       return data;
     },
     onSuccess: () => {
@@ -362,18 +376,16 @@ export function useClearFamily() {
 }
 
 // ── Family tree (DB-backed persons + relationships) ───────────────────────
-export function useFamilyTree(familyLabel?: string | null, group?: string | null) {
+export function useFamilyTree(familyLabel?: string | null, projectId?: number | null) {
   return useQuery<FamilyTreeData>({
-    // ``group`` matches a project label plus all its "label :: sub" trees;
-    // ``familyLabel`` is an exact single-tree match. They're mutually exclusive.
-    queryKey: ["tree", group ? `g:${group}` : familyLabel ?? null],
+    // ``projectId`` scopes to a project; ``familyLabel`` filters to one
+    // sub-family within the scope.
+    queryKey: ["tree", projectId ?? "global", familyLabel ?? null],
     queryFn: async () => {
-      const params = group
-        ? { params: { group } }
-        : familyLabel
-        ? { params: { family_label: familyLabel } }
-        : {};
-      return (await api.get("/api/v1/genealogy/tree", params)).data;
+      const params: Record<string, unknown> = {};
+      if (projectId != null) params.project_id = projectId;
+      if (familyLabel) params.family_label = familyLabel;
+      return (await api.get("/api/v1/genealogy/tree", { params })).data;
     },
   });
 }
