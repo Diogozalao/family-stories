@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { ArrowLeft, AtSign, KeyRound, Loader2, Mail, MailCheck } from "lucide-react";
 import AuthShell from "../components/auth/AuthShell";
@@ -10,6 +11,7 @@ import { extractErrorMessage } from "../lib/api";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const forgot = useForgotPassword();
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -43,11 +45,10 @@ export default function ForgotPasswordPage() {
                 <KeyRound className="h-5 w-5" />
               </span>
               <h1 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-[2rem]">
-                Recuperar palavra-passe
+                {t("auth.forgotTitle")}
               </h1>
               <p className="mt-2 text-[15px] text-stone-600 dark:text-stone-400">
-                Indica o email da tua conta. Vamos enviar-te um link seguro
-                para definires uma nova palavra-passe.
+                {t("auth.forgotLead")}
               </p>
             </header>
 
@@ -76,7 +77,7 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
                 {emailInvalid && (
-                  <p className="mt-1.5 text-xs text-rose-600">Indica um email válido.</p>
+                  <p className="mt-1.5 text-xs text-rose-600">{t("auth.emailInvalid")}</p>
                 )}
               </div>
 
@@ -90,7 +91,7 @@ export default function ForgotPasswordPage() {
                 ) : (
                   <Mail className="h-5 w-5" />
                 )}
-                <span>Enviar link de reset</span>
+                <span>{t("auth.sendResetLink")}</span>
               </button>
             </form>
 

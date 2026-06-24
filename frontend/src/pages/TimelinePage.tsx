@@ -14,8 +14,8 @@ export default function TimelinePage() {
   const rebuild = () => build.mutate(undefined, {
     onSuccess: (r: { total_events?: number }) => toast.success(
       (r?.total_events ?? 0) > 0
-        ? `Linha temporal atualizada: ${r.total_events} evento(s).`
-        : "Ainda sem eventos — as fotos não estão analisadas. Usa 'Re-analisar IA' na Biblioteca primeiro.",
+        ? t("timeline.rebuilt", { count: r.total_events })
+        : t("timeline.noEvents"),
     ),
     onError: (err) => toast.error(extractErrorMessage(err)),
   });
@@ -28,7 +28,7 @@ export default function TimelinePage() {
         actions={
           <button className="btn btn-ghost" onClick={rebuild} disabled={build.isPending}>
             {build.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span>Atualizar</span>
+            <span>{t("common.refresh")}</span>
           </button>
         }
       />

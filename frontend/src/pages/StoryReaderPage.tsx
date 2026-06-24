@@ -46,7 +46,7 @@ export default function StoryReaderPage() {
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
           <p>
             {lost
-              ? "Não foi possível carregar a história — o servidor pode estar a acordar. Tenta novamente dentro de alguns segundos."
+              ? t("storyReader.loadError")
               : extractErrorMessage(error, t("common.error"))}
           </p>
           <button
@@ -55,7 +55,7 @@ export default function StoryReaderPage() {
             className="btn btn-ghost mt-4"
           >
             {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span>Tentar novamente</span>
+            <span>{t("common.retry")}</span>
           </button>
         </div>
       </div>
@@ -154,7 +154,7 @@ export default function StoryReaderPage() {
                 className="btn btn-ghost"
               >
                 <Pencil className="h-4 w-4" />
-                <span>Editar</span>
+                <span>{t("storyReader.edit")}</span>
               </button>
             ) : (
               <>
@@ -164,7 +164,7 @@ export default function StoryReaderPage() {
                   className="btn btn-ghost"
                 >
                   <X className="h-4 w-4" />
-                  <span>Cancelar</span>
+                  <span>{t("common.cancel")}</span>
                 </button>
                 <button
                   onClick={handleSave}
@@ -172,7 +172,7 @@ export default function StoryReaderPage() {
                   className="btn btn-primary"
                 >
                   {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  <span>Guardar</span>
+                  <span>{t("common.save")}</span>
                 </button>
               </>
             )}
@@ -184,7 +184,7 @@ export default function StoryReaderPage() {
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
             className="input mt-3 font-serif text-3xl font-semibold leading-tight tracking-tight sm:text-4xl"
-            placeholder="Título da história"
+            placeholder={t("storyReader.titlePlaceholder")}
           />
         ) : (
           <h1 className="mt-3 font-serif text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
@@ -199,11 +199,11 @@ export default function StoryReaderPage() {
             value={draftNarrative}
             onChange={(e) => setDraftNarrative(e.target.value)}
             className="input min-h-[60vh] resize-y font-serif text-lg leading-relaxed"
-            placeholder="Texto da narrativa. Separa parágrafos com uma linha em branco."
+            placeholder={t("storyReader.narrativePlaceholder")}
           />
           <p className="mt-2 text-xs text-stone-500 dark:text-stone-500">
-            Separa parágrafos com uma linha em branco. Mínimo 30 caracteres.
-            {dirty && <span className="ml-2 text-amber-600 dark:text-amber-400">· Alterações por guardar</span>}
+            {t("storyReader.editHint")}
+            {dirty && <span className="ml-2 text-amber-600 dark:text-amber-400">· {t("storyReader.unsaved")}</span>}
           </p>
         </>
       ) : (

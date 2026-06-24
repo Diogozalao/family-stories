@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen, Calendar, Camera, Film, MapPin, Play, Sparkles,
 } from "lucide-react";
@@ -14,20 +15,8 @@ import { cn } from "../../lib/utils";
  * + state (no extra deps) keep it consistent with the rest of the landing.
  */
 
-const STAGES = [
-  { label: "Foto" },
-  { label: "IA descreve" },
-  { label: "Narrativa" },
-  { label: "Vídeo" },
-] as const;
-
 const STAGE_ICONS = [Camera, Sparkles, BookOpen, Film];
-
-const DESCRIPTION =
-  "Jardim ao fim da tarde. Três gerações reunidas à volta da mesa, entre risos e o calor de um dia de verão.";
-const DESC_TAGS = ["jardim", "fim de tarde", "verão", "família", "sorrisos"];
-const NARRATIVE =
-  "Naquele jardim, ao fim de uma tarde de verão, a família reunia-se como sempre — e, por um instante, o tempo parou para guardar aquele sorriso.";
+const STAGE_COUNT = 4;
 
 function useTypewriter(text: string, active: boolean, speed = 26): string {
   const [out, setOut] = useState("");
@@ -46,13 +35,18 @@ function useTypewriter(text: string, active: boolean, speed = 26): string {
 }
 
 export default function PipelineDemo() {
+  const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
+  const stages = [
+    t("pipelineDemo.stage1"), t("pipelineDemo.stage2"),
+    t("pipelineDemo.stage3"), t("pipelineDemo.stage4"),
+  ];
 
   useEffect(() => {
     if (paused) return;
     const id = window.setInterval(
-      () => setActive((i) => (i + 1) % STAGES.length),
+      () => setActive((i) => (i + 1) % STAGE_COUNT),
       4200,
     );
     return () => window.clearInterval(id);
@@ -62,25 +56,24 @@ export default function PipelineDemo() {
     <section id="demo" className="relative px-4 py-24 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <header className="mx-auto max-w-3xl text-center">
-          <span className="chip chip-accent">Demonstração</span>
+          <span className="chip chip-accent">{t("pipelineDemo.tag")}</span>
           <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            Vê uma memória ganhar vida.
+            {t("pipelineDemo.title")}
           </h2>
           <p className="mt-3 text-stone-600 dark:text-stone-400">
-            De uma fotografia a um documentário narrado — em quatro passos,
-            e sem sair da tua máquina.
+            {t("pipelineDemo.lead")}
           </p>
         </header>
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[260px_1fr]">
           {/* Stage tabs */}
           <ol className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
-            {STAGES.map((s, i) => {
+            {stages.map((label, i) => {
               const Icon = STAGE_ICONS[i];
               const isActive = i === active;
               const done = i < active;
               return (
-                <li key={s.label} className="shrink-0 lg:shrink">
+                <li key={label} className="shrink-0 lg:shrink">
                   <button
                     type="button"
                     onClick={() => { setActive(i); setPaused(true); }}
@@ -105,7 +98,7 @@ export default function PipelineDemo() {
                       "text-sm font-medium",
                       isActive ? "text-stone-900 dark:text-stone-100" : "text-stone-600 dark:text-stone-400",
                     )}>
-                      {s.label}
+                      {label}
                     </span>
                   </button>
                 </li>
@@ -118,7 +111,7 @@ export default function PipelineDemo() {
             <div className="absolute inset-x-0 top-0 h-1 bg-stone-200/70 dark:bg-stone-800">
               <div
                 className="h-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all duration-500"
-                style={{ width: `${((active + 1) / STAGES.length) * 100}%` }}
+                style={{ width: `${((active + 1) / STAGE_COUNT) * 100}%` }}
               />
             </div>
             {/* keyed wrapper re-triggers the fade + remounts the typewriters */}
@@ -133,15 +126,18 @@ export default function PipelineDemo() {
 }
 
 function StageCanvas({ active }: { active: number }) {
-  const desc = useTypewriter(DESCRIPTION, active === 1);
-  const narrative = useTypewriter(NARRATIVE, active === 2);
+  const { t } = useTranslation();
+  const tags  = t("pipelineDemo.tags",  { returnObjects: true }) as string[];
+  const chips = t("pipelineDemo.chips", { returnObjects: true }) as string[];
+  const desc = useTypewriter(t("pipelineDemo.description"), active === 1);
+  const narrative = useTypewriter(t("pipelineDemo.narrative"), active === 2);
 
   if (active === 0) {
     return (
       <div className="flex flex-col items-center justify-center pt-4">
         <PhotoFrame />
         <p className="mt-5 text-center text-sm text-stone-600 dark:text-stone-400">
-          Arrasta uma fotografia. Em segundos, ela passa por EXIF, OCR e visão por IA.
+          {t("pipelineDemo.step0Hint")}
         </p>
       </div>
     );
@@ -160,7 +156,7 @@ function StageCanvas({ active }: { active: number }) {
             <span className="ml-0.5 inline-block h-5 w-0.5 -translate-y-0.5 animate-pulse bg-brand-500 align-middle" />
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {DESC_TAGS.map((tag) => (
+            {tags.map((tag) => (
               <span key={tag} className="rounded-full bg-stone-100 px-2.5 py-1 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-300">
                 {tag}
               </span>
@@ -177,7 +173,7 @@ function StageCanvas({ active }: { active: number }) {
     return (
       <div className="pt-3">
         <div className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-          <BookOpen className="h-3.5 w-3.5" /> História gerada por IA
+          <BookOpen className="h-3.5 w-3.5" /> {t("pipelineDemo.aiStory")}
         </div>
         <div className="mt-3 rounded-2xl bg-white/70 p-5 shadow-soft dark:bg-stone-950/40">
           <p className="font-serif text-lg leading-relaxed text-stone-900 dark:text-stone-100">
@@ -198,7 +194,7 @@ function StageCanvas({ active }: { active: number }) {
     <div className="flex flex-col items-center justify-center pt-2">
       <VideoFrame />
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {["Ken Burns", "Voz narrada", "Ritmo calmo", "MP4 pronto a partilhar"].map((c) => (
+        {chips.map((c) => (
           <span key={c} className="rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-xs text-stone-600 dark:border-stone-700 dark:bg-stone-900/60 dark:text-stone-300">
             {c}
           </span>
@@ -230,10 +226,11 @@ function PhotoFrame({ compact = false }: { compact?: boolean }) {
 }
 
 function VideoFrame() {
-  const [t, setT] = useState(0);
+  const { t } = useTranslation();
+  const [prog, setProg] = useState(0);
   useEffect(() => {
-    setT(0);
-    const id = window.setInterval(() => setT((x) => (x >= 100 ? 0 : x + 1.4)), 60);
+    setProg(0);
+    const id = window.setInterval(() => setProg((x) => (x >= 100 ? 0 : x + 1.4)), 60);
     return () => window.clearInterval(id);
   }, []);
 
@@ -249,13 +246,13 @@ function VideoFrame() {
       {/* lower-third caption */}
       <div className="absolute bottom-8 left-4 right-4">
         <div className="inline-block rounded-md bg-black/50 px-2 py-1 font-serif text-sm text-white backdrop-blur">
-          Verão de 2014 · Jardim da família
+          {t("pipelineDemo.caption")}
         </div>
       </div>
       {/* timeline / playhead */}
       <div className="absolute inset-x-3 bottom-3 h-1 rounded-full bg-white/20">
-        <div className="h-full rounded-full bg-brand-400" style={{ width: `${t}%` }} />
-        <div className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow" style={{ left: `${t}%` }} />
+        <div className="h-full rounded-full bg-brand-400" style={{ width: `${prog}%` }} />
+        <div className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow" style={{ left: `${prog}%` }} />
       </div>
     </div>
   );

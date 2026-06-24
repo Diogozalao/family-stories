@@ -88,15 +88,13 @@ export default function LibraryPage() {
               className="btn btn-ghost"
               onClick={() => {
                 if (pendingAnalysis === 0) return;
-                if (!window.confirm(
-                  `Vais analisar ${pendingAnalysis} foto(s) com a IA — gasta ${pendingAnalysis} pedido(s) do Gemini Vision (limite ~20/dia). Continuar?`,
-                )) return;
+                if (!window.confirm(t("library.reanalyzeConfirm", { count: pendingAnalysis }))) return;
                 reanalyze.mutate(undefined, {
                   onSuccess: async (r) => {
                     toast.success(
                       r.described > 0
-                        ? `${r.described} foto(s) descrita(s) pela IA. Já podes gerar vídeos.`
-                        : "Nenhuma foto precisava de análise.",
+                        ? t("library.reanalyzeDone", { count: r.described })
+                        : t("library.reanalyzeNone"),
                     );
                     // As fotos passam a COMPLETED — reconstrói a linha temporal
                     // para os eventos aparecerem (antes ficava vazia).
@@ -107,11 +105,11 @@ export default function LibraryPage() {
               }}
               disabled={reanalyze.isPending || pendingAnalysis === 0}
               title={pendingAnalysis === 0
-                ? "Todas as fotos já estão analisadas."
-                : `Analisar ${pendingAnalysis} foto(s) sem descrição (gasta ${pendingAnalysis} pedido(s) Gemini).`}
+                ? t("library.reanalyzeAllDone")
+                : t("library.reanalyzeTitle", { count: pendingAnalysis })}
             >
               {reanalyze.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              <span>Re-analisar IA{pendingAnalysis > 0 ? ` (${pendingAnalysis})` : ""}</span>
+              <span>{t("library.reanalyze")}{pendingAnalysis > 0 ? ` (${pendingAnalysis})` : ""}</span>
             </button>
             <button className="btn btn-primary" onClick={open}>
               <UploadCloud className="h-4 w-4" />

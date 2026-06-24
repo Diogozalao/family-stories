@@ -101,7 +101,7 @@ function StoryPicker({ onClose }: { onClose: () => void }) {
               {t("videos.generate")}
             </h2>
             <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-              Escolhe a história a transformar em vídeo documental.
+              {t("videos.pickLead")}
             </p>
           </div>
           <button
@@ -122,7 +122,7 @@ function StoryPicker({ onClose }: { onClose: () => void }) {
             </div>
           ) : (stories ?? []).length === 0 ? (
             <p className="rounded-xl border border-dashed border-stone-300 bg-stone-50 p-6 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-              Ainda não tens histórias. Cria uma primeiro em Gerar.
+              {t("videos.noStories")}
             </p>
           ) : (
             <div className="space-y-2">
