@@ -23,6 +23,8 @@ class Person(Base):
 
     id           = Column(BigInteger, primary_key=True, index=True)
     user_id      = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # NULL = global Family; set = belongs to (and only shows inside) a project.
+    project_id   = Column(BigInteger, nullable=True, index=True)
     name         = Column(String(255), nullable=False)
     sex          = Column(String(1), nullable=True)   # 'M' | 'F' | None
     birth_date   = Column(DateTime(timezone=True), nullable=True)
@@ -68,6 +70,8 @@ class TimelineEvent(Base):
 
     id              = Column(BigInteger, primary_key=True, index=True)
     user_id         = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # NULL = global Timeline; set = belongs to (and only shows inside) a project.
+    project_id      = Column(BigInteger, nullable=True, index=True)
 
     event_date      = Column(DateTime(timezone=True), nullable=True)
     date_confidence = Column(Enum(ConfidenceLevel, name="confidence_level", create_type=False, values_callable=lambda x: [e.value for e in x]),

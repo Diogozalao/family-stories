@@ -31,7 +31,7 @@ class NarrativeGenerator:
             llm_backend = self.llm.backend,
         )
 
-    async def _build_graph_from_db(self, db: AsyncSession, user_id) -> FamilyGraph:
+    async def _build_graph_from_db(self, db: AsyncSession, user_id, project_id=None) -> FamilyGraph:
         """Build the family graph straight from the DB (persons + relationships).
 
         The DB (Supabase) is the source of truth. The old on-disk JSON graph
@@ -40,15 +40,17 @@ class NarrativeGenerator:
         narrative loses ALL genealogical context — which is exactly why stories
         used to invent relatives and relationships. Building from the DB here
         guarantees the tree, the kinship links and each person's notes always
-        reach the prompt. Mirrors ``_rebuild_graph_from_db`` in the genealogy
-        route. Always per-user, never cached across requests (multi-tenant).
+        reach the prompt. Scoped to ``project_id`` (a project story uses only
+        that project's family) or the global family when None.
         """
-        persons = (await db.execute(
-            select(Person).where(Person.user_id == user_id)
-        )).scalars().all()
-        rels = (await db.execute(
+        pstmt = select(Person).where(Person.user_id == user_id)
+        pstmt = pstmt.where(Person.project_id == project_id) if project_id is not None \
+            else pstmt.where(Person.project_id.is_(None))
+        persons = (await db.execute(pstmt)).scalars().all()
+        person_ids = {p.id for p in persons}
+        rels = [r for r in (await db.execute(
             select(Relationship).where(Relationship.user_id == user_id)
-        )).scalars().all()
+        )).scalars().all() if r.from_person_id in person_ids and r.to_person_id in person_ids]
 
         graph = FamilyGraph()
         for p in persons:
@@ -102,40 +104,27 @@ class NarrativeGenerator:
         log.info("generating_narrative",
             title=title, type=event_type, project_id=project_id, user_id=str(user_id))
 
-        graph    = await self._build_graph_from_db(db, user_id)
+        # A project story uses ONLY that project's isolated family + photos;
+        # a global story uses the global family + Library.
+        graph    = await self._build_graph_from_db(db, user_id, project_id)
         template = get_template(event_type)
 
-        # When scoped to a project, only consider media that's (a) owned by
-        # the caller AND (b) attached to that project. Outside of a project,
-        # consider every completed media owned by the caller.
+        media_stmt = select(MediaFile).where(
+            MediaFile.user_id == user_id,
+            MediaFile.status  == ProcessingStatus.COMPLETED,
+        )
         if project_id is not None:
-            from backend.models.project import Project, ProjectMedia
-            # First confirm the project is actually owned by the caller —
-            # otherwise we'd happily generate narratives over a stranger's
-            # project just because its id was passed in.
+            from backend.models.project import Project
+            # Confirm the project is actually owned by the caller.
             owns = (await db.execute(
                 select(Project.id).where(Project.id == project_id, Project.user_id == user_id)
             )).scalar_one_or_none()
             if owns is None:
                 raise PermissionError("Project not found for this user")
-
-            media_result = await db.execute(
-                select(MediaFile)
-                .join(ProjectMedia, ProjectMedia.media_id == MediaFile.id)
-                .where(
-                    ProjectMedia.project_id == project_id,
-                    MediaFile.user_id       == user_id,
-                    MediaFile.status        == ProcessingStatus.COMPLETED,
-                )
-            )
+            media_stmt = media_stmt.where(MediaFile.project_id == project_id)
         else:
-            media_result = await db.execute(
-                select(MediaFile).where(
-                    MediaFile.user_id == user_id,
-                    MediaFile.status  == ProcessingStatus.COMPLETED,
-                )
-            )
-        all_media = media_result.scalars().all()
+            media_stmt = media_stmt.where(MediaFile.project_id.is_(None))
+        all_media = (await db.execute(media_stmt)).scalars().all()
 
         # Explicit photo selection overrides everything: when the user picked
         # specific photos/documents in the wizard, the narrative — and the
@@ -170,9 +159,11 @@ class NarrativeGenerator:
 
         # Map person id → name so each photo's context can name who appears
         # in it (the photo↔person tagging) — connecting faces to the tree.
-        person_rows  = (await db.execute(
-            select(Person.id, Person.name).where(Person.user_id == user_id)
-        )).all()
+        # Scoped to the same family as the graph (project or global).
+        pn_stmt = select(Person.id, Person.name).where(Person.user_id == user_id)
+        pn_stmt = pn_stmt.where(Person.project_id == project_id) if project_id is not None \
+            else pn_stmt.where(Person.project_id.is_(None))
+        person_rows  = (await db.execute(pn_stmt)).all()
         person_names = {pid: name for pid, name in person_rows}
 
         events_context = self._build_events_from_media(all_media, person_names)

@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Optional
 
 import structlog
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -48,40 +48,43 @@ PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp", ".tiff"}
 MAX_BATCH_FILES  = 50
 
 
-async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id) -> MediaFile:
-    """Hand validated bytes off to M1.
+async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id,
+                  project_id: int | None = None) -> MediaFile:
+    """Hand validated bytes off to M1, analysing the photo in-request.
 
-    Runs only the fast part in-request (security scan, EXIF, Storage upload)
-    and schedules the slow AI analysis (Gemini Vision / OCR) to run in the
-    background, so the upload returns quickly and the photo is immediately
-    viewable. The row stays ``PROCESSING`` until the analysis completes.
+    The AI analysis (Gemini Vision / OCR) runs **synchronously**: on the free
+    tier the instance is suspended once the request returns, so an in-process
+    background thread never completed and the photo stayed ``PROCESSING``
+    forever (and so without a description). Running it in the request makes the
+    description reliably ready when the upload finishes — each upload is its own
+    request, so there's no batch-timeout risk. A failure marks the row FAILED
+    instead of leaving it stuck, and the "Re-analyse AI" button is still there
+    as a manual retry.
     """
-    record = await processor.process(
+    return await processor.process(
         content           = content,
         original_filename = file.filename,
         db                = db,
         user_id           = user_id,
-        defer_ai          = True,
+        defer_ai          = False,
+        project_id        = project_id,
     )
-    # Only schedule analysis when the fast part left the row PROCESSING —
-    # a row that failed the security scan has nothing left to analyse.
-    if record.status == ProcessingStatus.PROCESSING:
-        from backend.tasks.bodies import analyze_media_body
-        from backend.tasks.inproc import submit
-        media_id = record.id
-        submit(lambda: analyze_media_body(media_id, user_id), label=f"analyze-media-{media_id}")
-    return record
 
 
 @router.post("/upload", response_model=UploadResponse)
 @limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_file(
-    request: Request,
-    file:    UploadFile = File(...),
-    db:      AsyncSession = Depends(get_db),
-    user:    User         = Depends(get_current_user),
+    request:    Request,
+    file:       UploadFile = File(...),
+    project_id: Optional[int] = Form(default=None),
+    db:         AsyncSession = Depends(get_db),
+    user:       User         = Depends(get_current_user),
 ):
-    """Upload a single photo for ingestion by M1."""
+    """Upload a single photo for ingestion by M1.
+
+    ``project_id`` makes the photo belong to (and only show inside) that
+    project; omitted = global Library.
+    """
     ext = Path(file.filename or "").suffix.lower()
     if ext and ext not in PHOTO_EXTENSIONS:
         raise HTTPException(
@@ -90,7 +93,7 @@ async def upload_file(
         )
 
     validated = await validate_photo(file)
-    record    = await _ingest(file, validated.content, db, user.id)
+    record    = await _ingest(file, validated.content, db, user.id, project_id=project_id)
 
     return UploadResponse(
         message    = "File received and processed successfully",
@@ -254,10 +257,14 @@ async def list_media(
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """Return every ingested media file owned by the caller, newest first."""
+    """Return the caller's GLOBAL media (Library), newest first.
+
+    Project-scoped photos (``project_id`` set) are intentionally excluded —
+    they only show inside their project, never in the global Library/Home.
+    """
     result = await db.execute(
         select(MediaFile)
-        .where(MediaFile.user_id == user.id)
+        .where(MediaFile.user_id == user.id, MediaFile.project_id.is_(None))
         .order_by(MediaFile.created_at.desc())
     )
     return result.scalars().all()

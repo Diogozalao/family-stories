@@ -59,6 +59,7 @@ class M1Processor:
         user_id,
         ai_override:       dict | None = None,
         defer_ai:          bool = False,
+        project_id:        int | None = None,
     ) -> MediaFile:
         """Ingest ``content`` for ``user_id`` and persist a ``MediaFile`` row.
 
@@ -90,6 +91,7 @@ class M1Processor:
 
         record = MediaFile(
             user_id           = user_id,
+            project_id        = project_id,     # None = global Library; set = project-only.
             original_filename = original_filename,
             stored_filename   = stored_filename,
             file_path         = object_key,     # Supabase Storage key, not a disk path.

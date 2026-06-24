@@ -36,6 +36,10 @@ class MediaFile(Base):
 
     id      = Column(BigInteger, primary_key=True, index=True)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # NULL = global Library; set = belongs to (and only shows inside) a project.
+    # FK enforced in SQL (0010_project_isolation.sql); plain column here to
+    # avoid cross-model metadata resolution.
+    project_id = Column(BigInteger, nullable=True, index=True)
 
     original_filename = Column(String(255), nullable=False)
     stored_filename   = Column(String(255), nullable=False)

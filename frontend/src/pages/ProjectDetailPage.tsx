@@ -4,13 +4,13 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Check, Download, FileUp, Film, Images, Loader2,
+  ArrowLeft, Download, FileUp, Film, Images, Loader2,
   Network, Pencil, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
   User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useAddMediaToProject, useClearFamily, useDeleteStory, useFamilies, useFamilyTree, useMedia,
+  useClearFamily, useDeleteStory, useFamilies, useFamilyTree,
   usePersons, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
   useUploadGedcom, useUploadPhoto,
@@ -25,7 +25,7 @@ import FamilyTree from "../components/family/FamilyTree";
 import PersonGallery from "../components/family/PersonGallery";
 import FamilyEditor from "../components/family/FamilyEditor";
 import { cn, initials } from "../lib/utils";
-import type { MediaFile, TimelineEvent } from "../lib/types";
+import type { TimelineEvent } from "../lib/types";
 
 type Tab = "photos" | "timeline" | "family" | "stories" | "videos";
 
@@ -116,10 +116,37 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
   const { t } = useTranslation();
   const { data: photos, isLoading } = useProjectMedia(projectId);
   const remove = useRemoveMediaFromProject();
-  const [picker, setPicker] = useState(false);
+  const upload = useUploadPhoto();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const items = photos ?? [];
+
+  // Photos go STRAIGHT into the project (stamped with project_id) and are
+  // never added to the global Library — the project is its own isolated
+  // workspace, exactly like the Library but scoped to this project.
+  const onDrop = useCallback(async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    let ok = 0;
+    for (const f of files) {
+      try {
+        await upload.mutateAsync({ file: f, projectId });
+        ok++;
+      } catch (err) {
+        toast.error(extractErrorMessage(err));
+      }
+    }
+    setUploading(false);
+    if (ok > 0) toast.success(t("projectDetail.uploaded", { count: ok }));
+  }, [upload, projectId, t]);
+
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    onDrop,
+    accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp", ".heic"] },
+    noClick: true,
+    noKeyboard: true,
+  });
 
   const handleRemove = (mediaId: number) => {
     if (!window.confirm(t("projectDetail.removePhotoConfirm"))) return;
@@ -135,10 +162,35 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
         <p className="text-sm text-stone-600 dark:text-stone-400">
           {t("projectDetail.photosHint")}
         </p>
-        <button onClick={() => setPicker(true)} className="btn btn-primary">
-          <Plus className="h-4 w-4" />
+        <button onClick={open} disabled={uploading} className="btn btn-primary">
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           <span>{t("projectDetail.addPhotos")}</span>
         </button>
+      </div>
+
+      {/* Direct, isolated upload into THIS project (not the Library). */}
+      <div
+        {...getRootProps()}
+        className={
+          "mb-4 rounded-2xl border-2 border-dashed p-5 text-center transition " +
+          (isDragActive
+            ? "border-brand-400 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-950/30"
+            : "border-stone-300 bg-white/60 dark:border-stone-700 dark:bg-stone-900/40")
+        }
+      >
+        <input {...getInputProps()} />
+        <UploadCloud className="mx-auto h-6 w-6 text-stone-400" />
+        <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
+          {t("projectDetail.uploadHint", { label: projectLabel })}{" "}
+          <button type="button" onClick={open} className="font-medium text-brand-600 hover:underline dark:text-brand-400">
+            {t("library.browseFiles")}
+          </button>
+        </p>
+        {uploading && (
+          <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-stone-500">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("common.loading")}
+          </p>
+        )}
       </div>
 
       {isLoading ? (
@@ -179,191 +231,16 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
         </div>
       )}
 
-      {picker && (
-        <PhotoPickerModal
-          projectId={projectId}
-          alreadyIn={items.map((m) => m.id)}
-          onClose={() => setPicker(false)}
-        />
-      )}
-
       {viewerIndex !== null && items[viewerIndex] && (
         <PhotoViewer
           items={items}
           index={viewerIndex}
           onChange={setViewerIndex}
           onClose={() => setViewerIndex(null)}
-          personGroup={projectLabel}
+          projectId={projectId}
         />
       )}
     </>
-  );
-}
-
-function PhotoPickerModal({
-  projectId, alreadyIn, onClose,
-}: { projectId: number; alreadyIn: number[]; onClose: () => void }) {
-  const { t } = useTranslation();
-  const { data: all, isLoading } = useMedia();
-  const add = useAddMediaToProject();
-  const uploadPhoto = useUploadPhoto();
-  const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [uploading, setUploading] = useState(false);
-
-  // Upload brand-new photos straight into the project. They also land in
-  // the global Library (so they can be reused elsewhere) and are added to
-  // this project in one step.
-  const onDropNew = useCallback(async (files: File[]) => {
-    if (!files.length) return;
-    setUploading(true);
-    let ok = 0;
-    for (const f of files) {
-      try {
-        const res: { file_id?: number } = await uploadPhoto.mutateAsync(f);
-        if (res?.file_id) { await add.mutateAsync({ projectId, mediaIds: [res.file_id] }); ok++; }
-      } catch (err) {
-        toast.error(extractErrorMessage(err));
-      }
-    }
-    setUploading(false);
-    if (ok > 0) { toast.success(t("projectDetail.uploaded", { count: ok })); onClose(); }
-  }, [uploadPhoto, add, projectId, onClose, t]);
-
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    onDrop: onDropNew,
-    accept: { "image/*": [".jpg", ".jpeg", ".png", ".webp", ".heic"] },
-    noClick: true,
-    noKeyboard: true,
-  });
-
-  const candidates = useMemo(
-    () => (all ?? []).filter((m) => !alreadyIn.includes(m.id)),
-    [all, alreadyIn],
-  );
-
-  const toggle = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const handleAdd = () => {
-    if (selected.size === 0) return;
-    add.mutate(
-      { projectId, mediaIds: [...selected] },
-      {
-        onSuccess: (data: { added: number }) => {
-          toast.success(t("projectDetail.added", { count: data.added }));
-          onClose();
-        },
-        onError: (err) => toast.error(extractErrorMessage(err)),
-      },
-    );
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/60 p-4 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="flex h-[85vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-lift dark:border-stone-800 dark:bg-stone-900"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-stone-200 p-5 dark:border-stone-800">
-          <div>
-            <h2 className="font-serif text-xl font-semibold tracking-tight">{t("projectDetail.pickerTitle")}</h2>
-            <p className="text-xs text-stone-500 dark:text-stone-500">
-              {t("projectDetail.pickerAvail", { avail: candidates.length, sel: selected.size })}
-            </p>
-          </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5">
-          {/* Option A: upload new photos straight into the project. */}
-          <div
-            {...getRootProps()}
-            className={
-              "mb-5 rounded-xl border-2 border-dashed p-4 text-center transition " +
-              (isDragActive
-                ? "border-brand-400 bg-brand-50/60 dark:border-brand-500 dark:bg-brand-950/30"
-                : "border-stone-300 bg-white/60 dark:border-stone-700 dark:bg-stone-900/40")
-            }
-          >
-            <input {...getInputProps()} />
-            <UploadCloud className="mx-auto h-6 w-6 text-stone-400" />
-            <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
-              {t("projectDetail.pickerDrop")}{" "}
-              <button type="button" onClick={open} className="font-medium text-brand-600 hover:underline dark:text-brand-400">{t("library.browseFiles")}</button>{" "}
-              {t("projectDetail.pickerDropTail")}
-            </p>
-            {uploading && (
-              <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-stone-500">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("common.loading")}
-              </p>
-            )}
-          </div>
-
-          {/* Option B: pick from the existing Library. */}
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-400">{t("projectDetail.pickerOr")}</p>
-          {isLoading ? (
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
-              {Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton aspect-square rounded-xl" />)}
-            </div>
-          ) : candidates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-              {t("projectDetail.pickerNoMore")} <Link to="/library" className="underline">{t("nav.library")}</Link>.
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
-              {candidates.map((m: MediaFile) => {
-                const isSel = selected.has(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => toggle(m.id)}
-                    className={cn(
-                      "group relative aspect-square overflow-hidden rounded-xl border-2 transition",
-                      isSel
-                        ? "border-brand-500 ring-2 ring-brand-200 dark:ring-brand-900/40"
-                        : "border-stone-200 hover:border-stone-300 dark:border-stone-800 dark:hover:border-stone-700",
-                    )}
-                  >
-                    <Photo
-                      mediaId={m.id}
-                      alt={m.original_filename}
-                      className="h-full w-full object-cover"
-                    />
-                    {isSel && (
-                      <span className="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-500 text-white shadow-soft">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 border-t border-stone-200 p-5 dark:border-stone-800">
-          <button onClick={onClose} className="btn btn-ghost">{t("common.cancel")}</button>
-          <button
-            onClick={handleAdd}
-            disabled={selected.size === 0 || add.isPending}
-            className="btn btn-primary"
-          >
-            {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            <span>{t("projectDetail.pickerAdd")} {selected.size > 0 && `(${selected.size})`}</span>
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -372,7 +249,7 @@ function PhotoPickerModal({
 function TimelineTab({ projectId }: { projectId: number }) {
   const { t } = useTranslation();
   const { data: media, isLoading } = useProjectMedia(projectId);
-  const { data: persons } = usePersons();
+  const { data: persons } = usePersons(projectId);
 
   // Resolve who appears in each photo (media.person_ids) into names + family,
   // so the project timeline shows the same context as the global one.
@@ -429,53 +306,42 @@ function TimelineTab({ projectId }: { projectId: number }) {
 
 function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId: number }) {
   const { t } = useTranslation();
-  const projectLabel = familyLabel;                 // bare project group label
-  const SEP = " :: ";
+  const projectLabel = familyLabel;                 // project name (for messages)
   const upload = useUploadGedcom();
   const clear  = useClearFamily();
-  const { data: allFamilies } = useFamilies();
+  // Families are already scoped to this project (project_id) — fully isolated
+  // from the global Family and from other projects.
+  const { data: projectFamilies } = useFamilies(projectId);
 
-  // ``activeSub`` = the full label of the selected sub-family, or null for
-  // "All" (every tree imported into this project, viewed together).
+  // ``activeSub`` = the family_label of the selected sub-tree, or null for
+  // "All" (every tree imported into this project).
   const [activeSub, setActiveSub] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "tree">("tree");
   const [editorOpen, setEditorOpen] = useState(false);
   const [galleryPerson, setGalleryPerson] = useState<{ id: number; name: string } | null>(null);
 
-  // The list/persons of the current selection (a single sub-family, or the
-  // whole project group when "All" is active).
-  const { data: tree, isLoading } = useFamilyTree(
-    activeSub ?? undefined,
-    activeSub ? undefined : projectLabel,
-  );
+  const { data: tree, isLoading } = useFamilyTree(activeSub ?? undefined, projectId);
   const persons = tree?.persons ?? [];
 
-  // Sub-families that belong to THIS project: the bare project label plus any
-  // "<project> :: <sub>" labels. Keeps each imported GEDCOM in its own group
-  // so multiple trees never merge into one.
-  const subFamilies = (allFamilies ?? [])
-    .filter((f): f is { label: string; count: number } =>
-      !!f.label && (f.label === projectLabel || f.label.startsWith(projectLabel + SEP)));
-  const subDisplay = (label: string) =>
-    label === projectLabel ? t("family.unlabeled") : label.slice(projectLabel.length + SEP.length);
+  // One sub-family per imported GEDCOM (labelled by the file name).
+  const subFamilies = (projectFamilies ?? [])
+    .filter((f): f is { label: string; count: number } => !!f.label);
+  const subDisplay = (label: string) => label;
 
-  // Each imported file lands in its own sub-group, named after the file, so
-  // it stays isolated from the project's other trees (and other projects).
+  // Each imported file lands in its own sub-family (named after the file);
+  // project_id keeps it isolated from the global Family and other projects.
   const onDrop = useCallback(async (files: File[]) => {
     if (!files.length) return;
-    const stem = files[0].name
-      .replace(/\.(ged|gedcom)$/i, "").replace(/[_-]+/g, " ").trim() || "Árvore";
-    const sub = `${projectLabel}${SEP}${stem}`.slice(0, 120);
+    const sub = (files[0].name
+      .replace(/\.(ged|gedcom)$/i, "").replace(/[_-]+/g, " ").trim() || "Árvore").slice(0, 120);
     try {
-      const r = await upload.mutateAsync({ file: files[0], familyLabel: sub });
-      toast.success(`${r.message ?? t("common.success")}`, {
-        description: subDisplay(sub),
-      });
+      const r = await upload.mutateAsync({ file: files[0], familyLabel: sub, projectId });
+      toast.success(`${r.message ?? t("common.success")}`, { description: sub });
       setActiveSub(sub);
     } catch (err) {
       toast.error(extractErrorMessage(err));
     }
-  }, [upload, projectLabel, t]);
+  }, [upload, projectId, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -493,15 +359,16 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
   // concrete sub-family; when omitted we wipe the current selection (a single
   // sub-family, or — for "All" — every person in this project group).
   const deleteTree = async (label?: string) => {
-    const targets = label
-      ? [label]
-      : activeSub
-      ? [activeSub]
-      : subFamilies.map((f) => f.label);          // "All" → every sub-family
-    if (targets.length === 0) return;
     if (!confirm(t("family.confirmRemoveAll"))) return;
     try {
-      for (const lbl of targets) await clear.mutateAsync(lbl);
+      if (label) {
+        await clear.mutateAsync({ familyLabel: label, projectId });
+      } else if (activeSub) {
+        await clear.mutateAsync({ familyLabel: activeSub, projectId });
+      } else {
+        // "All" → wipe the whole project family in one call.
+        await clear.mutateAsync({ projectId });
+      }
       toast.success(t("common.success"));
       setActiveSub(null);
     } catch (err) {
@@ -589,8 +456,8 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
 
       {view === "tree" ? (
         activeSub
-          ? <FamilyTree familyLabel={activeSub} />
-          : <FamilyTree group={projectLabel} />
+          ? <FamilyTree familyLabel={activeSub} projectId={projectId} />
+          : <FamilyTree projectId={projectId} />
       ) : isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
@@ -636,7 +503,6 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
           personId={galleryPerson.id}
           personName={galleryPerson.name}
           projectId={projectId}
-          personGroup={projectLabel}
           onClose={() => setGalleryPerson(null)}
         />
       )}

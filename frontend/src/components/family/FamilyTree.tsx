@@ -196,9 +196,9 @@ function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function FamilyTree({ familyLabel, group }: { familyLabel?: string | null; group?: string | null }) {
+export default function FamilyTree({ familyLabel, projectId }: { familyLabel?: string | null; projectId?: number | null }) {
   const { t } = useTranslation();
-  const { data, isLoading } = useFamilyTree(familyLabel ?? undefined, group ?? undefined);
+  const { data, isLoading } = useFamilyTree(familyLabel ?? undefined, projectId ?? undefined);
 
   // ``useNodesState`` keeps the nodes editable so the user can DRAG them
   // freely; we re-seed the auto-layout whenever the underlying data changes.
