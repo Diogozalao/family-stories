@@ -74,7 +74,7 @@ export default function ProjectDetailPage() {
 
       {tab === "photos"   && <PhotosTab   projectId={project.id} />}
       {tab === "timeline" && <TimelineTab projectId={project.id} />}
-      {tab === "family"   && <FamilyTab   familyLabel={project.name} />}
+      {tab === "family"   && <FamilyTab   familyLabel={project.name} projectId={project.id} />}
       {tab === "stories"  && <StoriesTab  projectId={project.id} />}
       {tab === "videos"   && <VideosTab   projectId={project.id} />}
     </>
@@ -511,7 +511,7 @@ function groupByYear(events: TimelineEvent[]): Record<string, TimelineEvent[]> {
 
 // ── Family Tab ─────────────────────────────────────────────────────────────
 
-function FamilyTab({ familyLabel }: { familyLabel: string }) {
+function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId: number }) {
   const { t } = useTranslation();
   const projectLabel = familyLabel;                 // bare project group label
   const SEP = " :: ";
@@ -720,6 +720,7 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
         <PersonGallery
           personId={galleryPerson.id}
           personName={galleryPerson.name}
+          projectId={projectId}
           onClose={() => setGalleryPerson(null)}
         />
       )}

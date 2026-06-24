@@ -5,7 +5,7 @@ import { Check, ImagePlus, Loader2, Search, Trash2, X } from "lucide-react";
 
 import Photo from "../media/Photo";
 import PhotoViewer from "../media/PhotoViewer";
-import { useMedia, useSetMediaPersons } from "../../lib/hooks";
+import { useMedia, useProjectMedia, useSetMediaPersons } from "../../lib/hooks";
 import { extractErrorMessage } from "../../lib/api";
 import type { MediaFile } from "../../lib/types";
 
@@ -17,12 +17,21 @@ import type { MediaFile } from "../../lib/types";
  * (e.g. their portrait *and* a birth certificate) or detaching them — which
  * is the inverse of tagging "who appears" from the photo side. The same set
  * is what the generation wizard later offers when this person is chosen.
+ *
+ * When opened inside a project, ``projectId`` scopes the pool to that
+ * project's photos (both the person's photos and the ones offered to add),
+ * matching the project's isolated view; in the global Family page it spans
+ * the whole library.
  */
 export default function PersonGallery({
-  personId, personName, onClose,
-}: { personId: number; personName: string; onClose: () => void }) {
+  personId, personName, projectId = null, onClose,
+}: { personId: number; personName: string; projectId?: number | null; onClose: () => void }) {
   const { t } = useTranslation();
-  const { data: media } = useMedia();
+  // Both hooks must run (hooks can't be conditional); the project one is
+  // disabled when there's no projectId, so it's a no-op in the global view.
+  const { data: allMedia }     = useMedia();
+  const { data: projectMedia } = useProjectMedia(projectId);
+  const media = projectId != null ? projectMedia : allMedia;
   const setPersons = useSetMediaPersons();
 
   const [adding, setAdding] = useState(false);
