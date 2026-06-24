@@ -40,7 +40,7 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-300">
-        Projeto não encontrado.
+        {t("projectDetail.notFound")}
       </div>
     );
   }
@@ -49,19 +49,19 @@ export default function ProjectDetailPage() {
     <>
       <Link to="/projects" className="mb-4 inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100">
         <ArrowLeft className="h-4 w-4" />
-        Todos os projetos
+        {t("projectDetail.back")}
       </Link>
 
       <PageHeader
         title={project.name}
-        subtitle={project.description ?? "Sem descrição."}
+        subtitle={project.description ?? t("projectDetail.noDescription")}
         actions={
           <Link
             to={`/generate?project=${project.id}`}
             className="btn btn-accent"
           >
             <Sparkles className="h-4 w-4" />
-            <span>Gerar história</span>
+            <span>{t("projectDetail.generateStory")}</span>
           </Link>
         }
       />
@@ -113,6 +113,7 @@ function TabButton({
 // ── Photos Tab ─────────────────────────────────────────────────────────────
 
 function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabel: string }) {
+  const { t } = useTranslation();
   const { data: photos, isLoading } = useProjectMedia(projectId);
   const remove = useRemoveMediaFromProject();
   const [picker, setPicker] = useState(false);
@@ -121,9 +122,9 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
   const items = photos ?? [];
 
   const handleRemove = (mediaId: number) => {
-    if (!window.confirm("Remover esta foto do projeto? A foto continua na Biblioteca.")) return;
+    if (!window.confirm(t("projectDetail.removePhotoConfirm"))) return;
     remove.mutate({ projectId, mediaId }, {
-      onSuccess: () => toast.success("Removida do projeto"),
+      onSuccess: () => toast.success(t("projectDetail.removedFromProject")),
       onError: (err) => toast.error(extractErrorMessage(err)),
     });
   };
@@ -132,11 +133,11 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
     <>
       <div className="mb-4 flex items-center justify-between">
         <p className="text-sm text-stone-600 dark:text-stone-400">
-          Apenas estas fotografias serão usadas quando gerares histórias dentro do projeto.
+          {t("projectDetail.photosHint")}
         </p>
         <button onClick={() => setPicker(true)} className="btn btn-primary">
           <Plus className="h-4 w-4" />
-          <span>Adicionar fotos</span>
+          <span>{t("projectDetail.addPhotos")}</span>
         </button>
       </div>
 
@@ -146,7 +147,7 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-          Ainda não há fotografias neste projeto. Clica em "Adicionar fotos" para escolher da Biblioteca.
+          {t("projectDetail.photosEmpty")}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
@@ -161,7 +162,7 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-3 opacity-0 transition group-hover:opacity-100">
                 <p className="line-clamp-4 text-xs leading-snug text-white/95">
                   {m.ai_description || (
-                    <span className="italic text-white/70">Sem descrição — analisa na Biblioteca.</span>
+                    <span className="italic text-white/70">{t("projectDetail.noPhotoDesc")}</span>
                   )}
                 </p>
                 <p className="mt-1 truncate text-[10px] text-white/60">{m.original_filename}</p>
@@ -169,7 +170,7 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
               <button
                 onClick={() => handleRemove(m.id)}
                 className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white opacity-0 backdrop-blur transition hover:bg-black/70 group-hover:opacity-100"
-                aria-label="Remover do projeto"
+                aria-label={t("projectDetail.removeFromProject")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -202,6 +203,7 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
 function PhotoPickerModal({
   projectId, alreadyIn, onClose,
 }: { projectId: number; alreadyIn: number[]; onClose: () => void }) {
+  const { t } = useTranslation();
   const { data: all, isLoading } = useMedia();
   const add = useAddMediaToProject();
   const uploadPhoto = useUploadPhoto();
@@ -224,8 +226,8 @@ function PhotoPickerModal({
       }
     }
     setUploading(false);
-    if (ok > 0) { toast.success(`${ok} foto(s) carregada(s) para o projeto`); onClose(); }
-  }, [uploadPhoto, add, projectId, onClose]);
+    if (ok > 0) { toast.success(t("projectDetail.uploaded", { count: ok })); onClose(); }
+  }, [uploadPhoto, add, projectId, onClose, t]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop: onDropNew,
@@ -253,7 +255,7 @@ function PhotoPickerModal({
       { projectId, mediaIds: [...selected] },
       {
         onSuccess: (data: { added: number }) => {
-          toast.success(`${data.added} foto(s) adicionada(s)`);
+          toast.success(t("projectDetail.added", { count: data.added }));
           onClose();
         },
         onError: (err) => toast.error(extractErrorMessage(err)),
@@ -272,9 +274,9 @@ function PhotoPickerModal({
       >
         <div className="flex items-center justify-between border-b border-stone-200 p-5 dark:border-stone-800">
           <div>
-            <h2 className="font-serif text-xl font-semibold tracking-tight">Adicionar fotografias ao projeto</h2>
+            <h2 className="font-serif text-xl font-semibold tracking-tight">{t("projectDetail.pickerTitle")}</h2>
             <p className="text-xs text-stone-500 dark:text-stone-500">
-              {candidates.length} disponíveis · {selected.size} selecionadas
+              {t("projectDetail.pickerAvail", { avail: candidates.length, sel: selected.size })}
             </p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800">
@@ -296,26 +298,26 @@ function PhotoPickerModal({
             <input {...getInputProps()} />
             <UploadCloud className="mx-auto h-6 w-6 text-stone-400" />
             <p className="mt-2 text-xs text-stone-600 dark:text-stone-400">
-              Arrasta fotos novas ou{" "}
-              <button type="button" onClick={open} className="font-medium text-brand-600 hover:underline dark:text-brand-400">escolhe ficheiros</button>{" "}
-              para carregar diretamente para o projeto.
+              {t("projectDetail.pickerDrop")}{" "}
+              <button type="button" onClick={open} className="font-medium text-brand-600 hover:underline dark:text-brand-400">{t("library.browseFiles")}</button>{" "}
+              {t("projectDetail.pickerDropTail")}
             </p>
             {uploading && (
               <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-stone-500">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> A carregar…
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("common.loading")}
               </p>
             )}
           </div>
 
           {/* Option B: pick from the existing Library. */}
-          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-400">Ou escolhe da Biblioteca</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-stone-400">{t("projectDetail.pickerOr")}</p>
           {isLoading ? (
             <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
               {Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton aspect-square rounded-xl" />)}
             </div>
           ) : candidates.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-              Não há mais fotos para adicionar. Carrega novas em <Link to="/library" className="underline">Biblioteca</Link>.
+              {t("projectDetail.pickerNoMore")} <Link to="/library" className="underline">{t("nav.library")}</Link>.
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3 md:grid-cols-5">
@@ -350,14 +352,14 @@ function PhotoPickerModal({
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-stone-200 p-5 dark:border-stone-800">
-          <button onClick={onClose} className="btn btn-ghost">Cancelar</button>
+          <button onClick={onClose} className="btn btn-ghost">{t("common.cancel")}</button>
           <button
             onClick={handleAdd}
             disabled={selected.size === 0 || add.isPending}
             className="btn btn-primary"
           >
             {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            <span>Adicionar {selected.size > 0 && `(${selected.size})`}</span>
+            <span>{t("projectDetail.pickerAdd")} {selected.size > 0 && `(${selected.size})`}</span>
           </button>
         </div>
       </div>
@@ -368,6 +370,7 @@ function PhotoPickerModal({
 // ── Timeline Tab ───────────────────────────────────────────────────────────
 
 function TimelineTab({ projectId }: { projectId: number }) {
+  const { t } = useTranslation();
   const { data: media, isLoading } = useProjectMedia(projectId);
   const { data: persons } = usePersons();
 
@@ -390,7 +393,7 @@ function TimelineTab({ projectId }: { projectId: number }) {
       return {
         id: m.id,
         event_date: m.date_taken ?? m.created_at ?? null,
-        title: m.ai_setting || (m.ai_description ? m.ai_description.split(/[.!?]/)[0] : null) || "Fotografia",
+        title: m.ai_setting || (m.ai_description ? m.ai_description.split(/[.!?]/)[0] : null) || t("projectDetail.photoTitle"),
         description: m.ai_description ?? null,
         location: m.location_name ?? null,
         media_file_id: m.id,
@@ -398,7 +401,7 @@ function TimelineTab({ projectId }: { projectId: number }) {
         family: families.length ? families.join(", ") : null,
       };
     }),
-    [media, personById],
+    [media, personById, t],
   );
 
   if (isLoading) {
@@ -414,7 +417,7 @@ function TimelineTab({ projectId }: { projectId: number }) {
   if (events.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-        Adiciona fotografias a este projeto (separador «Fotografias») para construir a linha temporal.
+        {t("projectDetail.timelineEmpty")}
       </div>
     );
   }
@@ -543,8 +546,7 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
       </div>
 
       <p className="mb-4 text-xs text-stone-500 dark:text-stone-500">
-        A família deste projeto («{projectLabel}») é independente da Biblioteca e dos outros projetos.
-        Cada ficheiro GEDCOM importado fica no seu próprio grupo.
+        {t("projectDetail.familyIndependent", { label: projectLabel })}
       </p>
 
       <div
@@ -595,7 +597,7 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
         </div>
       ) : persons.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-          {t("family.noTree")} Usa «{t("family.editTree")}» para criar a árvore deste projeto.
+          {t("family.noTree")} {t("projectDetail.noTreeHint")}
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -645,6 +647,7 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
 function SubChip({
   label, count, active, onClick, onDelete,
 }: { label: string; count: number; active: boolean; onClick: () => void; onDelete?: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className={cn(
       "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition",
@@ -661,8 +664,8 @@ function SubChip({
         <button
           onClick={onDelete}
           className="ml-0.5 rounded-full p-0.5 text-stone-500 transition hover:bg-rose-100 hover:text-rose-700 dark:hover:bg-rose-950/40"
-          aria-label="Apagar esta árvore"
-          title="Apagar esta árvore"
+          aria-label={t("projectDetail.deleteTreeAria")}
+          title={t("projectDetail.deleteTreeAria")}
         >
           <Trash2 className="h-3 w-3" />
         </button>
@@ -692,13 +695,13 @@ function StoriesTab({ projectId }: { projectId: number }) {
   if (stories.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-        Ainda não geraste histórias neste projeto.
+        {t("projectDetail.storiesEmpty")}
         <button
           onClick={() => navigate(`/generate?project=${projectId}`)}
           className="btn btn-accent mt-4"
         >
           <Sparkles className="h-4 w-4" />
-          <span>Gerar primeira história</span>
+          <span>{t("projectDetail.generateFirstStory")}</span>
         </button>
       </div>
     );
@@ -716,6 +719,7 @@ function StoriesTab({ projectId }: { projectId: number }) {
 // ── Videos Tab ────────────────────────────────────────────────────────────
 
 function VideosTab({ projectId }: { projectId: number }) {
+  const { t } = useTranslation();
   const { data, isLoading } = useProjectVideos(projectId);
   const videos = data ?? [];
 
@@ -723,7 +727,7 @@ function VideosTab({ projectId }: { projectId: number }) {
   if (videos.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-stone-300 bg-white/50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
-        Ainda não há vídeos neste projeto. Gera uma história primeiro e depois cria o vídeo a partir dela.
+        {t("projectDetail.videosEmpty")}
       </div>
     );
   }

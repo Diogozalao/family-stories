@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
   Film, FolderPlus, Images, Loader2, Plus, ScrollText, Trash2,
@@ -11,6 +12,7 @@ import Photo from "../components/media/Photo";
 import type { Project } from "../lib/types";
 
 export default function ProjectsPage() {
+  const { t } = useTranslation();
   const { data, isLoading } = useProjects();
   const [open, setOpen] = useState(false);
   const projects = data ?? [];
@@ -18,12 +20,12 @@ export default function ProjectsPage() {
   return (
     <>
       <PageHeader
-        title="Projetos"
-        subtitle="Espaços de trabalho que agrupam fotos, histórias e vídeos relacionados."
+        title={t("projects.title")}
+        subtitle={t("projects.subtitle")}
         actions={
           <button onClick={() => setOpen(true)} className="btn btn-accent">
             <Plus className="h-4 w-4" />
-            <span>Novo projeto</span>
+            <span>{t("projects.newProject")}</span>
           </button>
         }
       />
@@ -48,14 +50,15 @@ export default function ProjectsPage() {
 }
 
 function ProjectCard({ project }: { project: Project }) {
+  const { t } = useTranslation();
   const del = useDeleteProject();
 
   const handleDelete = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!window.confirm(`Apagar o projeto "${project.name}"? As fotografias na Biblioteca permanecem.`)) return;
+    if (!window.confirm(t("projects.confirmDelete", { name: project.name }))) return;
     del.mutate(project.id, {
-      onSuccess: () => toast.success("Projeto apagado"),
+      onSuccess: () => toast.success(t("projects.deleted")),
       onError: (err) => toast.error(extractErrorMessage(err)),
     });
   };
@@ -81,8 +84,8 @@ function ProjectCard({ project }: { project: Project }) {
           onClick={handleDelete}
           disabled={del.isPending}
           className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white opacity-0 backdrop-blur transition hover:bg-black/70 group-hover:opacity-100"
-          title="Apagar projeto"
-          aria-label="Apagar"
+          title={t("projects.deleteAria")}
+          aria-label={t("projects.deleteAria")}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -105,24 +108,24 @@ function ProjectCard({ project }: { project: Project }) {
 }
 
 function EmptyState({ onNew }: { onNew: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-3xl border border-dashed border-stone-300 bg-white/50 p-14 text-center dark:border-stone-700 dark:bg-stone-900/40">
       <FolderPlus className="mx-auto h-10 w-10 text-stone-400" />
-      <h3 className="mt-4 font-serif text-2xl font-semibold tracking-tight">Ainda não tens projetos</h3>
+      <h3 className="mt-4 font-serif text-2xl font-semibold tracking-tight">{t("projects.emptyTitle")}</h3>
       <p className="mx-auto mt-2 max-w-md text-sm text-stone-600 dark:text-stone-400">
-        Cria um projeto para agrupar fotografias relacionadas — por exemplo
-        "Casamento dos avós" ou "Viagem ao Algarve 1985" — e gera histórias
-        focadas só nessas memórias.
+        {t("projects.emptyBody")}
       </p>
       <button onClick={onNew} className="btn btn-accent mt-6">
         <Plus className="h-4 w-4" />
-        <span>Criar o primeiro projeto</span>
+        <span>{t("projects.createFirst")}</span>
       </button>
     </div>
   );
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const create = useCreateProject();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -134,7 +137,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
       { name: name.trim(), description: description.trim() || undefined },
       {
         onSuccess: (project) => {
-          toast.success(`Projeto "${project.name}" criado`);
+          toast.success(t("projects.created", { name: project.name }));
           onClose();
         },
         onError: (err) => toast.error(extractErrorMessage(err)),
@@ -151,45 +154,45 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         className="w-full max-w-lg rounded-2xl border border-stone-200 bg-white p-6 shadow-lift animate-scale-in dark:border-stone-800 dark:bg-stone-900"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">Novo projeto</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">{t("projects.newProject")}</h2>
         <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Dá-lhe um nome curto e descritivo. Podes adicionar fotos e histórias depois.
+          {t("projects.modalLead")}
         </p>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <div>
-            <label className="label" htmlFor="proj-name">Nome</label>
+            <label className="label" htmlFor="proj-name">{t("projects.nameLabel")}</label>
             <input
               id="proj-name"
               autoFocus
               required
               maxLength={120}
               className="input"
-              placeholder="ex.: Casamento dos avós"
+              placeholder={t("projects.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
           </div>
           <div>
-            <label className="label" htmlFor="proj-desc">Descrição (opcional)</label>
+            <label className="label" htmlFor="proj-desc">{t("projects.descLabel")}</label>
             <textarea
               id="proj-desc"
               className="input min-h-[80px] resize-y"
-              placeholder="Algumas frases sobre o que este projeto vai conter."
+              placeholder={t("projects.descPlaceholder")}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="btn btn-ghost">Cancelar</button>
+            <button type="button" onClick={onClose} className="btn btn-ghost">{t("common.cancel")}</button>
             <button
               type="submit"
               disabled={create.isPending || name.trim().length === 0}
               className="btn btn-primary"
             >
               {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              <span>Criar</span>
+              <span>{t("projects.create")}</span>
             </button>
           </div>
         </form>

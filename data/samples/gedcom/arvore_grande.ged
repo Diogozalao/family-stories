@@ -1,0 +1,400 @@
+0 HEAD
+1 SOUR FamilyStoriesAI
+2 VERS 1.0
+2 NAME Family Stories AI
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 DATE 24 JUN 2026
+1 NOTE Arvore extensa (30 pessoas, 5 geracoes): bisavos, avos, tios-avos, pais, tios, primos, irmaos, conjuges, filhos e sobrinhos. Totalmente ligada e pronta a importar.
+0 @I1@ INDI
+1 NAME Afonso /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 3 FEB 1902
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 19 NOV 1975
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 OCCU Lavrador
+1 NOTE Bisavo paterno.
+1 FAMS @F1@
+0 @I2@ INDI
+1 NAME Rosa /Teixeira/
+1 SEX F
+1 BIRT
+2 DATE 21 MAY 1905
+2 PLAC Sortelha, Sabugal, Portugal
+1 DEAT
+2 DATE 8 MAR 1982
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 OCCU Tecedeira
+1 NOTE Bisavo paterna.
+1 FAMS @F1@
+0 @I3@ INDI
+1 NAME Bernardo /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 14 SEP 1900
+2 PLAC Covilha, Castelo Branco, Portugal
+1 DEAT
+2 DATE 2 JAN 1970
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Industrial textil
+1 NOTE Bisavo paterno (ramo Lopes).
+1 FAMS @F2@
+0 @I4@ INDI
+1 NAME Aurora /Pais/
+1 SEX F
+1 BIRT
+2 DATE 30 JUL 1908
+2 PLAC Fundao, Castelo Branco, Portugal
+1 DEAT
+2 DATE 17 OCT 1990
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Costureira
+1 NOTE Bisavo paterna (ramo Lopes).
+1 FAMS @F2@
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 MARR
+2 DATE 11 SEP 1927
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 CHIL @I5@
+1 CHIL @I6@
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 MARR
+2 DATE 4 JUN 1929
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I7@
+1 CHIL @I8@
+0 @I5@ INDI
+1 NAME Manuel /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 MAR 1930
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 5 MAY 2008
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Engenheiro textil
+1 NOTE Avo paterno.
+1 FAMC @F1@
+1 FAMS @F3@
+0 @I6@ INDI
+1 NAME Lucia /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 27 AUG 1933
+2 PLAC Belmonte, Castelo Branco, Portugal
+1 DEAT
+2 DATE 14 DEC 2015
+2 PLAC Lisboa, Portugal
+1 OCCU Professora
+1 NOTE Tia-avo paterna (irma do avo Manuel).
+1 FAMC @F1@
+1 FAMS @F4@
+0 @I7@ INDI
+1 NAME Carlota /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 6 FEB 1934
+2 PLAC Covilha, Castelo Branco, Portugal
+1 DEAT
+2 DATE 23 JUL 2019
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Dona de casa
+1 NOTE Avo paterna.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I8@ INDI
+1 NAME Jorge /Lopes/
+1 SEX M
+1 BIRT
+2 DATE 18 NOV 1936
+2 PLAC Covilha, Castelo Branco, Portugal
+1 DEAT
+2 DATE 9 APR 2011
+2 PLAC Porto, Portugal
+1 OCCU Medico
+1 NOTE Tio-avo paterno (irmao da avo Carlota).
+1 FAMC @F2@
+1 FAMS @F5@
+0 @I9@ INDI
+1 NAME Eduardo /Pinheiro/
+1 SEX M
+1 BIRT
+2 DATE 2 JUN 1931
+2 PLAC Lisboa, Portugal
+1 DEAT
+2 DATE 30 SEP 2009
+2 PLAC Lisboa, Portugal
+1 OCCU Arquiteto
+1 NOTE Casou com Lucia Dinis.
+1 FAMS @F4@
+0 @I10@ INDI
+1 NAME Helena /Marques/
+1 SEX F
+1 BIRT
+2 DATE 25 OCT 1939
+2 PLAC Porto, Portugal
+1 OCCU Enfermeira
+1 NOTE Casou com Jorge Lopes.
+1 FAMS @F5@
+0 @F3@ FAM
+1 HUSB @I5@
+1 WIFE @I7@
+1 MARR
+2 DATE 22 JUN 1956
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I11@
+1 CHIL @I12@
+1 CHIL @I13@
+0 @F4@ FAM
+1 HUSB @I9@
+1 WIFE @I6@
+1 MARR
+2 DATE 15 SEP 1958
+2 PLAC Lisboa, Portugal
+1 CHIL @I14@
+0 @F5@ FAM
+1 HUSB @I8@
+1 WIFE @I10@
+1 MARR
+2 DATE 3 MAY 1962
+2 PLAC Porto, Portugal
+1 CHIL @I15@
+0 @I11@ INDI
+1 NAME Joao /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 APR 1960
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Engenheiro civil
+1 NOTE Pai.
+1 FAMC @F3@
+1 FAMS @F6@
+0 @I12@ INDI
+1 NAME Carlos /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 8 JAN 1963
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Medico de familia
+1 NOTE Tio paterno.
+1 FAMC @F3@
+1 FAMS @F7@
+0 @I13@ INDI
+1 NAME Sofia /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 23 OCT 1966
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Advogada
+1 NOTE Tia paterna.
+1 FAMC @F3@
+1 FAMS @F8@
+0 @I14@ INDI
+1 NAME Ricardo /Pinheiro/
+1 SEX M
+1 BIRT
+2 DATE 19 FEB 1961
+2 PLAC Lisboa, Portugal
+1 OCCU Professor universitario
+1 NOTE Primo do pai (filho da tia-avo Lucia).
+1 FAMC @F4@
+1 FAMS @F9@
+0 @I15@ INDI
+1 NAME Beatriz /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 7 JUL 1964
+2 PLAC Porto, Portugal
+1 OCCU Bibliotecaria
+1 NOTE Prima da avo (filha do tio-avo Jorge).
+1 FAMC @F5@
+0 @I16@ INDI
+1 NAME Maria /Nogueira/
+1 SEX F
+1 BIRT
+2 DATE 27 SEP 1963
+2 PLAC Viseu, Portugal
+1 OCCU Bibliotecaria
+1 NOTE Mae. Originaria da Familia Nogueira.
+1 FAMS @F6@
+0 @I17@ INDI
+1 NAME Ines /Ferreira/
+1 SEX F
+1 BIRT
+2 DATE 14 MAR 1965
+2 PLAC Guarda, Portugal
+1 OCCU Farmaceutica
+1 NOTE Tia por afinidade (esposa do tio Carlos).
+1 FAMS @F7@
+0 @I18@ INDI
+1 NAME Paulo /Costa/
+1 SEX M
+1 BIRT
+2 DATE 1 DEC 1964
+2 PLAC Coimbra, Portugal
+1 OCCU Contabilista
+1 NOTE Tio por afinidade (marido da tia Sofia).
+1 FAMS @F8@
+0 @I19@ INDI
+1 NAME Teresa /Almeida/
+1 SEX F
+1 BIRT
+2 DATE 9 AUG 1966
+2 PLAC Lisboa, Portugal
+1 OCCU Jornalista
+1 NOTE Esposa de Ricardo Pinheiro.
+1 FAMS @F9@
+0 @F6@ FAM
+1 HUSB @I11@
+1 WIFE @I16@
+1 MARR
+2 DATE 18 JUL 1988
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I20@
+1 CHIL @I21@
+0 @F7@ FAM
+1 HUSB @I12@
+1 WIFE @I17@
+1 MARR
+2 DATE 11 OCT 1990
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I22@
+1 CHIL @I23@
+0 @F8@ FAM
+1 HUSB @I18@
+1 WIFE @I13@
+1 MARR
+2 DATE 5 SEP 1992
+2 PLAC Coimbra, Portugal
+1 CHIL @I24@
+0 @F9@ FAM
+1 HUSB @I14@
+1 WIFE @I19@
+1 MARR
+2 DATE 27 MAY 1989
+2 PLAC Lisboa, Portugal
+1 CHIL @I25@
+0 @I20@ INDI
+1 NAME Diogo /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 14 MAR 1992
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Engenheiro informatico
+1 NOTE Sujeito do arquivo.
+1 FAMC @F6@
+1 FAMS @F10@
+0 @I21@ INDI
+1 NAME Mariana /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 8 NOV 1995
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Designer
+1 NOTE Irma de Diogo.
+1 FAMC @F6@
+0 @I22@ INDI
+1 NAME Filipe /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 3 SEP 1991
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Engenheiro de software
+1 NOTE Primo direito (filho do tio Carlos).
+1 FAMC @F7@
+1 FAMS @F11@
+0 @I23@ INDI
+1 NAME Carolina /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 21 FEB 1994
+2 PLAC Covilha, Castelo Branco, Portugal
+1 OCCU Veterinaria
+1 NOTE Prima direita (filha do tio Carlos).
+1 FAMC @F7@
+0 @I24@ INDI
+1 NAME Andre /Costa/
+1 SEX M
+1 BIRT
+2 DATE 17 JUN 1996
+2 PLAC Coimbra, Portugal
+1 OCCU Musico
+1 NOTE Primo direito (filho da tia Sofia).
+1 FAMC @F8@
+0 @I25@ INDI
+1 NAME Tiago /Pinheiro/
+1 SEX M
+1 BIRT
+2 DATE 4 APR 1993
+2 PLAC Lisboa, Portugal
+1 OCCU Piloto
+1 NOTE Primo afastado (filho de Ricardo Pinheiro).
+1 FAMC @F9@
+0 @I26@ INDI
+1 NAME Rita /Sousa/
+1 SEX F
+1 BIRT
+2 DATE 30 JAN 1993
+2 PLAC Aveiro, Portugal
+1 OCCU Medica
+1 NOTE Esposa de Diogo.
+1 FAMS @F10@
+0 @I27@ INDI
+1 NAME Joana /Dias/
+1 SEX F
+1 BIRT
+2 DATE 12 DEC 1992
+2 PLAC Braga, Portugal
+1 OCCU Professora
+1 NOTE Esposa de Filipe.
+1 FAMS @F11@
+0 @F10@ FAM
+1 HUSB @I20@
+1 WIFE @I26@
+1 MARR
+2 DATE 6 JUL 2019
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I28@
+0 @F11@ FAM
+1 HUSB @I22@
+1 WIFE @I27@
+1 MARR
+2 DATE 14 SEP 2018
+2 PLAC Covilha, Castelo Branco, Portugal
+1 CHIL @I29@
+1 CHIL @I30@
+0 @I28@ INDI
+1 NAME Martim /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 2 MAY 2021
+2 PLAC Covilha, Castelo Branco, Portugal
+1 NOTE Filho de Diogo e Rita.
+1 FAMC @F10@
+0 @I29@ INDI
+1 NAME Leonor /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 19 AUG 2020
+2 PLAC Covilha, Castelo Branco, Portugal
+1 NOTE Sobrinha de Diogo (filha do primo Filipe).
+1 FAMC @F11@
+0 @I30@ INDI
+1 NAME Gabriel /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 11 NOV 2022
+2 PLAC Covilha, Castelo Branco, Portugal
+1 NOTE Sobrinho de Diogo (filho do primo Filipe).
+1 FAMC @F11@
+0 TRLR

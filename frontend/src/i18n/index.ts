@@ -3,12 +3,16 @@ import { initReactI18next } from "react-i18next";
 import pt from "./pt";
 import en from "./en";
 
-const stored = (localStorage.getItem("lm-lang") as "pt" | "en" | null) ?? "pt";
+// English is the default language; a Portuguese choice (or a Portuguese
+// browser on first visit) switches to PT, and the choice is then persisted.
+const saved = localStorage.getItem("lm-lang") as "pt" | "en" | null;
+const stored: "pt" | "en" =
+  saved ?? ((navigator.language || "").toLowerCase().startsWith("pt") ? "pt" : "en");
 
 i18n.use(initReactI18next).init({
   resources: { pt: { translation: pt }, en: { translation: en } },
   lng: stored,
-  fallbackLng: "pt",
+  fallbackLng: "en",
   interpolation: { escapeValue: false },
 });
 

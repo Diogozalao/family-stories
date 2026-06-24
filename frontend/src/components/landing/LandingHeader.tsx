@@ -25,7 +25,7 @@ export default function LandingHeader() {
   // sections don't exist). LoginPage handles the smooth-scroll-to-hash.
   const links: { label: string; to: string }[] = [
     { label: t("landing.navAbout"),     to: "/about"          },
-    { label: "Demonstração",            to: "/login#demo"     },
+    { label: t("landing.navDemo"),      to: "/login#demo"     },
     { label: t("landing.navPlatforms"), to: "/login#platforms" },
     { label: t("landing.navHow"),       to: "/login#how"      },
     { label: t("landing.navPrivacy"),   to: "/login#privacy"  },
