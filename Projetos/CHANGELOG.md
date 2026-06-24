@@ -24,7 +24,11 @@ Formato: `AAAA-MM-DD` · `[Adição|Correção|Reescrita|Remoção]` · ficheiro
 >   atualizados para o routing novo (Ollama→Groq→Gemini; Gemini reservado p/ visão).
 > - **[Adição]** `cap6...tex` §M3 nova subsecção "Ancoragem nas fotografias e
 >   seleção pelo utilizador" (`\ref{sub:selecao_fotos}`) — narrativas usam
->   descrição/OCR/quem-aparece das fotos + o utilizador escolhe `media_ids`.
+>   descrição/OCR/quem-aparece das fotos + o utilizador escolhe `media_ids`;
+>   **seleção agrupada por pessoa** + **galeria por pessoa** (anexar/remover
+>   fotos/documentos de cada pessoa). Vídeo só usa as fotos selecionadas (via
+>   cenas). Visualizador de fotos reenquadrado (painel lateral + pesquisa) e
+>   reutilizado dentro do Projeto (editar data/etiquetar lá também).
 > - **[Adição]** `cap6...tex` §M2 par. "Isolamento de múltiplas árvores" —
 >   namespacing de `gedcom_id` por família + Projeto→Família com sub-grupos.
 > - **[Adição]** `cap6...tex` §M4 — produção usa 854×480@20 (720p dava OOM).

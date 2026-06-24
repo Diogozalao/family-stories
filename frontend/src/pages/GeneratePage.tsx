@@ -11,7 +11,7 @@ import {
 } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 import Photo from "../components/media/Photo";
-import type { Story } from "../lib/types";
+import type { MediaFile, Story } from "../lib/types";
 import { useGenerateDraft } from "../store/generateDraft";
 import { cn, initials } from "../lib/utils";
 
@@ -52,6 +52,21 @@ export default function GeneratePage() {
         : [...selectedMediaIds, id],
     });
   };
+  const toggleMany = (ids: number[], on: boolean) => {
+    const set = new Set(selectedMediaIds);
+    for (const id of ids) { if (on) set.add(id); else set.delete(id); }
+    patch({ selectedMediaIds: [...set] });
+  };
+
+  // Group the selectable photos by each chosen person (photos they're tagged
+  // in), so the user picks exactly which of that person's photos to use.
+  const selectedPeople = (persons ?? []).filter((p) => selectedIds.includes(p.id));
+  const photoGroups = selectedPeople.map((p) => ({
+    person: p,
+    photos: photos.filter((m) => (m.person_ids ?? []).includes(p.id)),
+  }));
+  const groupedIds = new Set(photoGroups.flatMap((g) => g.photos.map((m) => m.id)));
+  const otherPhotos = photos.filter((m) => !groupedIds.has(m.id));
 
   const isCustom = eventType === "custom";
 
@@ -323,33 +338,49 @@ export default function GeneratePage() {
 
               {photos.length === 0 ? (
                 <p className="mt-4 text-sm text-stone-500">{t("generate.noPhotos")}</p>
+              ) : selectedPeople.length === 0 ? (
+                // No people chosen yet → flat grid of everything available.
+                <div className="mt-4">
+                  <PhotoPickGrid photos={photos} selected={selectedMediaIds} onToggle={toggleMedia} />
+                </div>
               ) : (
-                <div className="mt-4 grid max-h-[42vh] grid-cols-3 gap-2 overflow-y-auto pr-1 sm:grid-cols-4 lg:grid-cols-6">
-                  {photos.map((m) => {
-                    const active = selectedMediaIds.includes(m.id);
+                // People chosen → group photos BY person, so you pick exactly
+                // which of (e.g.) Alberto's photos go into the story/video.
+                <div className="mt-4 space-y-5">
+                  {photoGroups.map((g) => {
+                    const ids = g.photos.map((m) => m.id);
+                    const allOn = ids.length > 0 && ids.every((id) => selectedMediaIds.includes(id));
                     return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => toggleMedia(m.id)}
-                        className={cn(
-                          "group relative aspect-square overflow-hidden rounded-lg border-2 transition",
-                          active
-                            ? "border-brand-500 ring-2 ring-brand-200 dark:ring-brand-900/40"
-                            : "border-transparent hover:border-stone-300 dark:hover:border-stone-700",
+                      <div key={g.person.id}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            {g.person.name}
+                            <span className="ml-1 text-stone-500 dark:text-stone-500">· {g.photos.length}</span>
+                          </p>
+                          {ids.length > 0 && (
+                            <button type="button" onClick={() => toggleMany(ids, !allOn)}
+                                    className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
+                              {allOn ? t("generate.deselectAll") : t("generate.selectAll")}
+                            </button>
+                          )}
+                        </div>
+                        {g.photos.length === 0 ? (
+                          <p className="text-xs text-stone-500">{t("generate.personNoPhotos")}</p>
+                        ) : (
+                          <PhotoPickGrid photos={g.photos} selected={selectedMediaIds} onToggle={toggleMedia} />
                         )}
-                        title={m.original_filename}
-                      >
-                        <Photo mediaId={m.id} alt={m.original_filename}
-                               className="h-full w-full object-cover" />
-                        {active && (
-                          <span className="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white shadow">
-                            <Check className="h-3 w-3" />
-                          </span>
-                        )}
-                      </button>
+                      </div>
                     );
                   })}
+                  {otherPhotos.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-sm font-medium">
+                        {t("generate.otherPhotos")}
+                        <span className="ml-1 text-stone-500 dark:text-stone-500">· {otherPhotos.length}</span>
+                      </p>
+                      <PhotoPickGrid photos={otherPhotos} selected={selectedMediaIds} onToggle={toggleMedia} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -506,6 +537,39 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-start gap-3 border-b border-stone-100 pb-2 dark:border-stone-800">
       <dt className="w-40 shrink-0 text-xs uppercase tracking-wider text-stone-500 dark:text-stone-500">{label}</dt>
       <dd className="flex-1 text-sm">{value}</dd>
+    </div>
+  );
+}
+
+function PhotoPickGrid({
+  photos, selected, onToggle,
+}: { photos: MediaFile[]; selected: number[]; onToggle: (id: number) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
+      {photos.map((m) => {
+        const active = selected.includes(m.id);
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onToggle(m.id)}
+            className={cn(
+              "group relative aspect-square overflow-hidden rounded-lg border-2 transition",
+              active
+                ? "border-brand-500 ring-2 ring-brand-200 dark:ring-brand-900/40"
+                : "border-transparent hover:border-stone-300 dark:hover:border-stone-700",
+            )}
+            title={m.ai_description || m.original_filename}
+          >
+            <Photo mediaId={m.id} alt={m.original_filename} className="h-full w-full object-cover" />
+            {active && (
+              <span className="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white shadow">
+                <Check className="h-3 w-3" />
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

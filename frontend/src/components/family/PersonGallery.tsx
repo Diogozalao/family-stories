@@ -1,0 +1,156 @@
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { Check, ImagePlus, Loader2, Search, Trash2, X } from "lucide-react";
+
+import Photo from "../media/Photo";
+import PhotoViewer from "../media/PhotoViewer";
+import { useMedia, useSetMediaPersons } from "../../lib/hooks";
+import { extractErrorMessage } from "../../lib/api";
+import type { MediaFile } from "../../lib/types";
+
+/**
+ * Per-person photo/document gallery.
+ *
+ * A person's photos are the media tagged with them (``media.person_ids``).
+ * From here the user manages that set directly — attaching photos/documents
+ * (e.g. their portrait *and* a birth certificate) or detaching them — which
+ * is the inverse of tagging "who appears" from the photo side. The same set
+ * is what the generation wizard later offers when this person is chosen.
+ */
+export default function PersonGallery({
+  personId, personName, onClose,
+}: { personId: number; personName: string; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { data: media } = useMedia();
+  const setPersons = useSetMediaPersons();
+
+  const [adding, setAdding] = useState(false);
+  const [query, setQuery] = useState("");
+  const [viewerIdx, setViewerIdx] = useState<number | null>(null);
+
+  const photos = useMemo(
+    () => (media ?? []).filter((m) => m.media_type !== "video"),
+    [media],
+  );
+  const mine   = useMemo(() => photos.filter((m) => (m.person_ids ?? []).includes(personId)), [photos, personId]);
+  const others = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return photos
+      .filter((m) => !(m.person_ids ?? []).includes(personId))
+      .filter((m) => !q || (m.original_filename + " " + (m.ai_description ?? "")).toLowerCase().includes(q));
+  }, [photos, personId, query]);
+
+  const setTag = (m: MediaFile, attach: boolean) => {
+    const cur = m.person_ids ?? [];
+    const next = attach ? [...cur, personId] : cur.filter((x) => x !== personId);
+    setPersons.mutate(
+      { id: m.id, person_ids: next },
+      { onError: (err) => toast.error(extractErrorMessage(err)) },
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/80 p-4 backdrop-blur" onClick={onClose}>
+      <div
+        className="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-2xl border border-stone-200 bg-white shadow-lift dark:border-stone-800 dark:bg-stone-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-start justify-between gap-3 border-b border-stone-100 p-5 dark:border-stone-800">
+          <div>
+            <h2 className="font-serif text-xl font-semibold tracking-tight">{personName}</h2>
+            <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
+              {t("person.galleryLead")}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setAdding((v) => !v)} className={adding ? "btn btn-ghost" : "btn btn-primary"}>
+              {adding ? <X className="h-4 w-4" /> : <ImagePlus className="h-4 w-4" />}
+              <span>{adding ? t("common.close") : t("person.addPhotos")}</span>
+            </button>
+            <button onClick={onClose} className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800" aria-label={t("common.close")}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          {adding ? (
+            <>
+              <div className="relative mb-4 max-w-md">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("common.search")}
+                  className="input pl-9"
+                />
+              </div>
+              {others.length === 0 ? (
+                <p className="py-10 text-center text-sm text-stone-500">{t("person.noneToAdd")}</p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                  {others.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => setTag(m, true)}
+                      className="group relative aspect-square overflow-hidden rounded-lg border border-stone-200 transition hover:border-brand-400 dark:border-stone-800"
+                      title={m.ai_description || m.original_filename}
+                    >
+                      <Photo mediaId={m.id} alt={m.original_filename} className="h-full w-full object-cover" />
+                      <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/40 group-hover:opacity-100">
+                        <ImagePlus className="h-6 w-6" />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : mine.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50 p-12 text-center text-sm text-stone-500 dark:border-stone-700 dark:bg-stone-900/40">
+              {t("person.empty")}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+              {mine.map((m, idx) => (
+                <div key={m.id} className="group relative aspect-square overflow-hidden rounded-lg border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-900">
+                  <Photo
+                    mediaId={m.id}
+                    alt={m.original_filename}
+                    onClick={() => setViewerIdx(idx)}
+                    className="h-full w-full cursor-zoom-in object-cover transition group-hover:scale-105"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-2 opacity-0 transition group-hover:opacity-100">
+                    <p className="line-clamp-2 text-[10px] leading-snug text-white/95">
+                      {m.ai_description || m.original_filename}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setTag(m, false)}
+                    className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-stone-950/55 text-white opacity-0 transition hover:bg-rose-600 group-hover:opacity-100"
+                    aria-label={t("person.remove")}
+                    title={t("person.remove")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <footer className="flex items-center justify-between gap-2 border-t border-stone-100 px-5 py-3 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-500">
+          <span className="inline-flex items-center gap-1.5">
+            <Check className="h-3.5 w-3.5 text-emerald-500" />
+            {t("person.count", { count: mine.length })}
+          </span>
+          {setPersons.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+        </footer>
+      </div>
+
+      {viewerIdx !== null && mine[viewerIdx] && (
+        <PhotoViewer items={mine} index={viewerIdx} onChange={setViewerIdx} onClose={() => setViewerIdx(null)} />
+      )}
+    </div>
+  );
+}

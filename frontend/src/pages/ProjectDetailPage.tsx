@@ -19,6 +19,7 @@ import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
 import PhotoViewer from "../components/media/PhotoViewer";
 import FamilyTree from "../components/family/FamilyTree";
+import PersonGallery from "../components/family/PersonGallery";
 import FamilyEditor from "../components/family/FamilyEditor";
 import { cn, initials } from "../lib/utils";
 import type { MediaFile, TimelineEvent } from "../lib/types";
@@ -523,6 +524,7 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
   const [activeSub, setActiveSub] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "tree">("tree");
   const [editorOpen, setEditorOpen] = useState(false);
+  const [galleryPerson, setGalleryPerson] = useState<{ id: number; name: string } | null>(null);
 
   // The list/persons of the current selection (a single sub-family, or the
   // whole project group when "All" is active).
@@ -685,7 +687,12 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {persons.map((p) => (
-            <div key={p.id} className="card-soft p-4">
+            <button
+              key={p.id}
+              onClick={() => setGalleryPerson({ id: p.id, name: p.name })}
+              className="card-soft p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lift"
+              title={t("person.addPhotos")}
+            >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-semibold text-white">
                   {initials(p.name) || <UserIcon className="h-4 w-4" />}
@@ -700,13 +707,21 @@ function FamilyTab({ familyLabel }: { familyLabel: string }) {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
 
       {editorOpen && (
         <FamilyEditor familyLabel={targetLabel} onClose={() => setEditorOpen(false)} />
+      )}
+
+      {galleryPerson && (
+        <PersonGallery
+          personId={galleryPerson.id}
+          personName={galleryPerson.name}
+          onClose={() => setGalleryPerson(null)}
+        />
       )}
     </>
   );

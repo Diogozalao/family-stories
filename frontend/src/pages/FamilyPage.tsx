@@ -9,6 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import PageHeader from "../components/ui/PageHeader";
 import FamilyTree from "../components/family/FamilyTree";
 import FamilyEditor from "../components/family/FamilyEditor";
+import PersonGallery from "../components/family/PersonGallery";
 import { downloadGedcom, extractErrorMessage, isLostResponse } from "../lib/api";
 import { useClearFamily, useFamilies, usePersons, useUploadGedcom } from "../lib/hooks";
 import type { Person } from "../lib/types";
@@ -34,6 +35,8 @@ export default function FamilyPage() {
   const [view, setView] = useState<"list" | "tree">("list");
   /** Full-screen manual tree editor overlay. */
   const [editorOpen, setEditorOpen] = useState(false);
+  /** Person whose photo gallery is open (null = closed). */
+  const [galleryPerson, setGalleryPerson] = useState<Person | null>(null);
 
   const onDrop = useCallback((files: File[]) => {
     if (!files.length) return;
@@ -259,7 +262,12 @@ export default function FamilyPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (
-            <div key={p.id} className="card-soft p-4">
+            <button
+              key={p.id}
+              onClick={() => setGalleryPerson(p)}
+              className="card-soft p-4 text-left transition hover:-translate-y-0.5 hover:shadow-lift"
+              title={t("person.addPhotos")}
+            >
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-xs font-semibold text-white">
                   {initials(p.name) || <UserIcon className="h-4 w-4" />}
@@ -282,7 +290,7 @@ export default function FamilyPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -291,6 +299,14 @@ export default function FamilyPage() {
 
       {editorOpen && (
         <FamilyEditor familyLabel={treeLabel} onClose={() => setEditorOpen(false)} />
+      )}
+
+      {galleryPerson && (
+        <PersonGallery
+          personId={galleryPerson.id}
+          personName={galleryPerson.name}
+          onClose={() => setGalleryPerson(null)}
+        />
       )}
 
       {/* ── Family-label dialog ─────────────────────────────── */}
