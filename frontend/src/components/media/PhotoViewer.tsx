@@ -19,12 +19,14 @@ import type { MediaFile } from "../../lib/types";
  * read and select even with a big family.
  */
 export default function PhotoViewer({
-  items, index, onChange, onClose,
+  items, index, onChange, onClose, personGroup = null,
 }: {
   items: MediaFile[];
   index: number;
   onChange: (i: number) => void;
   onClose: () => void;
+  /** When set (inside a project), only this project's people are taggable. */
+  personGroup?: string | null;
 }) {
   const { t } = useTranslation();
   const cur = items[index];
@@ -47,8 +49,9 @@ export default function PhotoViewer({
   };
   const dateChanged = (cur.date_taken?.slice(0, 10) ?? "") !== dateInput;
 
-  // Tag which family members appear in this photo.
-  const { data: persons } = usePersons();
+  // Tag which family members appear in this photo. Scoped to the project's
+  // people when ``personGroup`` is set, so a project never lists everyone.
+  const { data: persons } = usePersons(personGroup);
   const setPersons = useSetMediaPersons();
   const [tagged, setTagged] = useState<number[]>(cur.person_ids ?? []);
   useEffect(() => { setTagged(cur.person_ids ?? []); }, [cur.id, cur.person_ids]);

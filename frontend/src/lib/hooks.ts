@@ -283,12 +283,15 @@ export function useRemoveMediaFromProject() {
 }
 
 // ── Genealogy ───────────────────────────────────────────────────────────
-export function usePersons() {
+export function usePersons(group?: string | null) {
   return useQuery<Person[]>({
-    queryKey: ["persons"],
+    // ``group`` scopes the people to a project (its label + sub-families).
+    // Omitted = every person the user owns (global Family page, dashboard…).
+    queryKey: ["persons", group ?? null],
     queryFn: async () => {
       try {
-        return (await api.get("/api/v1/genealogy/persons")).data;
+        const params = group ? { params: { group } } : {};
+        return (await api.get("/api/v1/genealogy/persons", params)).data;
       } catch {
         return [];
       }

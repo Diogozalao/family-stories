@@ -198,17 +198,25 @@ async def upload_gedcom(
 
 @router.get("/genealogy/persons")
 async def list_persons(
-    family_label: str | None = Query(default=None, description="Optional filter by family group"),
+    family_label: str | None = Query(default=None, description="Optional filter by exact family group"),
+    group:        str | None = Query(default=None, description="Project group: this label OR its 'group :: sub' sub-families"),
     db:           AsyncSession = Depends(get_db),
     user:         User         = Depends(get_current_user),
 ):
     """Return every person imported from the caller's GEDCOM files.
 
-    Optionally filtered by ``family_label`` to render a single tree at a
-    time in the UI.
+    ``family_label`` filters to one exact tree. ``group`` scopes to a whole
+    project — the bare project label plus every ``"<project> :: <sub>"`` —
+    so the project's person pickers never show people from other projects or
+    from the global library.
     """
     stmt = select(Person).where(Person.user_id == user.id)
-    if family_label:
+    if group:
+        stmt = stmt.where(or_(
+            Person.family_label == group,
+            Person.family_label.like(group + " :: %"),
+        ))
+    elif family_label:
         stmt = stmt.where(Person.family_label == family_label)
     stmt = stmt.order_by(Person.family_label.nulls_last(), Person.name)
 

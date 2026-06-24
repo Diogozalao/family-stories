@@ -24,8 +24,8 @@ import type { MediaFile } from "../../lib/types";
  * the whole library.
  */
 export default function PersonGallery({
-  personId, personName, projectId = null, onClose,
-}: { personId: number; personName: string; projectId?: number | null; onClose: () => void }) {
+  personId, personName, projectId = null, personGroup = null, onClose,
+}: { personId: number; personName: string; projectId?: number | null; personGroup?: string | null; onClose: () => void }) {
   const { t } = useTranslation();
   // Both hooks must run (hooks can't be conditional); the project one is
   // disabled when there's no projectId, so it's a no-op in the global view.
@@ -158,7 +158,8 @@ export default function PersonGallery({
       </div>
 
       {viewerIdx !== null && mine[viewerIdx] && (
-        <PhotoViewer items={mine} index={viewerIdx} onChange={setViewerIdx} onClose={() => setViewerIdx(null)} />
+        <PhotoViewer items={mine} index={viewerIdx} onChange={setViewerIdx}
+                     onClose={() => setViewerIdx(null)} personGroup={personGroup} />
       )}
     </div>
   );

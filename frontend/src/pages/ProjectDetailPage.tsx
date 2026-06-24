@@ -72,7 +72,7 @@ export default function ProjectDetailPage() {
         <TabButton current={tab} value="videos"   onClick={setTab} icon={Film}       label={`${t("projectDetail.tabs.videos")} (${project.videos_count})`} />
       </div>
 
-      {tab === "photos"   && <PhotosTab   projectId={project.id} />}
+      {tab === "photos"   && <PhotosTab   projectId={project.id} projectLabel={project.name} />}
       {tab === "timeline" && <TimelineTab projectId={project.id} />}
       {tab === "family"   && <FamilyTab   familyLabel={project.name} projectId={project.id} />}
       {tab === "stories"  && <StoriesTab  projectId={project.id} />}
@@ -109,7 +109,7 @@ function TabButton({
 
 // ── Photos Tab ─────────────────────────────────────────────────────────────
 
-function PhotosTab({ projectId }: { projectId: number }) {
+function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabel: string }) {
   const { data: photos, isLoading } = useProjectMedia(projectId);
   const remove = useRemoveMediaFromProject();
   const [picker, setPicker] = useState(false);
@@ -189,6 +189,7 @@ function PhotosTab({ projectId }: { projectId: number }) {
           index={viewerIndex}
           onChange={setViewerIndex}
           onClose={() => setViewerIndex(null)}
+          personGroup={projectLabel}
         />
       )}
     </>
@@ -721,6 +722,7 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
           personId={galleryPerson.id}
           personName={galleryPerson.name}
           projectId={projectId}
+          personGroup={projectLabel}
           onClose={() => setGalleryPerson(null)}
         />
       )}
