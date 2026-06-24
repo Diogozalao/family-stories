@@ -220,6 +220,14 @@ export function useProjectMedia(id: number | null) {
     queryKey: ["projects", id, "media"],
     queryFn: async () => (await api.get(`/api/v1/projects/${id}/media`)).data,
     enabled: id !== null,
+    // Photos uploaded into a project are analysed in the background (same as
+    // the Library). Poll while any is still processing so the AI description
+    // shows up on its own — otherwise the project view looked "not analysed".
+    refetchInterval: (query) => {
+      const data = query.state.data as MediaFile[] | undefined;
+      const pending = data?.some((m) => m.status === "processing" || m.status === "pending");
+      return pending ? 4000 : false;
+    },
   });
 }
 
