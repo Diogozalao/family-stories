@@ -119,6 +119,17 @@ class M4Processor:
         else:
             photo_stmt = photo_stmt.where(MediaFile.project_id.is_(None))
         photos = (await db.execute(photo_stmt)).scalars().all()
+
+        # Use ONLY the photos this story was generated from (the user's wizard
+        # selection), so the documentary mirrors the story — just like the
+        # narrative did. Order is preserved as selected. Legacy stories have no
+        # selection → keep every scope photo (previous behaviour).
+        selected = list(getattr(story, "media_ids", None) or [])
+        if selected:
+            rank = {mid: i for i, mid in enumerate(selected)}
+            chosen = [p for p in photos if p.id in rank]
+            if chosen:
+                photos = sorted(chosen, key=lambda p: rank[p.id])
         if not photos:
             raise ValueError(
                 "No photos available. Upload photos first and make sure the "

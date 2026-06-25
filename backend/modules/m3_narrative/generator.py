@@ -268,6 +268,10 @@ class NarrativeGenerator:
             project_id    = project_id,
             language      = lang_code,
             scenes        = scenes,
+            # The exact photos this narrative was built from — the video (M4)
+            # reuses ONLY these, so the documentary shows the same selection
+            # the user picked for the story (never the whole library).
+            media_ids     = [m.id for m in all_media],
         )
         db.add(story)
         await db.commit()
