@@ -62,6 +62,13 @@ services:
         value: "480"
       - key: VIDEO_FPS
         value: "20"
+      # Force synchronous video render in the cloud. There's no Celery worker
+      # here, so a "background" request would run on an in-process thread that
+      # the free instance kills on sleep, stranding the video as "A processar".
+      # Sync keeps the instance awake for the render (and fails visibly on OOM).
+      # The "Gerar vídeo" button still works; locally this is False (background).
+      - key: VIDEO_FORCE_SYNC
+        value: "True"
       # The frontend's deployed origin — used by the CORS middleware.
       # Set this after the first Vercel deploy gives you the URL.
       - key: CORS_ORIGINS

@@ -45,7 +45,17 @@ async def generate_video(
     db:       AsyncSession = Depends(get_db),
     user:     User         = Depends(get_current_user),
 ):
-    """Build the documentary video for ``story_id`` (owned by caller)."""
+    """Build the documentary video for ``story_id`` (owned by caller).
+
+    The client may ask for ``background`` (best for a local backend, which
+    stays up for the whole render), but a cloud instance forces ``sync`` via
+    ``VIDEO_FORCE_SYNC`` — there's no worker there and an in-process thread
+    would be killed on sleep, stranding the video as "processing". This keeps
+    the same "Gerar vídeo" button working in both environments.
+    """
+    if settings.VIDEO_FORCE_SYNC:
+        mode = "sync"
+
     if mode == "sync":
         try:
             record = await processor.generate_video(story_id, db, user_id=user.id)

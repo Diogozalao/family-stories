@@ -71,6 +71,15 @@ class Settings(BaseSettings):
     VIDEO_HEIGHT: int = 720
     VIDEO_FPS:    int = 24
 
+    # Force the video endpoint to render SYNCHRONOUSLY regardless of the mode
+    # the client asks for. Set ``True`` in the cloud (Render): there is no
+    # Celery worker there, so a "background" job would run on an in-process
+    # thread that the free instance kills when it sleeps — leaving the video
+    # stuck "processing" forever. Sync keeps the instance awake for the render
+    # and fails visibly if it runs out of memory. Locally this stays ``False``
+    # so the browser isn't blocked on a multi-minute 720p render.
+    VIDEO_FORCE_SYNC: bool = False
+
     # Upload size limits (in megabytes).
     MAX_PHOTO_SIZE_MB:  int = 25
     MAX_GEDCOM_SIZE_MB: int = 100   # ample headroom for trees with thousands of persons
