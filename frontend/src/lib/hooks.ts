@@ -476,12 +476,15 @@ export function useBulkTree() {
 }
 
 // ── Timeline ────────────────────────────────────────────────────────────
-export function useTimeline() {
+export function useTimeline(projectId?: number | null) {
   return useQuery<TimelineEvent[]>({
-    queryKey: ["timeline"],
+    // ``projectId`` scopes to a project's own events (e.g. GEDCOM marriages /
+    // births imported into it); omitted = the global timeline.
+    queryKey: ["timeline", projectId ?? "global"],
     queryFn: async () => {
       try {
-        return (await api.get("/api/v1/timeline")).data;
+        const params = projectId != null ? { params: { project_id: projectId } } : {};
+        return (await api.get("/api/v1/timeline", params)).data;
       } catch {
         return [];
       }

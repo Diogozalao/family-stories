@@ -2,6 +2,8 @@ import google.generativeai as genai
 import structlog
 import json
 import asyncio
+import re
+import time
 from pathlib import Path
 from PIL import Image
 from backend.core.config import settings
@@ -39,17 +41,46 @@ class GeminiAnalyzer:
             log.error("gemini_setup_error", error=str(e))
 
     def analyze(self, file_path: Path) -> dict:
-        """Análise síncrona — usada pelo processador individual."""
+        """Análise síncrona — usada pelo processador individual.
+
+        Free-tier Gemini is rate-limited (≈15 requests/min): uploading many
+        photos at once hits **429 quota exceeded**. We retry a few times,
+        honouring the ``retry_delay`` the API suggests (capped so an upload
+        request never hangs too long). If it still fails, the caller marks
+        the photo FAILED so it's visible and re-analysable later.
+        """
         if not self.model:
             return self._fallback()
         try:
             img = Image.open(file_path)
             img.thumbnail((1024, 1024))
-            response = self.model.generate_content([ANALYSIS_PROMPT, img])
-            return self._parse(response.text)
         except Exception as e:
-            log.error("gemini_analysis_error", file=str(file_path), error=str(e))
+            log.error("gemini_image_open_error", file=str(file_path), error=str(e))
             return self._fallback()
+
+        for attempt in range(4):
+            try:
+                response = self.model.generate_content([ANALYSIS_PROMPT, img])
+                return self._parse(response.text)
+            except Exception as e:
+                msg = str(e)
+                is_429 = "429" in msg or "quota" in msg.lower() or "rate" in msg.lower()
+                if is_429 and attempt < 3:
+                    wait = self._retry_after(msg, default=8 * (attempt + 1))
+                    log.warning("gemini_429_retry", attempt=attempt + 1, wait=wait)
+                    time.sleep(wait)
+                    continue
+                log.error("gemini_analysis_error", file=str(file_path), error=msg)
+                return self._fallback()
+        return self._fallback()
+
+    @staticmethod
+    def _retry_after(message: str, default: float) -> float:
+        """Pull a ``retry_delay`` (seconds) out of a 429 message; cap it so a
+        synchronous upload request never blocks for too long."""
+        m = re.search(r"retry_delay\D+(\d+)", message) or re.search(r"in (\d+(?:\.\d+)?)s", message)
+        secs = float(m.group(1)) if m else default
+        return min(max(secs, 2.0), 30.0)
 
     async def analyze_batch(self, file_paths: list[Path]) -> list[dict]:
         """

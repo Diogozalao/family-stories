@@ -13,7 +13,7 @@ import {
   useClearFamily, useDeleteStory, useFamilies, useFamilyTree,
   usePersons, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
-  useUploadGedcom, useUploadPhoto,
+  useTimeline, useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
 import { downloadGedcom, extractErrorMessage } from "../lib/api";
 import Photo from "../components/media/Photo";
@@ -250,6 +250,9 @@ function TimelineTab({ projectId }: { projectId: number }) {
   const { t } = useTranslation();
   const { data: media, isLoading } = useProjectMedia(projectId);
   const { data: persons } = usePersons(projectId);
+  // The project's own genealogical events (GEDCOM marriages / births imported
+  // into it) — same as the global timeline, but scoped to this project.
+  const { data: gedcomEvents } = useTimeline(projectId);
 
   // Resolve who appears in each photo (media.person_ids) into names + family,
   // so the project timeline shows the same context as the global one.
@@ -259,16 +262,17 @@ function TimelineTab({ projectId }: { projectId: number }) {
     return m;
   }, [persons]);
 
-  // The project timeline is built ONLY from the project's own photos —
-  // each photo becomes a dated event. This keeps it scoped to the project
-  // instead of mixing in the user's whole (global) timeline.
-  const events: TimelineEvent[] = useMemo(
-    () => (media ?? []).map((m) => {
+  // Two sources, merged (TimelineList sorts + groups by year on its own):
+  //   1. each project photo → a dated event;
+  //   2. the project's GEDCOM events (marriages, births).
+  // Photo ids are offset so they never collide with event ids as React keys.
+  const events: TimelineEvent[] = useMemo(() => {
+    const photoEvents: TimelineEvent[] = (media ?? []).map((m) => {
       const who = (m.person_ids ?? []).map((id) => personById.get(id)).filter(Boolean) as
         { name: string; family_label?: string | null }[];
       const families = [...new Set(who.map((p) => p.family_label).filter(Boolean))] as string[];
       return {
-        id: m.id,
+        id: 1_000_000_000 + m.id,
         event_date: m.date_taken ?? m.created_at ?? null,
         title: m.ai_setting || (m.ai_description ? m.ai_description.split(/[.!?]/)[0] : null) || t("projectDetail.photoTitle"),
         description: m.ai_description ?? null,
@@ -277,9 +281,9 @@ function TimelineTab({ projectId }: { projectId: number }) {
         people: who.map((p) => p.name),
         family: families.length ? families.join(", ") : null,
       };
-    }),
-    [media, personById, t],
-  );
+    });
+    return [...(gedcomEvents ?? []), ...photoEvents];
+  }, [media, personById, gedcomEvents, t]);
 
   if (isLoading) {
     return (

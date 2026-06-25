@@ -142,7 +142,16 @@ class M1Processor:
                 # status stays PROCESSING; analysis happens out of band.
             else:
                 self._run_ai(record, tmp_path, media_type, original_filename)
-                record.status = ProcessingStatus.COMPLETED
+                # A photo with NO description means Gemini Vision failed
+                # (bad/missing GEMINI_API_KEY, quota, network). Surface it as
+                # FAILED — not a silent "completed with no description" — so the
+                # user sees it and "Re-analyse" can retry it.
+                if media_type == MediaType.PHOTO and not record.ai_description:
+                    record.status        = ProcessingStatus.FAILED
+                    record.error_message = ("A análise de imagem não devolveu descrição "
+                                            "— verifica a GEMINI_API_KEY / quota.")
+                else:
+                    record.status = ProcessingStatus.COMPLETED
 
             log.info("m1_ingested", file=original_filename, id=record.id,
                      key=object_key, status=record.status.value)
@@ -213,8 +222,15 @@ class M1Processor:
         try:
             await download_to_disk(record.file_path, tmp_path)
             self._run_ai(record, tmp_path, record.media_type, record.original_filename)
-            record.status = ProcessingStatus.COMPLETED
-            log.info("m1_analyze_complete", media_id=media_id)
+            if record.media_type == MediaType.PHOTO and not record.ai_description:
+                record.status        = ProcessingStatus.FAILED
+                record.error_message = ("A análise de imagem não devolveu descrição "
+                                        "— verifica a GEMINI_API_KEY / quota.")
+                log.warning("m1_analyze_empty", media_id=media_id)
+            else:
+                record.status = ProcessingStatus.COMPLETED
+                record.error_message = None
+                log.info("m1_analyze_complete", media_id=media_id)
         except Exception as exc:
             log.error("m1_analyze_failed", media_id=media_id, error=str(exc))
             record.status        = ProcessingStatus.FAILED
