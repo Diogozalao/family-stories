@@ -65,15 +65,17 @@ export default function StoryReaderPage() {
   const paragraphs = (story.narrative ?? "").split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
 
   const handleGenerateVideo = () => {
-    // Synchronous render (same reasoning as the Videos page): avoids the
-    // background worker that gets abandoned on the free tier. Takes 1–2 min;
-    // the Videos page polls so the result lands even if the request times out.
+    // Background render: a 720p video can take several minutes to build, so
+    // we don't block the browser on a long request. The server creates the
+    // video as "processing" immediately and the Videos page polls until the
+    // finished MP4 lands (works great when the backend runs locally, which is
+    // how videos are produced — the free cloud tier OOMs at 720p).
     toast.info(t("videos.generating"));
     genVideo.mutate(
-      { story_id: story.id, mode: "sync" },
+      { story_id: story.id, mode: "background" },
       {
         onSuccess: () => {
-          toast.success(t("videos.done"));
+          toast.success(t("videos.processing"));
           navigate("/videos");
         },
         onError: (err) => {

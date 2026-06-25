@@ -37,6 +37,11 @@ class Story(Base):
     status        = Column(Enum(StoryStatus, name="story_status", create_type=False, values_callable=lambda x: [e.value for e in x]),
                            default=StoryStatus.DRAFT)
     person_ids    = Column(JSONB, default=list)
+    # The media (photo) ids this narrative was generated from — the exact
+    # selection the user picked in the wizard. M4 builds the video from ONLY
+    # these, so the documentary mirrors the story's photos. Empty/None on
+    # legacy stories → M4 falls back to every photo in the story's scope.
+    media_ids     = Column(JSONB, default=list)
     # Two-letter language code (``pt`` or ``en``) — drives the TTS voice
     # when M4 builds the documentary so the audio matches the prose.
     language      = Column(String(8), nullable=False, default="pt")

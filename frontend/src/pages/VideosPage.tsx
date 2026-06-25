@@ -64,17 +64,16 @@ function StoryPicker({ onClose }: { onClose: () => void }) {
 
   const handleGenerate = () => {
     if (selectedId === null) return;
-    // Synchronous render: keeps the free-tier instance awake instead of
-    // handing the job to a background worker that gets killed when the
-    // instance sleeps (the old "Tarefa abandonada" failure). It can take
-    // 1–2 min; the videos list polls so the result appears even if the
-    // request itself times out at the proxy.
+    // Background render: a 720p video takes several minutes, so we don't block
+    // the browser on a long request. The server marks the video "processing"
+    // right away and this list polls until the MP4 lands (videos are produced
+    // by running the backend locally — the free cloud tier OOMs at 720p).
     toast.info(t("videos.generating"));
     gen.mutate(
-      { story_id: selectedId, mode: "sync" },
+      { story_id: selectedId, mode: "background" },
       {
         onSuccess: () => {
-          toast.success(t("videos.done"));
+          toast.success(t("videos.processing"));
           onClose();
         },
         onError: (err) => {
