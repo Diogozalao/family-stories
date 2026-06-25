@@ -102,7 +102,10 @@ class M4Processor:
         Storage; this method touches the local disk only for ephemeral
         scratch space (a temp dir cleaned up before returning).
         """
-        query = await db.execute(
+        # Photos are scoped to the SAME area as the story: a project story
+        # uses only that project's photos, a global story only global ones —
+        # keeping the documentary isolated, exactly like the narrative was.
+        photo_stmt = (
             select(MediaFile)
             .where(
                 MediaFile.user_id    == user_id,
@@ -111,7 +114,11 @@ class M4Processor:
             )
             .order_by(MediaFile.date_taken.asc().nulls_last(), MediaFile.created_at)
         )
-        photos = query.scalars().all()
+        if story.project_id is not None:
+            photo_stmt = photo_stmt.where(MediaFile.project_id == story.project_id)
+        else:
+            photo_stmt = photo_stmt.where(MediaFile.project_id.is_(None))
+        photos = (await db.execute(photo_stmt)).scalars().all()
         if not photos:
             raise ValueError(
                 "No photos available. Upload photos first and make sure the "
