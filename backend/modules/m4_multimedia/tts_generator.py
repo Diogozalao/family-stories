@@ -41,9 +41,27 @@ EDGE_VOICES: dict[str, dict[str, str]] = {
 }
 
 
-def _pick_default_voice(language: str) -> str:
+def _resolve_voice(language: str, voice: str | None) -> str:
+    """Map a requested voice to a concrete neural voice id.
+
+    ``voice`` may be a gender the user picked in the wizard
+    (``"male"``/``"female"`` — also accepts the PT words) or an explicit
+    Edge voice id. ``None`` → the language's default (male). This is what
+    lets the user choose a masculine or feminine narrator per story.
+    """
     voices = EDGE_VOICES.get(language) or EDGE_VOICES["pt"]
-    return voices["default"]
+    if not voice:
+        return voices["default"]
+    v = voice.strip().lower()
+    if v in ("male", "m", "masculina", "masculino", "homem", "default"):
+        return voices["default"]
+    if v in ("female", "f", "feminina", "feminino", "mulher"):
+        return voices.get("female", voices["default"])
+    return voice                      # already an explicit Edge voice id
+
+
+def _pick_default_voice(language: str) -> str:
+    return _resolve_voice(language, None)
 
 
 def _gtts_params_for(language: str) -> tuple[str, str]:
@@ -62,7 +80,8 @@ class TTSGenerator:
         voice:    str | None = None,
     ):
         self.language = language if language in EDGE_VOICES else "pt"
-        self.voice    = voice or _pick_default_voice(self.language)
+        # ``voice`` accepts a gender ("male"/"female") or an explicit voice id.
+        self.voice    = _resolve_voice(self.language, voice)
         # ``lang``/``tld`` are kept for the gTTS fallback only.
         self.lang, self.tld = _gtts_params_for(self.language)
 

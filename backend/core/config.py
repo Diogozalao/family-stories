@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     # so the browser isn't blocked on a multi-minute 720p render.
     VIDEO_FORCE_SYNC: bool = False
 
+    # Per-photo motion in the documentary:
+    #   "none"     → photos stay perfectly still (clean memorial look; default).
+    #   "gentle"   → a barely-perceptible slow zoom, no panning.
+    #   "kenburns" → classic zoom + directional pan (busiest).
+    # "none" also renders much faster (no per-frame transform).
+    VIDEO_MOTION: str = "none"
+
     # Upload size limits (in megabytes).
     MAX_PHOTO_SIZE_MB:  int = 25
     MAX_GEDCOM_SIZE_MB: int = 100   # ample headroom for trees with thousands of persons

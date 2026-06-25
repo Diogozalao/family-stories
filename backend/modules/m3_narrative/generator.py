@@ -99,6 +99,7 @@ class NarrativeGenerator:
         custom_tone:      str  = None,
         custom_structure: str  = None,
         language:         str  = "pt",
+        voice:            str  = None,
     ) -> Story:
 
         log.info("generating_narrative",
@@ -267,6 +268,7 @@ class NarrativeGenerator:
             person_ids    = person_ids or [],
             project_id    = project_id,
             language      = lang_code,
+            voice         = voice,
             scenes        = scenes,
             # The exact photos this narrative was built from — the video (M4)
             # reuses ONLY these, so the documentary shows the same selection

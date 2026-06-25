@@ -42,7 +42,7 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, selectedMediaIds, patch, reset,
+    selectedIds, selectedMediaIds, voice, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
 
@@ -130,6 +130,8 @@ export default function GeneratePage() {
         // i18n.language is "pt" or "en" — the M3 LLM writes in that
         // language and the M4 TTS later picks the matching voice.
         language:         i18n.language === "en" ? "en" : "pt",
+        // Narrator gender for the documentary (male/female neural voice).
+        voice,
         // Narratives are short (~30 s) and we always run them synchronously:
         // the open request keeps the free-tier instance awake and returns the
         // story directly, which avoids the in-process background worker
@@ -316,6 +318,31 @@ export default function GeneratePage() {
               />
               <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
                 {t("generate.queryHint")}
+              </p>
+            </div>
+
+            {/* Narrator voice for the documentary video. */}
+            <div>
+              <label className="label">{t("generate.voiceLabel")}</label>
+              <div className="flex gap-2">
+                {(["male", "female"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    onClick={() => patch({ voice: g })}
+                    className={cn(
+                      "flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition",
+                      voice === g
+                        ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950/40 dark:text-brand-300"
+                        : "border-stone-200 text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800/50",
+                    )}
+                  >
+                    {t(g === "male" ? "generate.voiceMale" : "generate.voiceFemale")}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
+                {t("generate.voiceHint")}
               </p>
             </div>
 

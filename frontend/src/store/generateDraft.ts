@@ -22,6 +22,8 @@ interface GenerateDraft {
   selectedIds: number[];
   /** Explicitly chosen photo media ids; empty = use every available photo. */
   selectedMediaIds: number[];
+  /** Narrator voice for the documentary: "male" or "female". */
+  voice: "male" | "female";
   mode: "sync" | "background";
   patch: (partial: Partial<GenerateDraftFields>) => void;
   reset: () => void;
@@ -38,6 +40,7 @@ const INITIAL: GenerateDraftFields = {
   customStructure: "",
   selectedIds: [],
   selectedMediaIds: [],
+  voice: "male",
   mode: "background",
 };
 

@@ -154,7 +154,9 @@ class M4Processor:
             # time so the documentary keeps the same language even if the user
             # later flips the UI toggle.
             story_language = (getattr(story, "language", None) or "pt").lower()
-            tts = TTSGenerator(language=story_language)
+            # Narrator gender the user picked for this story (male/female).
+            story_voice = getattr(story, "voice", None)
+            tts = TTSGenerator(language=story_language, voice=story_voice)
 
             # Per-id download cache so a photo referenced by one scene is
             # only fetched from Storage once.

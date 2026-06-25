@@ -547,6 +547,8 @@ export interface GenerateInput {
    *  caller side. Stored on the Story so the M4 TTS later picks the
    *  matching voice (e.g. ``pt-PT-DuarteNeural`` vs ``en-GB-RyanNeural``). */
   language?: string;
+  /** Narrator voice for the documentary: "male" or "female". */
+  voice?: string;
 }
 
 export function useGenerateNarrative() {

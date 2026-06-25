@@ -22,6 +22,9 @@ class GenerateRequest(BaseModel):
     # Output language for the narrative ("pt" or "en"). Stored on the
     # Story so the M4 TTS later picks the matching voice.
     language:         str           = "pt"
+    # Narrator voice for the documentary: "male" or "female". Stored on the
+    # Story; M4 resolves it to a neural voice per language. None → default.
+    voice:            Optional[str] = None
 
     class Config:
         json_schema_extra = {

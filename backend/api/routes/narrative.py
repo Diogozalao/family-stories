@@ -121,6 +121,7 @@ async def generate_narrative(
             custom_tone      = payload.custom_tone,
             custom_structure = payload.custom_structure,
             language         = payload.language,
+            voice            = payload.voice,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

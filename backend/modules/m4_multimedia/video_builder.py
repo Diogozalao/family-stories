@@ -34,9 +34,13 @@ TARGET_H = settings.VIDEO_HEIGHT
 FPS      = settings.VIDEO_FPS
 
 # Per-clip motion & transition timing.
-KEN_BURNS_ZOOM     = 1.08   # Max zoom factor at the end of motion (subtle, cinematic).
-KEN_BURNS_PAN_FRAC = 0.10   # Max pan distance as fraction of frame width/height.
-CROSSFADE_SECONDS  = 1.2    # Overlap between consecutive clips (smoother than 0.9).
+KEN_BURNS_ZOOM     = 1.06   # Max zoom at the end of motion (only in "kenburns" mode).
+KEN_BURNS_PAN_FRAC = 0.06   # Max pan as fraction of frame (only in "kenburns" mode).
+GENTLE_ZOOM        = 1.035  # Barely-perceptible slow zoom for "gentle" mode (no pan).
+# Per-photo motion mode — "none" (still), "gentle", or "kenburns". See config.
+MOTION             = (getattr(settings, "VIDEO_MOTION", "none") or "none").lower()
+CROSSFADE_SECONDS  = 1.6    # Slow, gentle dissolve between photos — the main source
+                            # of "life" now that photos are still by default.
 TITLE_DURATION     = 4.0    # Length of the opening title card.
 END_FADE_SECONDS   = 1.5    # Fade-to-black before the last frame.
 END_CARD_DURATION  = 3.5    # Length of the closing "Fim" card.
@@ -104,31 +108,45 @@ def _make_ken_burns_clip(
     zoom_in:    bool = True,
     pan_angle:  float | None = None,
 ):
-    """Build a Ken Burns clip from an image, using the fitted frame.
+    """Build a per-photo clip from the fitted frame.
+
+    Motion is controlled by ``VIDEO_MOTION`` (config):
+      * ``"none"``     → a perfectly still photo (clean look; also the
+        fastest to render — no per-frame transform). This is the default.
+      * ``"gentle"``   → a barely-perceptible slow zoom, no panning.
+      * ``"kenburns"`` → the classic zoom + directional pan.
 
     The fitted frame already contains the whole photo (letterboxed over a
-    blurred backdrop) so the zoom operates on the composed canvas. On top
-    of the zoom we add a directional pan: the crop window slides across
-    the frame along a vector defined by ``pan_angle`` (radians). When
-    omitted, a deterministic angle per photo is chosen from the file
-    path's hash so two adjacent clips don't accidentally drift the same
-    way.
+    blurred backdrop), so any zoom operates on the composed canvas.
     """
-    from moviepy.editor import VideoClip
+    from moviepy.editor import ImageClip, VideoClip
 
     fitted = _fit_to_frame(Image.open(image_path))
     base = np.array(fitted)
 
-    start_zoom = 1.0             if zoom_in else KEN_BURNS_ZOOM
-    end_zoom   = KEN_BURNS_ZOOM  if zoom_in else 1.0
+    # ── Clean / still ─────────────────────────────────────────────────
+    # A static image — the documentary's life comes from the smooth
+    # crossfades between photos, not from constant motion.
+    if MOTION == "none":
+        clip = ImageClip(base).set_duration(duration)
+        clip.fps = FPS
+        return clip
 
-    # Pan vector — direction is deterministic from the file path so the
-    # same photo always animates identically (useful for cache + tests).
-    if pan_angle is None:
-        rnd = random.Random(str(image_path))
-        pan_angle = rnd.uniform(0.0, 2 * math.pi)
-    pan_dx = math.cos(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_W
-    pan_dy = math.sin(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_H
+    # ── Gentle: subtle slow zoom, no pan ──────────────────────────────
+    if MOTION == "gentle":
+        start_zoom, end_zoom = 1.0, GENTLE_ZOOM
+        pan_dx = pan_dy = 0.0
+    # ── Ken Burns: zoom + directional pan ─────────────────────────────
+    else:
+        start_zoom = 1.0             if zoom_in else KEN_BURNS_ZOOM
+        end_zoom   = KEN_BURNS_ZOOM  if zoom_in else 1.0
+        # Pan vector — deterministic from the file path so the same photo
+        # always animates identically (useful for cache + tests).
+        if pan_angle is None:
+            rnd = random.Random(str(image_path))
+            pan_angle = rnd.uniform(0.0, 2 * math.pi)
+        pan_dx = math.cos(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_W
+        pan_dy = math.sin(pan_angle) * KEN_BURNS_PAN_FRAC * TARGET_H
 
     def make_frame(t: float) -> np.ndarray:
         progress = min(max(t / max(duration, 0.001), 0.0), 1.0)
