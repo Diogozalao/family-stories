@@ -172,100 +172,110 @@ def _make_ken_burns_clip(
     return clip
 
 
-def _make_title_card(title: str, duration: float = TITLE_DURATION):
-    """Opening title card: dark gradient, serif title, subtitle and rule."""
+# Card palette — warm gold over a deep, vignetted backdrop.
+GOLD      = (243, 226, 173)
+GOLD_SOFT = (190, 168, 116)
+
+
+def _elegant_backdrop() -> np.ndarray:
+    """Deep, vignetted backdrop with a warm centre glow — the cinematic base
+    shared by the title and end cards (far classier than a flat gradient)."""
+    yy, xx = np.mgrid[0:TARGET_H, 0:TARGET_W].astype(np.float32)
+    cx, cy = TARGET_W / 2.0, TARGET_H / 2.0
+    dist = np.sqrt(((xx - cx) / cx) ** 2 + ((yy - cy) / cy) ** 2) / 1.4142
+    dist = np.clip(dist, 0.0, 1.0)[..., None]
+    centre = np.array([26, 23, 33], np.float32)    # deep charcoal-indigo
+    edge   = np.array([6, 6, 9],  np.float32)       # near-black corners
+    bg = centre * (1.0 - dist) + edge * dist
+    glow = np.clip(1.0 - dist * 1.25, 0.0, 1.0)     # warm amber lift, centre
+    bg = bg + glow * np.array([22, 16, 6], np.float32)
+    return np.clip(bg, 0, 255).astype(np.uint8)
+
+
+def _fit_serif(draw, text: str, max_w: int, start: int, floor: int):
+    """Largest serif size that keeps ``text`` within ``max_w`` so long titles
+    (e.g. 'Um fim de semana na Covilhã') never run off the frame."""
+    size = start
+    while size > floor:
+        font = _load_font(FONT_PATHS_SERIF, size)
+        bb = draw.textbbox((0, 0), text, font=font)
+        if bb[2] - bb[0] <= max_w:
+            return font
+        size -= 3
+    return _load_font(FONT_PATHS_SERIF, floor)
+
+
+def _draw_center(draw, text: str, font, y: int, fill, shadow=(0, 0, 0)) -> None:
+    """Draw ``text`` horizontally centred at vertical ``y``."""
+    bb = draw.textbbox((0, 0), text, font=font)
+    x = (TARGET_W - (bb[2] - bb[0])) // 2 - bb[0]
+    if shadow:
+        draw.text((x + 2, y + 2), text, font=font, fill=shadow)
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def _draw_ornament(draw, cy: int, half: int = 150, color=GOLD_SOFT) -> None:
+    """A thin rule — small diamond — thin rule divider."""
+    mid, gap = TARGET_W // 2, 16
+    draw.line([(mid - half, cy), (mid - gap, cy)], fill=color, width=2)
+    draw.line([(mid + gap, cy), (mid + half, cy)], fill=color, width=2)
+    d = 5
+    draw.polygon([(mid, cy - d), (mid + d, cy), (mid, cy + d), (mid - d, cy)], fill=color)
+
+
+def _fade_clip(static: np.ndarray, duration: float, fade_out: bool):
+    """Wrap a still card image in a gently-eased fade-in (and optional out)."""
     from moviepy.editor import VideoClip
-
-    background = np.zeros((TARGET_H, TARGET_W, 3), dtype=np.uint8)
-    for y in range(TARGET_H):
-        shade = int(12 + 32 * y / TARGET_H)
-        background[y] = [shade, shade, int(shade * 1.4)]
-
-    font_title = _load_font(FONT_PATHS_SERIF, 58)
-    font_sub   = _load_font(FONT_PATHS_SERIF, 30)
-
-    image = Image.fromarray(background)
-    draw  = ImageDraw.Draw(image)
-
-    title_bbox = draw.textbbox((0, 0), title, font=font_title)
-    title_w = title_bbox[2] - title_bbox[0]
-    title_x = max(40, (TARGET_W - title_w) // 2)
-    title_y = TARGET_H // 2 - 60
-    # Drop shadow + foreground for readability.
-    draw.text((title_x + 2, title_y + 2), title, fill=(0, 0, 0), font=font_title)
-    draw.text((title_x, title_y), title, fill=(240, 220, 160), font=font_title)
-
-    subtitle = "Histórias Familiares"
-    sub_bbox = draw.textbbox((0, 0), subtitle, font=font_sub)
-    sub_x = (TARGET_W - (sub_bbox[2] - sub_bbox[0])) // 2
-    draw.text((sub_x, title_y + 80), subtitle, fill=(170, 150, 100), font=font_sub)
-
-    rule_x = (TARGET_W - 200) // 2
-    draw.line([(rule_x, title_y + 120), (rule_x + 200, title_y + 120)],
-              fill=(200, 180, 100), width=2)
-
-    static = np.array(image)
+    base = static.astype(np.float32)
+    fade = min(1.0, duration / 4)
 
     def make_frame(t: float) -> np.ndarray:
-        # Fade in for the first 0.8s, fade out in the last 0.8s.
-        alpha = 1.0
-        if t < 0.8:
-            alpha = t / 0.8
-        elif t > duration - 0.8:
-            alpha = max(0.0, (duration - t) / 0.8)
-        return (static * alpha).astype(np.uint8)
+        a = 1.0
+        if t < fade:
+            a = t / fade
+        elif fade_out and t > duration - fade:
+            a = max(0.0, (duration - t) / fade)
+        a = a * a * (3.0 - 2.0 * a)     # smoothstep — gentle, not linear
+        return (base * a).astype(np.uint8)
 
     clip = VideoClip(make_frame, duration=duration)
     clip.fps = FPS
     return clip
+
+
+def _make_title_card(title: str, duration: float = TITLE_DURATION):
+    """Opening title card — vignetted backdrop, auto-fitted gold serif title,
+    an ornamental divider and a tracked subtitle. Gently fades in and out."""
+    image = Image.fromarray(_elegant_backdrop())
+    draw  = ImageDraw.Draw(image)
+    cy    = TARGET_H // 2
+
+    font_title = _fit_serif(draw, title, TARGET_W - 160, 74, 34)
+    _draw_center(draw, title, font_title, cy - 104, GOLD)
+    _draw_ornament(draw, cy + 2)
+    _draw_center(draw, "H I S T Ó R I A S   F A M I L I A R E S",
+                 _load_font(FONT_PATHS_SERIF, 23), cy + 24, GOLD_SOFT, shadow=None)
+
+    return _fade_clip(np.array(image), duration, fade_out=True)
 
 
 def _make_end_card(title: str, duration: float = END_CARD_DURATION):
-    """Closing card — same look as the title card, with a gentle "Fim".
-
-    Gives the documentary a proper ending instead of just fading on the last
-    photo. Plays over silence (the narration track is padded to the video
-    length), and the global end-fade darkens it on the way out.
-    """
-    from moviepy.editor import VideoClip
-
-    background = np.zeros((TARGET_H, TARGET_W, 3), dtype=np.uint8)
-    for y in range(TARGET_H):
-        shade = int(12 + 32 * y / TARGET_H)
-        background[y] = [shade, shade, int(shade * 1.4)]
-
-    font_main = _load_font(FONT_PATHS_SERIF, 52)
-    font_sub  = _load_font(FONT_PATHS_SERIF, 28)
-
-    image = Image.fromarray(background)
+    """Closing card — the same elegant backdrop with a gentle "Fim", the story
+    title and a small wordmark. The global end-fade darkens it on the way out."""
+    image = Image.fromarray(_elegant_backdrop())
     draw  = ImageDraw.Draw(image)
+    cy    = TARGET_H // 2
 
-    main = "Fim"
-    mb = draw.textbbox((0, 0), main, font=font_main)
-    mx = (TARGET_W - (mb[2] - mb[0])) // 2
-    my = TARGET_H // 2 - 50
-    draw.text((mx + 2, my + 2), main, fill=(0, 0, 0), font=font_main)
-    draw.text((mx, my), main, fill=(240, 220, 160), font=font_main)
-
-    rule_x = (TARGET_W - 160) // 2
-    draw.line([(rule_x, my + 70), (rule_x + 160, my + 70)], fill=(200, 180, 100), width=2)
-
+    _draw_center(draw, "Fim", _load_font(FONT_PATHS_SERIF, 58), cy - 78, GOLD)
+    _draw_ornament(draw, cy + 4, half=110)
     if title:
-        sb = draw.textbbox((0, 0), title, font=font_sub)
-        sx = (TARGET_W - (sb[2] - sb[0])) // 2
-        draw.text((sx, my + 86), title, fill=(170, 150, 100), font=font_sub)
+        font_sub = _fit_serif(draw, title, TARGET_W - 200, 30, 18)
+        _draw_center(draw, title, font_sub, cy + 26, GOLD_SOFT, shadow=None)
+    _draw_center(draw, "Living Memory", _load_font(FONT_PATHS_SERIF, 18),
+                 TARGET_H - 72, (122, 112, 92), shadow=None)
 
-    static = np.array(image)
-
-    def make_frame(t: float) -> np.ndarray:
-        alpha = 1.0
-        if t < 0.8:                      # fade in; the global end-fade handles the out
-            alpha = t / 0.8
-        return (static * alpha).astype(np.uint8)
-
-    clip = VideoClip(make_frame, duration=duration)
-    clip.fps = FPS
-    return clip
+    # No fade-out here — the global end-fade handles the close.
+    return _fade_clip(np.array(image), duration, fade_out=False)
 
 
 def _add_caption(base_clip, caption_text: str):
