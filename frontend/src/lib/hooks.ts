@@ -552,6 +552,8 @@ export interface GenerateInput {
   language?: string;
   /** Narrator voice for the documentary: "male" or "female". */
   voice?: string;
+  /** Burn narration subtitles into the video (default true). */
+  subtitles?: boolean;
 }
 
 export function useGenerateNarrative() {

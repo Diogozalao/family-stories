@@ -7,7 +7,7 @@ Backed by the Postgres table ``stories`` created in
 import enum
 from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, Column, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from backend.models.media import Base
@@ -48,6 +48,9 @@ class Story(Base):
     # Narrator voice the user picked for the video: "male" / "female"
     # (resolved to a neural voice per language by M4). NULL → default (male).
     voice         = Column(String(16), nullable=True)
+    # Whether the documentary burns in narration subtitles. The user chooses
+    # this in the wizard; NULL/True → subtitles on (the default).
+    subtitles     = Column(Boolean, nullable=True, default=True)
     # Scene-segmented form of ``narrative``: a list of
     # ``{"text", "photo_ids", "caption"}`` objects. Lets M4 show each
     # photo exactly while its stretch of narration plays. ``None`` for

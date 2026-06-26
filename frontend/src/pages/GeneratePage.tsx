@@ -42,7 +42,7 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, selectedMediaIds, voice, patch, reset,
+    selectedIds, selectedMediaIds, voice, subtitles, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
 
@@ -132,6 +132,8 @@ export default function GeneratePage() {
         language:         i18n.language === "en" ? "en" : "pt",
         // Narrator gender for the documentary (male/female neural voice).
         voice,
+        // Whether to burn narration subtitles into the video.
+        subtitles,
         // Narratives are short (~30 s) and we always run them synchronously:
         // the open request keeps the free-tier instance awake and returns the
         // story directly, which avoids the in-process background worker
@@ -343,6 +345,39 @@ export default function GeneratePage() {
               </div>
               <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
                 {t("generate.voiceHint")}
+              </p>
+            </div>
+
+            {/* Subtitles on/off for the documentary. */}
+            <div>
+              <label className="label">{t("generate.subtitlesLabel")}</label>
+              <button
+                type="button"
+                onClick={() => patch({ subtitles: !subtitles })}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition",
+                  subtitles
+                    ? "border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-950/40"
+                    : "border-stone-200 dark:border-stone-700",
+                )}
+              >
+                <span className="font-medium">
+                  {subtitles ? t("generate.subtitlesOn") : t("generate.subtitlesOff")}
+                </span>
+                <span
+                  className={cn(
+                    "relative h-6 w-11 rounded-full transition",
+                    subtitles ? "bg-brand-500" : "bg-stone-300 dark:bg-stone-700",
+                  )}
+                >
+                  <span className={cn(
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                    subtitles ? "left-[22px]" : "left-0.5",
+                  )} />
+                </span>
+              </button>
+              <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
+                {t("generate.subtitlesHint")}
               </p>
             </div>
 

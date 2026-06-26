@@ -185,11 +185,12 @@ class M4Processor:
                     scenes, {p.id: p for p in photos}, _fetch, audio_dir, tts, loop)
                 if assembly:
                     used = sum(len(s["photo_paths"]) for s in assembly)
+                    want_subs = bool(getattr(story, "subtitles", True))
                     log.info("m4_scene_mode", story_id=story_id,
-                             scenes=len(assembly), photos=used)
+                             scenes=len(assembly), photos=used, subtitles=want_subs)
                     await loop.run_in_executor(
                         None, video_builder.build_documentary,
-                        assembly, video_local, story.title, None)
+                        assembly, video_local, story.title, None, want_subs)
                     return await self._finalize(user_id, video_name, video_local, used)
                 log.info("m4_scene_empty_fallback", story_id=story_id)
 
@@ -278,6 +279,9 @@ class M4Processor:
                 "audio_path":  audio_path,
                 "photo_paths": scene["paths"],
                 "caption":     scene["caption"],
+                # The narration prose for this scene — burned in as subtitles
+                # (split across the scene's photos) by ``build_documentary``.
+                "text":        scene["text"],
             })
         return assembly
 

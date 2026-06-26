@@ -302,6 +302,121 @@ def _add_caption(base_clip, caption_text: str):
     return CompositeVideoClip([base_clip, caption_clip], size=(TARGET_W, TARGET_H))
 
 
+def _wrap_text(draw, text: str, font, max_w: int) -> list[str]:
+    """Word-wrap ``text`` so each line fits within ``max_w`` pixels."""
+    lines, cur = [], ""
+    for word in text.split():
+        trial = f"{cur} {word}".strip()
+        if not cur or draw.textlength(trial, font=font) <= max_w:
+            cur = trial
+        else:
+            lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def _split_n(text: str, n: int) -> list[str]:
+    """Split ``text`` into exactly ``n`` contiguous, roughly-equal chunks, so a
+    scene's narration flows across its photos (one slice spoken per photo)."""
+    words = (text or "").split()
+    if not words:
+        return [""] * max(n, 1)
+    if n <= 1:
+        return [" ".join(words)]
+    if len(words) <= n:
+        return [words[i] if i < len(words) else "" for i in range(n)]
+    per = len(words) / n
+    return [" ".join(words[round(i * per):round((i + 1) * per)]) for i in range(n)]
+
+
+SUBTITLE_MAX_WORDS = 8     # words per on-screen subtitle segment (≈ one line)
+SUBTITLE_MIN_SECS  = 1.4   # never flash a segment faster than this
+
+
+def _segment_text(text: str, max_words: int = SUBTITLE_MAX_WORDS) -> list[str]:
+    """Break ``text`` into short, readable subtitle segments (≈ one line each),
+    preferring sentence/clause boundaries so lines don't split awkwardly."""
+    import re
+    out: list[str] = []
+    # Split on clause boundaries first, then pack words up to ``max_words``.
+    for clause in re.split(r"(?<=[.!?,;:…])\s+", text.strip()):
+        words = clause.split()
+        for i in range(0, len(words), max_words):
+            seg = " ".join(words[i:i + max_words]).strip()
+            if seg:
+                out.append(seg)
+    return out
+
+
+def _render_subtitle_overlay(text: str) -> tuple[np.ndarray, np.ndarray]:
+    """Render one subtitle line as (rgb, alpha) arrays — text + shadow over a
+    soft bottom gradient so it stays readable on any photo."""
+    font  = _load_font(FONT_PATHS_SANS, 30)
+    max_w = int(TARGET_W * 0.84)
+    overlay = Image.new("RGBA", (TARGET_W, TARGET_H), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    lines = _wrap_text(draw, text.strip(), font, max_w)[:2]
+    line_h  = font.size + 10
+    block_h = line_h * len(lines)
+    y0 = TARGET_H - 56 - block_h
+
+    grad_h = block_h + 80
+    grad = np.zeros((grad_h, TARGET_W, 4), np.uint8)
+    grad[:, :, 3] = (165 * np.linspace(0, 1, grad_h)).astype(np.uint8)[:, None]
+    overlay.alpha_composite(Image.fromarray(grad), (0, TARGET_H - grad_h))
+
+    for i, line in enumerate(lines):
+        w = draw.textlength(line, font=font)
+        x = int((TARGET_W - w) / 2)
+        y = y0 + i * line_h
+        draw.text((x + 2, y + 2), line, font=font, fill=(0, 0, 0, 215))   # shadow
+        draw.text((x, y), line, font=font, fill=(248, 246, 240, 255))
+
+    arr = np.array(overlay)
+    return arr[:, :, :3], arr[:, :, 3] / 255.0
+
+
+def _add_subtitle(base_clip, text: str):
+    """Burn the narration in as subtitles that FLOW with the speech: the text
+    is split into short segments, each shown for a slice of the clip
+    proportional to its length (so reading pace ≈ speaking pace).
+    """
+    if not text or not text.strip():
+        return base_clip
+    from moviepy.editor import CompositeVideoClip, ImageClip
+
+    duration = base_clip.duration
+    segments = _segment_text(text)
+    if not segments:
+        return base_clip
+
+    # If segments would flash too fast, merge down to a count that respects the
+    # minimum on-screen time for this clip's duration.
+    max_segments = max(1, int(duration / SUBTITLE_MIN_SECS))
+    if len(segments) > max_segments:
+        # Re-pack into ``max_segments`` roughly-equal groups.
+        per = len(segments) / max_segments
+        segments = [" ".join(segments[round(i * per):round((i + 1) * per)])
+                    for i in range(max_segments)]
+
+    total = sum(len(s.split()) for s in segments) or 1
+    layers, start = [], 0.0
+    for i, seg in enumerate(segments):
+        slot = duration * (len(seg.split()) / total)
+        if i == len(segments) - 1:
+            slot = max(0.1, duration - start)        # absorb rounding on the last
+        rgb, alpha = _render_subtitle_overlay(seg)
+        layers.append(
+            ImageClip(rgb, duration=slot)
+            .set_mask(ImageClip(alpha, ismask=True, duration=slot))
+            .set_start(start)
+        )
+        start += slot
+    return CompositeVideoClip([base_clip, *layers], size=(TARGET_W, TARGET_H))
+
+
 def _concatenate_with_crossfade(clips: list, crossfade: float):
     """Concatenate clips with a smooth crossfade between them.
 
@@ -371,11 +486,11 @@ def build_slideshow(
 
     clips = [_make_title_card(title, TITLE_DURATION)]
 
+    # The slideshow fallback has no per-photo narration text to subtitle, so it
+    # plays clean (no photo-description captions — the user didn't want those).
     for index, path in enumerate(photo_paths):
         try:
-            base = _make_ken_burns_clip(path, photo_duration, zoom_in=(index % 2 == 0))
-            caption = captions[index] if captions and index < len(captions) else None
-            clips.append(_add_caption(base, caption))
+            clips.append(_make_ken_burns_clip(path, photo_duration, zoom_in=(index % 2 == 0)))
         except Exception as exc:
             log.warning("m4_photo_error", photo=str(path), error=str(exc))
             clips.append(ColorClip((TARGET_W, TARGET_H), color=[10, 10, 10],
@@ -478,6 +593,7 @@ def build_documentary(
     output_path:           Path,
     title:                 str,
     background_music_path: Path | None = None,
+    subtitles:             bool = True,
 ) -> Path:
     """Assemble a documentary that *syncs* each photo to its narration.
 
@@ -509,11 +625,14 @@ def build_documentary(
     clips = [_make_title_card(title, TITLE_DURATION)]
     for s_index, scene in enumerate(usable):
         per = per_photo_durs[s_index]
-        caption = scene.get("caption")
+        # Subtitles = the scene's narration, split across its photos so the
+        # text on screen tracks what's being said (not the photo's description).
+        subs = (_split_n(scene.get("text") or "", len(scene["photo_paths"]))
+                if subtitles else None)
         for p_index, photo in enumerate(scene["photo_paths"]):
             try:
                 base = _make_ken_burns_clip(photo, per, zoom_in=(p_index % 2 == 0))
-                clips.append(_add_caption(base, caption))
+                clips.append(_add_subtitle(base, subs[p_index]) if subs else base)
             except Exception as exc:
                 log.warning("m4_scene_photo_error", photo=str(photo), error=str(exc))
                 clips.append(ColorClip((TARGET_W, TARGET_H), color=[10, 10, 10], duration=per))
