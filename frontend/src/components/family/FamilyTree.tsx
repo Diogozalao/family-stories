@@ -135,13 +135,15 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
   // Lay ``units`` left-to-right; each unit aims for ``targets[i]`` (its centre)
   // but never overlaps the previous one. Members stay adjacent within a unit.
   const placeUnits = (units: number[][], targets: (number | null)[]) => {
-    let cursor = -Infinity;
+    let rightEdge = -Infinity;          // x of the rightmost node placed so far
     units.forEach((unit, i) => {
       const span = (unit.length - 1) * X_SPACING;
-      let start = targets[i] != null ? (targets[i] as number) - span / 2 : cursor + X_SPACING + UNIT_GAP;
-      start = Math.max(start, cursor + X_SPACING + UNIT_GAP);
+      // First unit may start at 0; later ones clear the previous unit + a gap.
+      const minStart = rightEdge === -Infinity ? 0 : rightEdge + X_SPACING + UNIT_GAP;
+      let start = targets[i] != null ? (targets[i] as number) - span / 2 : minStart;
+      if (start < minStart) start = minStart;
       unit.forEach((id, k) => xpos.set(id, start + k * X_SPACING));
-      cursor = start + span;
+      rightEdge = start + span;
     });
   };
 
