@@ -29,10 +29,13 @@ class LLMClient:
 
     @property
     def backend(self) -> str:
-        if self._ollama_ok:
-            return "ollama"
+        # Groq first: a 70B model on cloud GPUs is far faster and stronger than
+        # a local 3B Ollama on CPU (which made narratives crawl). Ollama stays
+        # as an offline fallback; Gemini as last resort.
         if self._groq_ok:
             return "groq"
+        if self._ollama_ok:
+            return "ollama"
         return "gemini-fallback"
 
     def _check_ollama(self) -> bool:
@@ -53,11 +56,13 @@ class LLMClient:
         self._gemini = genai.GenerativeModel(settings.GEMINI_TEXT_MODEL)
 
     def generate(self, prompt: str, max_tokens: int = 1500) -> str:
-        # Texto: Ollama → Groq → Gemini (ver docstring da classe).
-        if self._ollama_ok:
-            return self._ollama_generate(prompt, max_tokens)
+        # Texto: Groq (70B, rápido, free tier) → Ollama (offline) → Gemini.
+        # Groq vem primeiro porque o Ollama 3B local no CPU é demasiado lento
+        # (a história ficava "a escrever..." durante minutos).
         if self._groq_ok:
             return self._groq_generate(prompt, max_tokens)
+        if self._ollama_ok:
+            return self._ollama_generate(prompt, max_tokens)
         return self._gemini_generate(prompt, max_tokens)
 
     def _ollama_generate(self, prompt: str, max_tokens: int) -> str:
