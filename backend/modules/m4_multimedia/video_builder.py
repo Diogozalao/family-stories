@@ -355,28 +355,35 @@ def _segment_text(text: str, max_words: int = SUBTITLE_MAX_WORDS) -> list[str]:
 
 
 def _render_subtitle_overlay(text: str) -> tuple[np.ndarray, np.ndarray]:
-    """Render one subtitle line as (rgb, alpha) arrays — text + shadow over a
-    soft bottom gradient so it stays readable on any photo."""
-    font  = _load_font(FONT_PATHS_SANS, 30)
-    max_w = int(TARGET_W * 0.84)
+    """Render one subtitle as (rgb, alpha): white text on a subtle dark rounded
+    "pill" sized to the text (YouTube-style) — clean and readable on any photo,
+    instead of a heavy full-width gradient bar."""
+    font  = _load_font(FONT_PATHS_SANS, 28)
+    max_w = int(TARGET_W * 0.78)
     overlay = Image.new("RGBA", (TARGET_W, TARGET_H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
+
     lines = _wrap_text(draw, text.strip(), font, max_w)[:2]
-    line_h  = font.size + 10
+    line_h  = font.size + 8
+    widths  = [draw.textlength(ln, font=font) for ln in lines] or [0]
+    block_w = max(widths)
     block_h = line_h * len(lines)
-    y0 = TARGET_H - 56 - block_h
 
-    grad_h = block_h + 80
-    grad = np.zeros((grad_h, TARGET_W, 4), np.uint8)
-    grad[:, :, 3] = (165 * np.linspace(0, 1, grad_h)).astype(np.uint8)[:, None]
-    overlay.alpha_composite(Image.fromarray(grad), (0, TARGET_H - grad_h))
+    pad_x, pad_y = 22, 12
+    box_w = int(block_w + 2 * pad_x)
+    box_h = block_h + 2 * pad_y
+    box_x = (TARGET_W - box_w) // 2
+    box_y = TARGET_H - 46 - box_h
 
+    # Subtle translucent pill behind just the text — clean, never a big bar.
+    draw.rounded_rectangle(
+        [box_x, box_y, box_x + box_w, box_y + box_h],
+        radius=min(18, box_h // 2), fill=(12, 12, 16, 140),
+    )
     for i, line in enumerate(lines):
-        w = draw.textlength(line, font=font)
-        x = int((TARGET_W - w) / 2)
-        y = y0 + i * line_h
-        draw.text((x + 2, y + 2), line, font=font, fill=(0, 0, 0, 215))   # shadow
-        draw.text((x, y), line, font=font, fill=(248, 246, 240, 255))
+        x = int((TARGET_W - widths[i]) / 2)
+        y = box_y + pad_y + i * line_h
+        draw.text((x, y), line, font=font, fill=(250, 250, 248, 255))
 
     arr = np.array(overlay)
     return arr[:, :, :3], arr[:, :, 3] / 255.0

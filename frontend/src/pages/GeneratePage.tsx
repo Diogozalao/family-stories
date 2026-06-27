@@ -355,19 +355,17 @@ export default function GeneratePage() {
                 type="button"
                 onClick={() => patch({ subtitles: !subtitles })}
                 className={cn(
-                  "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm transition",
+                  "flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition",
                   subtitles
-                    ? "border-brand-500 bg-brand-50 dark:border-brand-500 dark:bg-brand-950/40"
-                    : "border-stone-200 dark:border-stone-700",
+                    ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                    : "border-stone-200 text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800/50",
                 )}
               >
-                <span className="font-medium">
-                  {subtitles ? t("generate.subtitlesOn") : t("generate.subtitlesOff")}
-                </span>
+                <span>{subtitles ? t("generate.subtitlesOn") : t("generate.subtitlesOff")}</span>
                 <span
                   className={cn(
-                    "relative h-6 w-11 rounded-full transition",
-                    subtitles ? "bg-brand-500" : "bg-stone-300 dark:bg-stone-700",
+                    "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                    subtitles ? "bg-brand-500" : "bg-stone-300 dark:bg-stone-600",
                   )}
                 >
                   <span className={cn(
