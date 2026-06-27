@@ -154,13 +154,15 @@ async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict
     """
     story_ids = {v.story_id for v in videos if v.story_id}
     poster_by_story: dict[int, int] = {}
+    title_by_story:  dict[int, str] = {}
     if story_ids:
         rows = (await db.execute(
-            select(Story.id, Story.scenes).where(
+            select(Story.id, Story.title, Story.scenes).where(
                 Story.id.in_(story_ids), Story.user_id == user_id
             )
         )).all()
-        for sid, scenes in rows:
+        for sid, title, scenes in rows:
+            title_by_story[sid] = title
             for sc in (scenes or []):
                 pids = (sc or {}).get("photo_ids") or []
                 if pids:
@@ -171,6 +173,8 @@ async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict
         {
             "id":              v.id,
             "story_id":        v.story_id,
+            # The story's title — shown on the card instead of the raw filename.
+            "title":           title_by_story.get(v.story_id),
             "filename":        v.filename,
             "size_mb":         v.file_size_mb,
             "photos_used":     v.photos_used,

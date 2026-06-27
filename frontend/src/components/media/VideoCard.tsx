@@ -65,7 +65,7 @@ export default function VideoCard({ video }: { video: Video }) {
           {video.photos_used != null && <span>{t("videos.photos", { count: video.photos_used })}</span>}
           {video.size_mb != null && <span>· {t("videos.size", { size: video.size_mb.toFixed(1) })}</span>}
         </div>
-        <p className="mt-1 truncate font-medium">{video.filename ?? `#${video.id}`}</p>
+        <p className="mt-1 truncate font-medium">{video.title || video.filename || `#${video.id}`}</p>
         {ready && (
           <a href={videoUrl(video.filename!)} download
              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">

@@ -89,6 +89,8 @@ export type VideoStatus = "processing" | "completed" | "failed";
 export interface Video {
   id: number;
   story_id: number;
+  /** The story's title — shown on the card instead of the raw filename. */
+  title?: string | null;
   filename: string | null;
   size_mb: number | null;
   photos_used: number | null;
