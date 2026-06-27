@@ -36,21 +36,23 @@ def test_fit_to_frame_returns_target_dimensions_for_landscape():
 
 
 def test_fit_to_frame_does_not_crop_foreground():
-    # Paint a sharp red square on a blue canvas; after fitting, a pixel
-    # from every corner of the original should still be present (i.e.
-    # none of the photo was thrown away).
+    # Paint a red BLOCK in every corner on a blue canvas; after fitting, red
+    # must still be present (i.e. none of the photo was cropped away). Blocks
+    # (not single pixels) survive the resize at any target resolution.
     img = Image.new("RGB", (400, 800), (0, 0, 255))
-    for x, y in [(0, 0), (399, 0), (0, 799), (399, 799)]:
-        img.putpixel((x, y), (255, 0, 0))
+    b = 30
+    for x0, y0 in [(0, 0), (400 - b, 0), (0, 800 - b), (400 - b, 800 - b)]:
+        for x in range(x0, x0 + b):
+            for y in range(y0, y0 + b):
+                img.putpixel((x, y), (255, 0, 0))
 
     out = _fit_to_frame(img)
-    # Count red pixels — at least 4 should survive the resize.
     red_pixels = sum(
         1
         for px in out.getdata()
         if px[0] > 200 and px[1] < 80 and px[2] < 80
     )
-    assert red_pixels >= 1  # Resize may blend, but foreground must remain.
+    assert red_pixels >= 4  # The corner blocks must survive the resize.
 
 
 def test_fit_to_frame_preserves_aspect_ratio_check():

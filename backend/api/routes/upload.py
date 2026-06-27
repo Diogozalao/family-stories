@@ -49,7 +49,7 @@ MAX_BATCH_FILES  = 50
 
 
 async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id,
-                  project_id: int | None = None) -> MediaFile:
+                  project_id: int | None = None, analyze: bool = True) -> MediaFile:
     """Hand validated bytes off to M1, analysing the photo in-request.
 
     The AI analysis (Gemini Vision / OCR) runs **synchronously**: on the free
@@ -68,6 +68,7 @@ async def _ingest(file: UploadFile, content: bytes, db: AsyncSession, user_id,
         user_id           = user_id,
         defer_ai          = False,
         project_id        = project_id,
+        analyze           = analyze,
     )
 
 
@@ -77,13 +78,15 @@ async def upload_file(
     request:    Request,
     file:       UploadFile = File(...),
     project_id: Optional[int] = Form(default=None),
+    analyze:    bool          = Form(default=True),
     db:         AsyncSession = Depends(get_db),
     user:       User         = Depends(get_current_user),
 ):
     """Upload a single photo for ingestion by M1.
 
     ``project_id`` makes the photo belong to (and only show inside) that
-    project; omitted = global Library.
+    project; omitted = global Library. ``analyze=false`` skips the Gemini
+    Vision pass (used for profile portraits, to save the free-tier quota).
     """
     ext = Path(file.filename or "").suffix.lower()
     if ext and ext not in PHOTO_EXTENSIONS:
@@ -93,7 +96,8 @@ async def upload_file(
         )
 
     validated = await validate_photo(file)
-    record    = await _ingest(file, validated.content, db, user.id, project_id=project_id)
+    record    = await _ingest(file, validated.content, db, user.id,
+                              project_id=project_id, analyze=analyze)
 
     return UploadResponse(
         message    = "File received and processed successfully",

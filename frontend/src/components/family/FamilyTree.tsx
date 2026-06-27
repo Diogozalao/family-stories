@@ -157,7 +157,22 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
     } else {
       // Each unit is centred under the average X of its members' parents
       // (the pedigree look). Units with no placed parents go to the right.
-      const units = unitsFor(row, g);
+      const parentBary = (id: number): number => {
+        const px = (parentsOf.get(id) ?? []).map((p) => xpos.get(p)).filter((v): v is number => v != null);
+        return px.length ? px.reduce((s, v) => s + v, 0) / px.length : NaN;
+      };
+      // Order each couple's two members by which side their parents are on, so
+      // the two "child→parents" lines don't cross over each other.
+      const units = unitsFor(row, g).map((unit) => {
+        if (unit.length !== 2) return unit;
+        return [...unit].sort((a, b) => {
+          const pa = parentBary(a), pb = parentBary(b);
+          if (isNaN(pa) && isNaN(pb)) return 0;
+          if (isNaN(pa)) return 1;          // married-in (no parents) → outside
+          if (isNaN(pb)) return -1;
+          return pa - pb;                   // left-parented spouse on the left
+        });
+      });
       const targets = units.map((unit) => {
         const px = unit.flatMap((m) => parentsOf.get(m) ?? [])
           .map((p) => xpos.get(p)).filter((v): v is number => v != null);

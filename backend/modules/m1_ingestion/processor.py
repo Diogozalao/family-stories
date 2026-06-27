@@ -60,6 +60,7 @@ class M1Processor:
         ai_override:       dict | None = None,
         defer_ai:          bool = False,
         project_id:        int | None = None,
+        analyze:           bool = True,
     ) -> MediaFile:
         """Ingest ``content`` for ``user_id`` and persist a ``MediaFile`` row.
 
@@ -140,6 +141,12 @@ class M1Processor:
             elif defer_ai:
                 log.info("m1_ai_deferred", file=original_filename, id=record.id)
                 # status stays PROCESSING; analysis happens out of band.
+            elif not analyze:
+                # Profile/portrait upload — skip Gemini to save the free-tier
+                # quota. The photo is ready to use and taggable, just without
+                # an AI description.
+                log.info("m1_ai_skipped", file=original_filename, id=record.id)
+                record.status = ProcessingStatus.COMPLETED
             else:
                 self._run_ai(record, tmp_path, media_type, original_filename)
                 # A photo with NO description means Gemini Vision failed

@@ -174,13 +174,16 @@ export function useUploadPhoto() {
   return useMutation({
     // ``projectId`` uploads the photo straight into a project (isolated from
     // the Library); omitted = global Library.
-    mutationFn: async (input: File | { file: File; projectId?: number | null }) => {
+    mutationFn: async (input: File | { file: File; projectId?: number | null; analyze?: boolean }) => {
       const file = input instanceof File ? input : input.file;
       const projectId = input instanceof File ? undefined : input.projectId;
+      // ``analyze: false`` skips Gemini Vision (profile portraits) to save quota.
+      const analyze = input instanceof File ? undefined : input.analyze;
       await wakeBackend();           // absorb cold-start before the upload
       const form = new FormData();
       form.append("file", file);
       if (projectId != null) form.append("project_id", String(projectId));
+      if (analyze === false) form.append("analyze", "false");
       const { data } = await api.post("/api/v1/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });

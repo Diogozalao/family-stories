@@ -84,8 +84,10 @@ export default function PersonGallery({
     if (!file) return;
     setUploading(true);
     try {
+      // Profile portrait: skip the Gemini analysis (saves quota) — it just
+      // needs to be the person's face, not a described scene.
       const res: { file_id?: number } = await uploadPhoto.mutateAsync(
-        projectId != null ? { file, projectId } : file,
+        { file, projectId: projectId ?? undefined, analyze: false },
       );
       if (res?.file_id) {
         await setPersons.mutateAsync({ id: res.file_id, person_ids: [personId] });

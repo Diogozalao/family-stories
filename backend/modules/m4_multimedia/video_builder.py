@@ -14,6 +14,7 @@ Pipeline:
 """
 
 import math
+import os
 import random
 from pathlib import Path
 
@@ -32,6 +33,9 @@ log = structlog.get_logger()
 TARGET_W = settings.VIDEO_WIDTH
 TARGET_H = settings.VIDEO_HEIGHT
 FPS      = settings.VIDEO_FPS
+# Parallelise the H.264 encode across cores (the frame generation is still
+# single-threaded Python, but this shaves the encode side of the render).
+VIDEO_THREADS = max(2, min(8, os.cpu_count() or 2))
 
 # Per-clip motion & transition timing.
 KEN_BURNS_ZOOM     = 1.06   # Max zoom at the end of motion (only in "kenburns" mode).
@@ -557,6 +561,7 @@ def build_slideshow(
         temp_audiofile=str(tmp_audio),
         remove_temp=True,
         logger=None,
+        threads=VIDEO_THREADS,
         preset="veryfast",
         ffmpeg_params=["-crf", "23", "-pix_fmt", "yuv420p"],
     )
@@ -685,6 +690,7 @@ def build_documentary(
     video.write_videofile(
         str(output_path), fps=FPS, codec="libx264", audio_codec="aac",
         temp_audiofile=str(tmp_audio), remove_temp=True, logger=None,
+        threads=VIDEO_THREADS,
         preset="veryfast", ffmpeg_params=["-crf", "23", "-pix_fmt", "yuv420p"],
     )
 
