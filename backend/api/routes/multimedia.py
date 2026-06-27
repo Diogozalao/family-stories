@@ -53,6 +53,15 @@ async def generate_video(
     would be killed on sleep, stranding the video as "processing". This keeps
     the same "Gerar vídeo" button working in both environments.
     """
+    # On the cloud, rendering a 720p video OOMs the 512MB instance and crashes
+    # the app. Refuse cleanly with a message instead of taking the service down.
+    if settings.VIDEO_LOCAL_ONLY:
+        raise HTTPException(
+            status_code=409,
+            detail=("Os vídeos são criados localmente (a versão online não tem "
+                    "memória para os montar). Abre a app no teu computador para gerar o vídeo."),
+        )
+
     if settings.VIDEO_FORCE_SYNC:
         mode = "sync"
 

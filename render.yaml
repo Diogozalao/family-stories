@@ -69,6 +69,11 @@ services:
       # The "Gerar vídeo" button still works; locally this is False (background).
       - key: VIDEO_FORCE_SYNC
         value: "True"
+      # Refuse video rendering on the cloud — a 720p render OOMs the 512MB
+      # instance and crashes the app. The button shows a "generate locally"
+      # message instead. Videos are produced by running the backend locally.
+      - key: VIDEO_LOCAL_ONLY
+        value: "True"
       # The frontend's deployed origin — used by the CORS middleware.
       # Set this after the first Vercel deploy gives you the URL.
       - key: CORS_ORIGINS

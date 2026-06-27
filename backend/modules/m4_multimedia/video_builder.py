@@ -409,20 +409,38 @@ def _add_subtitle(base_clip, text: str):
                     for i in range(max_segments)]
 
     total = sum(len(s.split()) for s in segments) or 1
-    timed: list[tuple] = []
+    starts: list[float] = []
+    overlays: list[tuple] = []        # (rgb float32, alpha float32) per segment
     start = 0.0
     for i, seg in enumerate(segments):
         end = duration if i == len(segments) - 1 else start + duration * (len(seg.split()) / total)
         rgb, alpha = _render_subtitle_overlay(seg)
-        timed.append((start, end, rgb.astype(np.float32), alpha[:, :, None].astype(np.float32)))
+        starts.append(start)
+        overlays.append((rgb.astype(np.float32), alpha[:, :, None].astype(np.float32)))
         start = end
+    ends = starts[1:] + [duration]
 
-    def make_frame(t: float) -> np.ndarray:
-        frame = base_clip.get_frame(t)
-        for s, e, rgb, a in timed:
-            if s <= t < e:
-                return (frame * (1.0 - a) + rgb * a).astype(np.uint8)
-        return frame
+    if MOTION == "none":
+        # Static photo → bake each segment's full frame ONCE (photo + subtitle).
+        # Playback is then a pure lookup with zero per-frame compositing, which
+        # is what made long videos with subtitles crawl. Huge speed-up.
+        base = base_clip.get_frame(0).astype(np.float32)
+        plain = base.astype(np.uint8)
+        baked = [((base * (1.0 - a) + rgb * a).astype(np.uint8)) for rgb, a in overlays]
+
+        def make_frame(t: float) -> np.ndarray:
+            for i, s in enumerate(starts):
+                if s <= t < ends[i]:
+                    return baked[i]
+            return plain
+    else:
+        def make_frame(t: float) -> np.ndarray:
+            frame = base_clip.get_frame(t)
+            for i, s in enumerate(starts):
+                if s <= t < ends[i]:
+                    rgb, a = overlays[i]
+                    return (frame * (1.0 - a) + rgb * a).astype(np.uint8)
+            return frame
 
     clip = VideoClip(make_frame, duration=duration)
     clip.fps = FPS
@@ -430,28 +448,46 @@ def _add_subtitle(base_clip, text: str):
 
 
 def _concatenate_with_crossfade(clips: list, crossfade: float):
-    """Concatenate clips with a smooth crossfade between them.
+    """Concatenate clips with a smooth crossfade — fast, hand-rolled version.
 
-    The first clip plays fully; each following clip is overlapped by
-    `crossfade` seconds and fades in over the same window. The total
-    duration is shortened by crossfade * (n - 1).
+    MoviePy's ``CompositeVideoClip`` + ``crossfadein`` was the single biggest
+    cost in a render (per frame it composites every clip through generic masks
+    — ~64 s of a 105 s render at 720p). Here the timeline is laid out manually
+    and ``make_frame`` does a DIRECT two-frame blend only during the short
+    overlap windows, returning a single frame otherwise. Same look, a fraction
+    of the time.
     """
-    from moviepy.editor import CompositeVideoClip
+    from moviepy.editor import VideoClip
 
     if not clips:
         raise ValueError("No clips to concatenate.")
     if len(clips) == 1:
         return clips[0]
 
-    composed = [clips[0]]
-    running_start = clips[0].duration - crossfade
-    for clip in clips[1:]:
-        faded = clip.crossfadein(crossfade).set_start(running_start)
-        composed.append(faded)
-        running_start += clip.duration - crossfade
+    n = len(clips)
+    starts: list[float] = []
+    t = 0.0
+    for i, c in enumerate(clips):
+        starts.append(t)
+        t += c.duration - (crossfade if i < n - 1 else 0.0)
+    ends = [starts[i] + clips[i].duration for i in range(n)]
+    total = ends[-1]
 
-    total_duration = sum(c.duration for c in clips) - crossfade * (len(clips) - 1)
-    final = CompositeVideoClip(composed, size=(TARGET_W, TARGET_H)).set_duration(total_duration)
+    def make_frame(tt: float) -> np.ndarray:
+        active = [i for i in range(n) if starts[i] <= tt < ends[i]]
+        if not active:                       # past the end → last frame
+            last = clips[-1]
+            return last.get_frame(max(0.0, last.duration - 1e-3))
+        if len(active) == 1:
+            i = active[0]
+            return clips[i].get_frame(tt - starts[i])
+        a, b = active[0], active[1]          # a fades out, b fades in
+        x = min(max((tt - starts[b]) / crossfade, 0.0), 1.0)
+        fa = clips[a].get_frame(tt - starts[a]).astype(np.float32)
+        fb = clips[b].get_frame(tt - starts[b]).astype(np.float32)
+        return (fa * (1.0 - x) + fb * x).astype(np.uint8)
+
+    final = VideoClip(make_frame, duration=total)
     final.fps = FPS
     return final
 

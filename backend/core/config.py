@@ -80,6 +80,13 @@ class Settings(BaseSettings):
     # so the browser isn't blocked on a multi-minute 720p render.
     VIDEO_FORCE_SYNC: bool = False
 
+    # When True, the video endpoint REFUSES to render (returns a friendly
+    # "generate locally" message) instead of attempting it. Set on the cloud
+    # (Render), where a 720p render runs the 512MB instance out of memory and
+    # crashes the whole app. Videos are produced locally; this just stops the
+    # online button from taking the service down.
+    VIDEO_LOCAL_ONLY: bool = False
+
     # Per-photo motion in the documentary:
     #   "none"     → photos stay perfectly still (clean memorial look; default).
     #   "gentle"   → a barely-perceptible slow zoom, no panning.
