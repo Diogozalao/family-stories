@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import ReactFlow, {
-  Background, Controls, Handle, MiniMap, Panel, Position,
+  Background, Controls, Handle, Panel, Position,
   useEdgesState, useNodesState,
   type Edge, type Node,
 } from "reactflow";
@@ -109,50 +109,67 @@ function computeLayout(persons: Person[], rels: TreeRelationship[]): Map<number,
   for (const id of ids) pushMap(byGen, gen.get(id) ?? 0, id);
   const gens = [...byGen.keys()].sort((a, b) => a - b);
 
-  const groupCouples = (row: number[], g: number): number[] => {
-    const out: number[] = [];
+  // ── Unit-based layout (proper genealogy rules) ──────────────────────────
+  // A "unit" is a couple [husband, wife] or a single person. Members of a
+  // unit are ALWAYS laid out consecutively, so spouses sit side by side with
+  // nobody between them; a child unit is centred under its parents' unit.
+  const UNIT_GAP = X_SPACING * 0.4;     // extra breathing room between units
+
+  const unitsFor = (row: number[], g: number): number[][] => {
     const seen = new Set<number>();
+    const units: number[][] = [];
     for (const id of row) {
       if (seen.has(id)) continue;
-      out.push(id); seen.add(id);
+      seen.add(id);
+      const unit = [id];
       for (const sp of spousesOf.get(id) ?? []) {
-        if (!seen.has(sp) && (gen.get(sp) ?? 0) === g) { out.push(sp); seen.add(sp); }
+        if (!seen.has(sp) && (gen.get(sp) ?? 0) === g) { unit.push(sp); seen.add(sp); }
       }
+      units.push(unit);
     }
-    return out;
+    return units;
   };
 
   const xpos = new Map<number, number>();
 
+  // Lay ``units`` left-to-right; each unit aims for ``targets[i]`` (its centre)
+  // but never overlaps the previous one. Members stay adjacent within a unit.
+  const placeUnits = (units: number[][], targets: (number | null)[]) => {
+    let cursor = -Infinity;
+    units.forEach((unit, i) => {
+      const span = (unit.length - 1) * X_SPACING;
+      let start = targets[i] != null ? (targets[i] as number) - span / 2 : cursor + X_SPACING + UNIT_GAP;
+      start = Math.max(start, cursor + X_SPACING + UNIT_GAP);
+      unit.forEach((id, k) => xpos.set(id, start + k * X_SPACING));
+      cursor = start + span;
+    });
+  };
+
   gens.forEach((g, gi) => {
     const row = byGen.get(g)!;
     if (gi === 0) {
-      // Top generation: lay out left-to-right, couples together.
-      const ordered = groupCouples([...row].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? "")), g);
-      ordered.forEach((id, i) => xpos.set(id, i * X_SPACING));
+      // Top generation: order couples by name, lay out left-to-right.
+      const ordered = [...row].sort((a, b) => (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
+      const units = unitsFor(ordered, g);
+      placeUnits(units, units.map(() => null));
     } else {
-      // Each person sits at the average X of its parents → centred between
-      // them (the pedigree look). Married-in people go beside their spouse.
-      for (const id of row) {
-        const px = (parentsOf.get(id) ?? []).map((p) => xpos.get(p)).filter((v): v is number => v != null);
-        if (px.length) xpos.set(id, px.reduce((s, v) => s + v, 0) / px.length);
-      }
-      let maxX = Math.max(0, ...[...xpos.values()]);
-      for (const id of row) {
-        if (xpos.get(id) == null) {
-          const sx = (spousesOf.get(id) ?? []).map((s) => xpos.get(s)).filter((v): v is number => v != null);
-          if (sx.length) xpos.set(id, sx[0] + X_SPACING);
-          else { maxX += X_SPACING; xpos.set(id, maxX); }
-        }
-      }
-      // Spread out any overlaps while keeping the left-to-right order.
-      const sorted = [...row].sort((a, b) => (xpos.get(a)! - xpos.get(b)!) || (nameOf.get(a) ?? "").localeCompare(nameOf.get(b) ?? ""));
-      let last = -Infinity;
-      for (const id of sorted) {
-        const xi = Math.max(xpos.get(id)!, last + X_SPACING);
-        xpos.set(id, xi);
-        last = xi;
-      }
+      // Each unit is centred under the average X of its members' parents
+      // (the pedigree look). Units with no placed parents go to the right.
+      const units = unitsFor(row, g);
+      const targets = units.map((unit) => {
+        const px = unit.flatMap((m) => parentsOf.get(m) ?? [])
+          .map((p) => xpos.get(p)).filter((v): v is number => v != null);
+        return px.length ? px.reduce((s, v) => s + v, 0) / px.length : null;
+      });
+      // Order units by their target (children follow their parents' order).
+      const order = units.map((_, i) => i).sort((a, b) => {
+        const ta = targets[a], tb = targets[b];
+        if (ta == null && tb == null) return a - b;
+        if (ta == null) return 1;
+        if (tb == null) return -1;
+        return ta - tb;
+      });
+      placeUnits(order.map((i) => units[i]), order.map((i) => targets[i]));
     }
   });
 
@@ -196,7 +213,12 @@ function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<
 
 // ── Component ───────────────────────────────────────────────────────────────
 
-export default function FamilyTree({ familyLabel, projectId }: { familyLabel?: string | null; projectId?: number | null }) {
+export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
+  familyLabel?: string | null;
+  projectId?: number | null;
+  /** Click a node → edit that person (id). */
+  onPersonClick?: (id: number) => void;
+}) {
   const { t } = useTranslation();
   const { data, isLoading } = useFamilyTree(familyLabel ?? undefined, projectId ?? undefined);
 
@@ -255,15 +277,16 @@ export default function FamilyTree({ familyLabel, projectId }: { familyLabel?: s
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
+        onNodeClick={(_e, node) => onPersonClick?.(Number(node.id))}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}
         nodesConnectable={false}
         nodesDraggable
+        proOptions={{ hideAttribution: true }}
       >
         <Background color="#d6d3d1" gap={20} />
         <Controls showInteractive={false} />
-        <MiniMap pannable zoomable nodeStrokeWidth={2} />
         <Panel position="top-right">
           <button
             onClick={resetLayout}

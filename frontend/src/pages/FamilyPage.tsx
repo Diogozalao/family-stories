@@ -230,7 +230,13 @@ export default function FamilyPage() {
       )}
 
       {view === "tree" ? (
-        <FamilyTree familyLabel={treeLabel} />
+        <FamilyTree
+          familyLabel={treeLabel}
+          onPersonClick={(id) => {
+            const p = items.find((x) => x.id === id);
+            if (p) setGalleryPerson(p);
+          }}
+        />
       ) : (
       <>
       {items.length > 0 && (
@@ -305,6 +311,7 @@ export default function FamilyPage() {
         <PersonGallery
           personId={galleryPerson.id}
           personName={galleryPerson.name}
+          person={galleryPerson}
           onClose={() => setGalleryPerson(null)}
         />
       )}

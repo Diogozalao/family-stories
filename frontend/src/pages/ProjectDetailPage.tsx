@@ -326,6 +326,10 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
 
   const { data: tree, isLoading } = useFamilyTree(activeSub ?? undefined, projectId);
   const persons = tree?.persons ?? [];
+  const openPerson = (id: number) => {
+    const p = persons.find((x) => x.id === id);
+    if (p) setGalleryPerson({ id: p.id, name: p.name });
+  };
 
   // One sub-family per imported GEDCOM (labelled by the file name).
   const subFamilies = (projectFamilies ?? [])
@@ -460,8 +464,8 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
 
       {view === "tree" ? (
         activeSub
-          ? <FamilyTree familyLabel={activeSub} projectId={projectId} />
-          : <FamilyTree projectId={projectId} />
+          ? <FamilyTree familyLabel={activeSub} projectId={projectId} onPersonClick={openPerson} />
+          : <FamilyTree projectId={projectId} onPersonClick={openPerson} />
       ) : isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
@@ -507,6 +511,7 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
           personId={galleryPerson.id}
           personName={galleryPerson.name}
           projectId={projectId}
+          person={persons.find((p) => p.id === galleryPerson.id) ?? null}
           onClose={() => setGalleryPerson(null)}
         />
       )}

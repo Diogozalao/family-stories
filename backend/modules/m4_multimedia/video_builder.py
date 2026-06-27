@@ -382,39 +382,47 @@ def _add_subtitle(base_clip, text: str):
     """Burn the narration in as subtitles that FLOW with the speech: the text
     is split into short segments, each shown for a slice of the clip
     proportional to its length (so reading pace ≈ speaking pace).
+
+    Performance: each segment is pre-rendered ONCE and blended in a single
+    ``make_frame`` (a NumPy alpha-composite). The old approach stacked one
+    ``CompositeVideoClip`` layer per segment, which made long single-photo
+    clips render for many minutes — this is dramatically faster.
     """
     if not text or not text.strip():
         return base_clip
-    from moviepy.editor import CompositeVideoClip, ImageClip
+    from moviepy.editor import VideoClip
 
     duration = base_clip.duration
     segments = _segment_text(text)
     if not segments:
         return base_clip
 
-    # If segments would flash too fast, merge down to a count that respects the
-    # minimum on-screen time for this clip's duration.
+    # Don't let segments flash faster than the minimum readable time.
     max_segments = max(1, int(duration / SUBTITLE_MIN_SECS))
     if len(segments) > max_segments:
-        # Re-pack into ``max_segments`` roughly-equal groups.
         per = len(segments) / max_segments
         segments = [" ".join(segments[round(i * per):round((i + 1) * per)])
                     for i in range(max_segments)]
 
     total = sum(len(s.split()) for s in segments) or 1
-    layers, start = [], 0.0
+    timed: list[tuple] = []
+    start = 0.0
     for i, seg in enumerate(segments):
-        slot = duration * (len(seg.split()) / total)
-        if i == len(segments) - 1:
-            slot = max(0.1, duration - start)        # absorb rounding on the last
+        end = duration if i == len(segments) - 1 else start + duration * (len(seg.split()) / total)
         rgb, alpha = _render_subtitle_overlay(seg)
-        layers.append(
-            ImageClip(rgb, duration=slot)
-            .set_mask(ImageClip(alpha, ismask=True, duration=slot))
-            .set_start(start)
-        )
-        start += slot
-    return CompositeVideoClip([base_clip, *layers], size=(TARGET_W, TARGET_H))
+        timed.append((start, end, rgb.astype(np.float32), alpha[:, :, None].astype(np.float32)))
+        start = end
+
+    def make_frame(t: float) -> np.ndarray:
+        frame = base_clip.get_frame(t)
+        for s, e, rgb, a in timed:
+            if s <= t < e:
+                return (frame * (1.0 - a) + rgb * a).astype(np.uint8)
+        return frame
+
+    clip = VideoClip(make_frame, duration=duration)
+    clip.fps = FPS
+    return clip
 
 
 def _concatenate_with_crossfade(clips: list, crossfade: float):
