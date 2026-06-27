@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Living Memory — launcher único
-# Arranca Redis, backend (FastAPI :8000), Celery worker, frontend (Vite :5173)
+# Arranca Redis, backend (FastAPI :8000, --reload) e frontend (Vite :5173)
 # e abre o browser na aplicação. Ctrl+C termina tudo.
+#
+# Sem Celery: localmente CELERY_ENABLED=False (no .env), por isso o vídeo
+# corre no executor in-process dentro do uvicorn. Um worker Celery aqui só
+# ficaria inútil — e foi o que antes deixava os vídeos presos em "A processar".
 
 set -e
 cd "$(dirname "$0")"
@@ -57,9 +61,9 @@ fi
 fuser -k 8000/tcp 2>/dev/null || true
 fuser -k 5173/tcp 2>/dev/null || true
 
-# 4. Backend
-say "A iniciar backend (FastAPI :8000)…"
-uvicorn backend.main:app --port 8000 > "$LOG_DIR/backend.log" 2>&1 &
+# 4. Backend (com --reload: recarrega sozinho quando o código muda)
+say "A iniciar backend (FastAPI :8000, --reload)…"
+uvicorn backend.main:app --port 8000 --reload > "$LOG_DIR/backend.log" 2>&1 &
 PIDS+=($!)
 for _ in {1..30}; do
   curl -fs http://127.0.0.1:8000/healthz >/dev/null 2>&1 && break
@@ -69,20 +73,7 @@ curl -fs http://127.0.0.1:8000/healthz >/dev/null 2>&1 \
   || fail "Backend não respondeu em 30 s — vê $LOG_DIR/backend.log"
 say "Backend ✓"
 
-# 5. Celery
-say "A iniciar Celery worker…"
-celery -A backend.core.celery_app:celery_app worker --loglevel=info --concurrency=1 \
-  > "$LOG_DIR/celery.log" 2>&1 &
-PIDS+=($!)
-for _ in {1..20}; do
-  grep -q "celery@.*ready" "$LOG_DIR/celery.log" 2>/dev/null && break
-  sleep 1
-done
-grep -q "celery@.*ready" "$LOG_DIR/celery.log" 2>/dev/null \
-  || warn "Celery demorou a ficar pronto — vê $LOG_DIR/celery.log"
-say "Celery ✓"
-
-# 6. Frontend
+# 5. Frontend
 say "A iniciar frontend (Vite :5173)…"
 ( cd frontend && npm run dev > "$LOG_DIR/frontend.log" 2>&1 ) &
 PIDS+=($!)
@@ -94,7 +85,7 @@ curl -fs http://127.0.0.1:5173 >/dev/null 2>&1 \
   || fail "Frontend não respondeu em 40 s — vê $LOG_DIR/frontend.log (npm install correu?)"
 say "Frontend ✓"
 
-# 7. Browser (WSL → Windows; Linux → xdg-open)
+# 6. Browser (WSL → Windows; Linux → xdg-open)
 URL="http://localhost:5173"
 if command -v wslview >/dev/null 2>&1; then
   wslview "$URL" >/dev/null 2>&1 &
@@ -111,7 +102,7 @@ fi
 
 echo
 printf "${B}${G}━━━ Living Memory pronto em ${URL} ━━━${N}\n"
-printf "${D}Logs:    $LOG_DIR/{backend,celery,frontend}.log${N}\n"
+printf "${D}Logs:    $LOG_DIR/{backend,frontend}.log${N}\n"
 printf "${D}Stop:    Ctrl+C${N}\n\n"
 
 # Mantém o script vivo até receber sinal
