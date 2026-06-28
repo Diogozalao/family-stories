@@ -37,12 +37,7 @@ export default function LandingHero(props: HeroProps) {
       <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:px-10">
         {/* ── Left column ───────────────────────────────────── */}
         <div className="order-2 lg:order-1">
-          <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
-            <Sparkles className="h-3.5 w-3.5" />
-            {t("landing.heroBadge")}
-          </span>
-
-          <h1 className="mt-5 font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.5rem]">
+          <h1 className="font-serif text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.5rem]">
             {t("landing.heroTitle1")}
             <span className="block text-brand-600 dark:text-brand-400">
               {t("landing.heroTitle2")}

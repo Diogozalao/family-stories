@@ -2,7 +2,7 @@ import { cn } from "../../lib/utils";
 
 export default function Logo({
   className,
-  size = 34,
+  size = 38,
   showWordmark = true,
 }: {
   className?: string;
@@ -20,7 +20,7 @@ export default function Logo({
         className="shrink-0 object-contain"
       />
       {showWordmark && (
-        <span className="font-serif text-[17px] font-semibold tracking-tight leading-none">
+        <span className="font-serif text-[19px] font-semibold tracking-tight leading-none">
           Living memory
         </span>
       )}
