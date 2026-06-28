@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 from backend.models.narrative import StoryStatus
@@ -86,6 +86,18 @@ class StoryResponse(BaseModel):
     person_ids:    List[int]     = []
     media_ids:     List[int]     = []
     created_at:    datetime
+
+    # Older stories predate these columns and store NULL — coerce to safe
+    # defaults so serialization never fails on legacy rows.
+    @field_validator("person_ids", "media_ids", mode="before")
+    @classmethod
+    def _none_to_empty_list(cls, v):
+        return v or []
+
+    @field_validator("favorite", mode="before")
+    @classmethod
+    def _none_to_false(cls, v):
+        return bool(v)
 
     class Config:
         from_attributes = True
