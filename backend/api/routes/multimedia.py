@@ -132,14 +132,16 @@ async def generate_video(
 @router.get("/video/{filename}")
 async def download_video(
     filename: str,
+    download: bool         = Query(False, description="Force a file download (Content-Disposition)"),
     db:       AsyncSession = Depends(get_db),
     user:     User         = Depends(get_current_user_query_or_header),
 ):
     """Redirect to a signed URL for the generated documentary MP4.
 
-    Accepts JWT in header or ``?token=`` so ``<video>`` tags work. The
-    lookup is by ``filename + user_id`` so a user can never download a
-    video that doesn't belong to them even if they guess the filename.
+    Accepts JWT in header or ``?token=`` so ``<video>`` tags work. With
+    ``?download=1`` the signed URL is told to serve the file as an
+    attachment (Supabase honours ``&download=``), so "Download MP4" actually
+    saves the file instead of opening it in the browser.
     """
     if "/" in filename or ".." in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
@@ -154,6 +156,10 @@ async def download_video(
         raise HTTPException(status_code=404, detail="Video not found")
 
     signed = await cached_signed_url(record.file_path, expires_in=3600)
+    if download:
+        from urllib.parse import quote
+        sep = "&" if "?" in signed else "?"
+        signed = f"{signed}{sep}download={quote(filename)}"
     return RedirectResponse(url=signed, status_code=302)
 
 

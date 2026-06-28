@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Download, Loader2, Play, Trash2, X } from "lucide-react";
 
 import Photo from "./Photo";
-import { useDeleteVideo, videoUrl } from "../../lib/hooks";
+import { downloadVideoUrl, useDeleteVideo, videoUrl } from "../../lib/hooks";
 import { api, extractErrorMessage } from "../../lib/api";
 import { cn } from "../../lib/utils";
 import type { Video } from "../../lib/types";
@@ -96,7 +96,7 @@ export default function VideoCard({ video }: { video: Video }) {
         </div>
         <p className="mt-1 truncate font-medium">{video.title || video.filename || `#${video.id}`}</p>
         {ready && (
-          <a href={videoUrl(video.filename!)} download
+          <a href={downloadVideoUrl(video.filename!)}
              className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
             <Download className="h-3.5 w-3.5" /> {t("videos.download")}
           </a>

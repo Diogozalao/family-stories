@@ -648,6 +648,14 @@ export function videoUrl(filename: string): string {
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
+/** Like ``videoUrl`` but forces the browser to SAVE the file (the signed URL
+ *  gets a ``download`` flag) instead of opening it. */
+export function downloadVideoUrl(filename: string): string {
+  const token = useAuthStore.getState().token;
+  const base  = `${API_BASE}/api/v1/multimedia/video/${encodeURIComponent(filename)}?download=1`;
+  return token ? `${base}&token=${encodeURIComponent(token)}` : base;
+}
+
 // ── Tasks ───────────────────────────────────────────────────────────────
 export function useTasks(projectId?: number) {
   const qs = projectId != null ? `&project_id=${projectId}` : "";

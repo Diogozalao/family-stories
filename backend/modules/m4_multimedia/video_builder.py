@@ -800,6 +800,37 @@ def build_documentary(
         a.close()
     video.close()
 
+    # Embed the subtitles into the MP4 too, so a DOWNLOADED file carries them
+    # (the web player still uses the sidecar .vtt). Best-effort.
+    if subtitles:
+        _mux_subtitles(output_path, output_path.with_suffix(".vtt"))
+
     size_mb = round(output_path.stat().st_size / 1024 / 1024, 2)
     log.info("m4_complete_scenes", output=str(output_path), size_mb=size_mb)
     return output_path
+
+
+def _mux_subtitles(video_path: Path, vtt_path: Path) -> None:
+    """Embed ``vtt_path`` into ``video_path`` as a soft (toggleable) mov_text
+    subtitle stream. The web player uses the separate .vtt; this is so the
+    downloaded MP4 also carries captions (VLC, QuickTime, etc.)."""
+    if not vtt_path.exists():
+        return
+    import subprocess
+    try:
+        import imageio_ffmpeg
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        ffmpeg = "ffmpeg"
+    muxed = video_path.with_suffix(".muxed.mp4")
+    cmd = [ffmpeg, "-y", "-loglevel", "error",
+           "-i", str(video_path), "-i", str(vtt_path),
+           "-map", "0", "-map", "1", "-c", "copy", "-c:s", "mov_text",
+           "-metadata:s:s:0", "language=por", str(muxed)]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True, timeout=180)
+        muxed.replace(video_path)
+        log.info("m4_subs_muxed", output=str(video_path))
+    except Exception as exc:                               # keep the clean MP4
+        log.warning("m4_mux_subs_failed", error=str(exc))
+        muxed.unlink(missing_ok=True)
