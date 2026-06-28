@@ -101,6 +101,7 @@ class NarrativeGenerator:
         language:         str  = "pt",
         voice:            str  = None,
         subtitles:        bool = True,
+        subtitle_size:    str  = "medium",
     ) -> Story:
 
         log.info("generating_narrative",
@@ -271,6 +272,7 @@ class NarrativeGenerator:
             language      = lang_code,
             voice         = voice,
             subtitles     = subtitles,
+            subtitle_size = subtitle_size,
             scenes        = scenes,
             # The exact photos this narrative was built from — the video (M4)
             # reuses ONLY these, so the documentary shows the same selection

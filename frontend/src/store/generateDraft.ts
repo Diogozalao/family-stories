@@ -24,8 +24,10 @@ interface GenerateDraft {
   selectedMediaIds: number[];
   /** Narrator voice for the documentary: "male" or "female". */
   voice: "male" | "female";
-  /** Burn narration subtitles into the video. */
+  /** Include a narration subtitle track. */
   subtitles: boolean;
+  /** Subtitle size in the player. */
+  subtitleSize: "small" | "medium" | "large";
   mode: "sync" | "background";
   patch: (partial: Partial<GenerateDraftFields>) => void;
   reset: () => void;
@@ -44,6 +46,7 @@ const INITIAL: GenerateDraftFields = {
   selectedMediaIds: [],
   voice: "male",
   subtitles: true,
+  subtitleSize: "medium",
   mode: "background",
 };
 

@@ -48,9 +48,11 @@ class Story(Base):
     # Narrator voice the user picked for the video: "male" / "female"
     # (resolved to a neural voice per language by M4). NULL → default (male).
     voice         = Column(String(16), nullable=True)
-    # Whether the documentary burns in narration subtitles. The user chooses
-    # this in the wizard; NULL/True → subtitles on (the default).
+    # Whether the documentary ships a narration subtitle track. The user
+    # chooses this in the wizard; NULL/True → subtitles on (the default).
     subtitles     = Column(Boolean, nullable=True, default=True)
+    # Subtitle size shown in the player: "small" / "medium" / "large".
+    subtitle_size = Column(String(10), nullable=True)
     # Scene-segmented form of ``narrative``: a list of
     # ``{"text", "photo_ids", "caption"}`` objects. Lets M4 show each
     # photo exactly while its stretch of narration plays. ``None`` for

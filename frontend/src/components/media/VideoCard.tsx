@@ -1,12 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Download, Loader2, Play, Trash2, X } from "lucide-react";
 
 import Photo from "./Photo";
 import { useDeleteVideo, videoUrl } from "../../lib/hooks";
-import { extractErrorMessage } from "../../lib/api";
+import { api, extractErrorMessage } from "../../lib/api";
+import { cn } from "../../lib/utils";
 import type { Video } from "../../lib/types";
+
+const SUBTITLE_SIZE_CLASS: Record<string, string> = {
+  small:  "subs-small",
+  medium: "subs-medium",
+  large:  "subs-large",
+};
 
 /**
  * Self-contained documentary-video card, shared by the global Videos page and
@@ -17,7 +24,29 @@ export default function VideoCard({ video }: { video: Video }) {
   const { t } = useTranslation();
   const del = useDeleteVideo();
   const [playing, setPlaying] = useState(false);
+  const [vttUrl, setVttUrl] = useState<string | null>(null);
   const ready = video.status === "completed" && !!video.filename;
+
+  // Fetch the .vtt and hand the player a same-origin blob URL — sidesteps the
+  // cross-origin restrictions on <track> without needing crossorigin on the
+  // (Storage-redirected) video element.
+  useEffect(() => {
+    if (!playing || !video.subtitle_url) return;
+    let blobUrl: string | null = null;
+    let cancelled = false;
+    api.get(video.subtitle_url, { responseType: "text" })
+      .then((r) => {
+        if (cancelled) return;
+        blobUrl = URL.createObjectURL(new Blob([r.data], { type: "text/vtt" }));
+        setVttUrl(blobUrl);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      setVttUrl(null);
+    };
+  }, [playing, video.subtitle_url]);
 
   const handleDelete = () => {
     if (!confirm(t("videos.confirmDelete"))) return;
@@ -82,8 +111,21 @@ export default function VideoCard({ video }: { video: Video }) {
           <button onClick={() => setPlaying(false)} className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" aria-label={t("common.close")}>
             <X className="h-5 w-5" />
           </button>
-          <video key={video.id} src={videoUrl(video.filename)} controls autoPlay
-                 className="max-h-[85vh] max-w-[95vw] rounded-xl shadow-lift" onClick={(e) => e.stopPropagation()} />
+          <video
+            key={video.id}
+            src={videoUrl(video.filename)}
+            controls
+            autoPlay
+            className={cn(
+              "max-h-[85vh] max-w-[95vw] rounded-xl shadow-lift",
+              SUBTITLE_SIZE_CLASS[video.subtitle_size ?? "medium"] ?? "subs-medium",
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {vttUrl && (
+              <track kind="subtitles" srcLang="pt" label={t("videos.subtitles")} default src={vttUrl} />
+            )}
+          </video>
         </div>
       )}
     </article>

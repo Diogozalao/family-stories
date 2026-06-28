@@ -42,7 +42,7 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, selectedMediaIds, voice, subtitles, patch, reset,
+    selectedIds, selectedMediaIds, voice, subtitles, subtitleSize, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
 
@@ -132,8 +132,9 @@ export default function GeneratePage() {
         language:         i18n.language === "en" ? "en" : "pt",
         // Narrator gender for the documentary (male/female neural voice).
         voice,
-        // Whether to burn narration subtitles into the video.
+        // Subtitle track on/off + size in the player.
         subtitles,
+        subtitle_size: subtitleSize,
         // Narratives are short (~30 s) and we always run them synchronously:
         // the open request keeps the free-tier instance awake and returns the
         // story directly, which avoids the in-process background worker
@@ -377,6 +378,25 @@ export default function GeneratePage() {
               <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
                 {t("generate.subtitlesHint")}
               </p>
+              {subtitles && (
+                <div className="mt-3 flex gap-2">
+                  {(["small", "medium", "large"] as const).map((sz) => (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => patch({ subtitleSize: sz })}
+                      className={cn(
+                        "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition",
+                        subtitleSize === sz
+                          ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                          : "border-stone-200 text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800/50",
+                      )}
+                    >
+                      {t(`generate.subtitleSize_${sz}`)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {isCustom && (

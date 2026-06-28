@@ -274,22 +274,36 @@ class M4Processor:
             if not scene["text"]:
                 continue
             audio_path = audio_dir / f"scene_{index:02d}.mp3"
-            await loop.run_in_executor(None, tts.generate, scene["text"], audio_path)
+            # Capture word-level timestamps so the .vtt subtitle track can be
+            # synced exactly to the speech (edge-tts WordBoundary marks).
+            _, marks = await loop.run_in_executor(
+                None, tts.generate_with_marks, scene["text"], audio_path)
             assembly.append({
                 "audio_path":  audio_path,
                 "photo_paths": scene["paths"],
                 "caption":     scene["caption"],
-                # The narration prose for this scene — burned in as subtitles
-                # (split across the scene's photos) by ``build_documentary``.
                 "text":        scene["text"],
+                "marks":       marks,
             })
         return assembly
 
     async def _finalize(self, user_id, video_name: str, video_local: Path, photos_used: int) -> dict:
-        """Upload the rendered MP4 to Storage and return the DB pointer dict."""
+        """Upload the rendered MP4 (and its .vtt subtitle track) to Storage."""
         video_key = object_key_for(user_id, "videos", video_name)
         await upload_bytes(video_key, video_local.read_bytes(), content_type="video/mp4")
         size_mb = round(video_local.stat().st_size / 1024 / 1024, 2)
+
+        # Companion WebVTT subtitle track (same name, .vtt) — uploaded next to
+        # the MP4 so the player can offer a toggleable, synced caption track.
+        vtt_local = video_local.with_suffix(".vtt")
+        if vtt_local.exists():
+            vtt_name = Path(video_name).with_suffix(".vtt").name
+            vtt_key  = object_key_for(user_id, "videos", vtt_name)
+            try:
+                await upload_bytes(vtt_key, vtt_local.read_bytes(), content_type="text/vtt")
+            except Exception as exc:                   # subs are optional
+                log.warning("m4_vtt_upload_failed", error=str(exc))
+
         return {
             "filename":    video_name,
             "file_path":   video_key,

@@ -105,6 +105,49 @@ class TTSGenerator:
                      path=str(output_path), chars=len(text))
         return self._get_duration(output_path)
 
+    def generate_with_marks(self, text: str, output_path: Path) -> tuple[float, list[dict]]:
+        """Like :meth:`generate` but also returns word-level timestamps.
+
+        Returns ``(duration_seconds, marks)`` where each mark is
+        ``{"start", "end", "word"}`` (seconds, in this clip's own timeline).
+        edge-tts emits these as ``WordBoundary`` events; the gTTS fallback has
+        none (empty list) and the caller then times subtitles by proportion.
+        """
+        try:
+            marks = self._render_edge_tts_with_marks(text, output_path)
+            log.info("tts_generated", backend="edge-tts", voice=self.voice,
+                     path=str(output_path), chars=len(text), marks=len(marks))
+        except Exception as exc:                       # noqa: BLE001
+            log.warning("tts_edge_failed_fallback_gtts", error=str(exc))
+            self._render_gtts(text, output_path)
+            marks = []
+        return self._get_duration(output_path), marks
+
+    def _render_edge_tts_with_marks(self, text: str, output_path: Path) -> list[dict]:
+        """edge-tts streaming: write the MP3 *and* collect word boundaries."""
+        import edge_tts
+        marks: list[dict] = []
+
+        async def _run() -> None:
+            comm = edge_tts.Communicate(text=text, voice=self.voice,
+                                        rate="-6%", pitch="-2Hz",
+                                        boundary="WordBoundary")
+            with open(output_path, "wb") as fh:
+                async for chunk in comm.stream():
+                    if chunk["type"] == "audio":
+                        fh.write(chunk["data"])
+                    elif chunk["type"] == "WordBoundary":
+                        start = chunk["offset"] / 1e7      # 100-ns ticks → seconds
+                        end   = start + chunk["duration"] / 1e7
+                        marks.append({"start": start, "end": end, "word": chunk["text"]})
+
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(_run())
+        finally:
+            loop.close()
+        return marks
+
     def generate_paragraphs(self, text: str, output_dir: Path) -> list[dict]:
         """One MP3 per paragraph. Returns ``[{path, duration, text}]``."""
         output_dir.mkdir(parents=True, exist_ok=True)

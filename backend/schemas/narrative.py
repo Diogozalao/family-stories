@@ -25,8 +25,10 @@ class GenerateRequest(BaseModel):
     # Narrator voice for the documentary: "male" or "female". Stored on the
     # Story; M4 resolves it to a neural voice per language. None → default.
     voice:            Optional[str] = None
-    # Whether to burn narration subtitles into the video. Default on.
+    # Whether to include a narration subtitle track. Default on.
     subtitles:        bool          = True
+    # Subtitle size in the player: "small" / "medium" / "large".
+    subtitle_size:    str           = "medium"
 
     class Config:
         json_schema_extra = {

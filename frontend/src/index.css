@@ -88,3 +88,10 @@
     margin-top: 0.12em;
   }
 }
+
+/* ── Video subtitle (WebVTT ::cue) sizes ──────────────────────────────────
+   Applied to the <video> element based on the story's subtitle_size choice.
+   Uses viewport-height units so the caption scales with the player. */
+.subs-small::cue  { font-size: 2.4vh; background: rgba(12,12,16,0.62); }
+.subs-medium::cue { font-size: 3.4vh; background: rgba(12,12,16,0.62); }
+.subs-large::cue  { font-size: 4.8vh; background: rgba(12,12,16,0.62); }

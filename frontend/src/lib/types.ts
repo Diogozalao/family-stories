@@ -99,6 +99,10 @@ export interface Video {
   created_at: string;
   download_url?: string | null;
   poster_media_id?: number | null;
+  /** WebVTT subtitle track path (toggleable in the player); null if off. */
+  subtitle_url?: string | null;
+  /** Subtitle size in the player: "small" | "medium" | "large". */
+  subtitle_size?: string | null;
 }
 
 export type TaskState = "pending" | "running" | "done" | "failed";

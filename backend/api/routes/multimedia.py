@@ -11,9 +11,12 @@ Every row in ``video_outputs`` carries ``user_id``; every read here
 filters by ``user.id`` so no caller can see/touch another user's videos.
 """
 
+import tempfile
+from pathlib import Path
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +27,7 @@ from backend.core.rate_limit import limiter
 from backend.core.supabase_storage import (
     cached_signed_url,
     delete_object,
+    download_to_disk,
     invalidate_signed_url,
 )
 from backend.models.narrative import Story
@@ -153,6 +157,42 @@ async def download_video(
     return RedirectResponse(url=signed, status_code=302)
 
 
+@router.get("/subtitle/{filename}")
+async def download_subtitle(
+    filename: str,
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user_query_or_header),
+):
+    """Serve the WebVTT subtitle track for a video (``documentario_X.vtt``).
+
+    Served *through* the backend (text/vtt + our CORS headers) so the HTML5
+    ``<track>`` element loads it cross-origin without Storage CORS issues.
+    """
+    if "/" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    video_filename = filename.rsplit(".", 1)[0] + ".mp4"
+    record = (await db.execute(
+        select(VideoOutput).where(
+            VideoOutput.filename == video_filename,
+            VideoOutput.user_id  == user.id,
+        )
+    )).scalar_one_or_none()
+    if not record or not record.file_path:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+
+    vtt_key = record.file_path.rsplit(".", 1)[0] + ".vtt"
+    tmp = Path(tempfile.mkdtemp()) / "s.vtt"
+    try:
+        await download_to_disk(vtt_key, tmp)
+        content = tmp.read_text(encoding="utf-8")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Subtitle not found")
+    finally:
+        tmp.unlink(missing_ok=True)
+    return Response(content=content, media_type="text/vtt")
+
+
 async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict]:
     """Serialise ``VideoOutput`` rows into the API shape used by the frontend.
 
@@ -164,19 +204,27 @@ async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict
     story_ids = {v.story_id for v in videos if v.story_id}
     poster_by_story: dict[int, int] = {}
     title_by_story:  dict[int, str] = {}
+    subs_by_story:   dict[int, tuple] = {}      # sid -> (subtitles_on, size)
     if story_ids:
         rows = (await db.execute(
-            select(Story.id, Story.title, Story.scenes).where(
+            select(Story.id, Story.title, Story.scenes, Story.subtitles, Story.subtitle_size).where(
                 Story.id.in_(story_ids), Story.user_id == user_id
             )
         )).all()
-        for sid, title, scenes in rows:
+        for sid, title, scenes, subs_on, sub_size in rows:
             title_by_story[sid] = title
+            subs_by_story[sid] = (subs_on is not False, sub_size or "medium")
             for sc in (scenes or []):
                 pids = (sc or {}).get("photo_ids") or []
                 if pids:
                     poster_by_story[sid] = pids[0]
                     break
+
+    def _vtt_url(v):
+        subs_on, _ = subs_by_story.get(v.story_id, (True, "medium"))
+        if not subs_on or not v.filename:
+            return None
+        return f"/api/v1/multimedia/subtitle/{Path(v.filename).with_suffix('.vtt').name}"
 
     return [
         {
@@ -191,6 +239,9 @@ async def serialize_videos(db: AsyncSession, videos: list, user_id) -> list[dict
             "created_at":      str(v.created_at),
             "download_url":    f"/api/v1/multimedia/video/{v.filename}" if v.filename else None,
             "poster_media_id": poster_by_story.get(v.story_id),
+            # Toggleable, word-synced subtitle track + its size preference.
+            "subtitle_url":    _vtt_url(v),
+            "subtitle_size":   subs_by_story.get(v.story_id, (True, "medium"))[1],
         }
         for v in videos
     ]

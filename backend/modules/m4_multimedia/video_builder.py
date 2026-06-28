@@ -644,6 +644,60 @@ def plan_scene_durations(scene_audio_durations: list[float],
     return durations
 
 
+def _vtt_timestamp(t: float) -> str:
+    t = max(0.0, t)
+    h = int(t // 3600); m = int((t % 3600) // 60); s = t % 60
+    return f"{h:02d}:{m:02d}:{s:06.3f}"
+
+
+def _scene_word_times(scene: dict, dur: float) -> list[tuple]:
+    """``[(start, end, word)]`` in the scene's own timeline — from real edge-tts
+    marks when available, else the text's words spread evenly over ``dur``."""
+    marks = scene.get("marks") or []
+    if marks:
+        return [(m["start"], m["end"], m["word"]) for m in marks]
+    words = (scene.get("text") or "").split()
+    if not words:
+        return []
+    step = dur / len(words)
+    return [(i * step, (i + 1) * step, w) for i, w in enumerate(words)]
+
+
+def write_vtt(scenes: list[dict], scene_durations: list[float], vtt_path: Path,
+              lead_in: float = TITLE_DURATION, max_words: int = 7) -> Path:
+    """Write a WebVTT subtitle file synced to the documentary's audio.
+
+    The video's audio is ``lead_in`` seconds of silence (the title card) then
+    the scene narrations back to back, so a word spoken at offset ``w`` in
+    scene ``k`` lands at ``lead_in + Σ(previous scene durations) + w`` on the
+    player's clock. Words are grouped into short cues (~``max_words``).
+    """
+    cues: list[tuple] = []
+    cursor = lead_in
+    for scene, dur in zip(scenes, scene_durations):
+        group: list[tuple] = []
+        for (ws, we, word) in _scene_word_times(scene, dur):
+            group.append((ws, we, word))
+            if len(group) >= max_words:
+                cues.append((cursor + group[0][0], cursor + group[-1][1],
+                             " ".join(g[2] for g in group)))
+                group = []
+        if group:
+            cues.append((cursor + group[0][0], cursor + group[-1][1],
+                         " ".join(g[2] for g in group)))
+        cursor += dur
+
+    lines = ["WEBVTT", ""]
+    for i, (s, e, txt) in enumerate(cues):
+        if e <= s:
+            e = s + 0.6
+        if i + 1 < len(cues) and e > cues[i + 1][0]:    # don't overlap the next cue
+            e = max(s + 0.3, cues[i + 1][0] - 0.05)
+        lines += [f"{_vtt_timestamp(s)} --> {_vtt_timestamp(e)}", txt.strip(), ""]
+    vtt_path.write_text("\n".join(lines), encoding="utf-8")
+    return vtt_path
+
+
 def build_documentary(
     scenes:                list[dict],
     output_path:           Path,
@@ -678,22 +732,27 @@ def build_documentary(
              photos=sum(photo_counts),
              total_audio=round(sum(a.duration for a in scene_audios), 1))
 
+    # The video stays CLEAN — subtitles are delivered as a separate .vtt track
+    # (toggleable in the player, word-synced, resizable) written below.
     clips = [_make_title_card(title, TITLE_DURATION)]
     for s_index, scene in enumerate(usable):
         per = per_photo_durs[s_index]
-        # Subtitles = the scene's narration, split across its photos so the
-        # text on screen tracks what's being said (not the photo's description).
-        subs = (_split_n(scene.get("text") or "", len(scene["photo_paths"]))
-                if subtitles else None)
         for p_index, photo in enumerate(scene["photo_paths"]):
             try:
-                base = _make_ken_burns_clip(photo, per, zoom_in=(p_index % 2 == 0))
-                clips.append(_add_subtitle(base, subs[p_index]) if subs else base)
+                clips.append(_make_ken_burns_clip(photo, per, zoom_in=(p_index % 2 == 0)))
             except Exception as exc:
                 log.warning("m4_scene_photo_error", photo=str(photo), error=str(exc))
                 clips.append(ColorClip((TARGET_W, TARGET_H), color=[10, 10, 10], duration=per))
 
     clips.append(_make_end_card(title))
+
+    # Word-synced subtitle track (WebVTT), aligned to the audio timeline.
+    if subtitles:
+        try:
+            write_vtt(usable, [a.duration for a in scene_audios],
+                      output_path.with_suffix(".vtt"), lead_in=TITLE_DURATION)
+        except Exception as exc:                       # never fail the render on subs
+            log.warning("m4_vtt_failed", error=str(exc))
 
     video = _concatenate_with_crossfade(clips, CROSSFADE_SECONDS)
 
