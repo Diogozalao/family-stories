@@ -19,14 +19,27 @@ export default function Logo({
         className="shrink-0"
       >
         <rect width="64" height="64" rx="14" className="fill-stone-900 dark:fill-stone-100" />
-        <path
-          d="M20 42V24a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v18l-8-5-4 3-4-3-8 5Z"
-          className="fill-brand-400 dark:fill-brand-500"
-        />
+        {/* Family tree: one parent branching down to two children. */}
+        <g
+          className="stroke-brand-400 dark:stroke-brand-500"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M32 25 V31" />
+          <path d="M21 31 H43" />
+          <path d="M21 31 V38" />
+          <path d="M43 31 V38" />
+        </g>
+        <g className="fill-brand-400 dark:fill-brand-500">
+          <circle cx="32" cy="20" r="5" />
+          <circle cx="21" cy="43" r="5" />
+          <circle cx="43" cy="43" r="5" />
+        </g>
       </svg>
       {showWordmark && (
         <span className="font-serif text-[17px] font-semibold tracking-tight leading-none">
-          Living Memory
+          living_memory
         </span>
       )}
     </div>
