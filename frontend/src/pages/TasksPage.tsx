@@ -143,19 +143,19 @@ function TaskRow({ task, projectLabel }: { task: TaskRecord; projectLabel: strin
       : task.video_id;
 
   const handleCancel = () => {
-    if (!window.confirm("Cancelar esta tarefa em curso?")) return;
+    if (!window.confirm(t("tasks.cancelConfirm"))) return;
     cancel.mutate(task.id, {
-      onSuccess: () => toast.success("Tarefa cancelada"),
+      onSuccess: () => toast.success(t("tasks.cancelled")),
       onError: (err) => toast.error(extractErrorMessage(err)),
     });
   };
   const handleDelete = () => {
     const msg = active
-      ? "Esta tarefa ainda está ativa. Apagar (e cancelar)?"
-      : "Apagar esta entrada do histórico?";
+      ? t("tasks.deleteActiveConfirm")
+      : t("tasks.deleteHistoryConfirm");
     if (!window.confirm(msg)) return;
     del.mutate(task.id, {
-      onSuccess: () => toast.success("Apagado"),
+      onSuccess: () => toast.success(t("tasks.deleted")),
       onError: (err) => toast.error(extractErrorMessage(err)),
     });
   };
@@ -246,8 +246,8 @@ function TaskRow({ task, projectLabel }: { task: TaskRecord; projectLabel: strin
             onClick={handleDelete}
             disabled={del.isPending}
             className="rounded-lg p-2 text-stone-500 hover:bg-stone-100 hover:text-rose-600 dark:hover:bg-stone-800"
-            title="Apagar do histórico"
-            aria-label="Apagar"
+            title={t("tasks.deleteFromHistory")}
+            aria-label={t("common.delete")}
           >
             {del.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           </button>

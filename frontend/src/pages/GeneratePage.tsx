@@ -56,7 +56,7 @@ export default function GeneratePage() {
   // The picker shows ONE family at a time. In a project it defaults to that
   // project's family, but you can switch folders to pull in someone from
   // another family if you want.
-  const SEM_FAMILIA = "Sem família";
+  const SEM_FAMILIA = t("generate.noFamily");
   const families = useMemo(() => {
     const set = new Set<string>();
     for (const p of persons ?? []) set.add(p.family_label || SEM_FAMILIA);
@@ -221,8 +221,8 @@ export default function GeneratePage() {
                       : "border-stone-200 bg-white hover:border-stone-300 dark:border-stone-800 dark:bg-stone-900 dark:hover:border-stone-700",
                   )}
                 >
-                  <p className="font-medium">{tpl.name}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wider text-stone-500 dark:text-stone-500">{tpl.tone}</p>
+                  <p className="font-medium">{t(`generate.themeName.${tpl.id}`, { defaultValue: tpl.name })}</p>
+                  <p className="mt-1 text-xs uppercase tracking-wider text-stone-500 dark:text-stone-500">{t(`generate.themeTone.${tpl.id}`, { defaultValue: tpl.tone })}</p>
                 </button>
               ))}
             </div>

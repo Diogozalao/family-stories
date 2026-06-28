@@ -193,14 +193,14 @@ function PersonForm({
 
 // ── Quick pedigree wizard (fixed template) ─────────────────────────────────────
 
-const PEDIGREE_FIELDS: { key: string; label: string; sex: string | null }[] = [
-  { key: "eu",         label: "Eu",            sex: null },
-  { key: "pai",        label: "Pai",           sex: "M" },
-  { key: "mae",        label: "Mãe",           sex: "F" },
-  { key: "avoPaterno", label: "Avô paterno",   sex: "M" },
-  { key: "avoPaterna", label: "Avó paterna",   sex: "F" },
-  { key: "avoMaterno", label: "Avô materno",   sex: "M" },
-  { key: "avoMaterna", label: "Avó materna",   sex: "F" },
+const PEDIGREE_FIELDS: { key: string; labelKey: string; sex: string | null }[] = [
+  { key: "eu",         labelKey: "family.editor.roleEu",     sex: null },
+  { key: "pai",        labelKey: "family.editor.roleFather", sex: "M" },
+  { key: "mae",        labelKey: "family.editor.roleMother", sex: "F" },
+  { key: "avoPaterno", labelKey: "family.editor.roleGpP",    sex: "M" },
+  { key: "avoPaterna", labelKey: "family.editor.roleGmP",    sex: "F" },
+  { key: "avoMaterno", labelKey: "family.editor.roleGpM",    sex: "M" },
+  { key: "avoMaterna", labelKey: "family.editor.roleGmM",    sex: "F" },
 ];
 const SEX_OF_ROLE: Record<string, string | null> =
   Object.fromEntries(PEDIGREE_FIELDS.map((f) => [f.key, f.sex]));
@@ -243,7 +243,7 @@ function PedigreeWizard({
   // Anyone already named (a pedigree role OR another extra) can be the
   // target an extra person is linked to.
   const targetOptions = (selfId: string) => ([
-    ...PEDIGREE_FIELDS.filter((f) => (vals[f.key] ?? "").trim()).map((f) => ({ value: f.key, label: f.label })),
+    ...PEDIGREE_FIELDS.filter((f) => (vals[f.key] ?? "").trim()).map((f) => ({ value: f.key, label: t(f.labelKey) })),
     ...extras.filter((e) => e.name.trim() && e.id !== selfId).map((e) => ({ value: `x_${e.id}`, label: e.name.trim() })),
   ]);
   const defaultTarget = PEDIGREE_FIELDS.find((f) => (vals[f.key] ?? "").trim())?.key ?? "eu";
@@ -354,7 +354,7 @@ function PedigreeWizard({
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {PEDIGREE_FIELDS.map((f) => (
             <div key={f.key}>
-              <label className="label">{f.label}</label>
+              <label className="label">{t(f.labelKey)}</label>
               <input
                 className="input"
                 value={vals[f.key] ?? ""}
@@ -367,24 +367,24 @@ function PedigreeWizard({
 
         <div className="mt-3">
           <label className="label">{t("family.editor.siblings")}</label>
-          <input className="input" value={siblings} onChange={(e) => setSiblings(e.target.value)} placeholder="ex.: Ana, João" />
+          <input className="input" value={siblings} onChange={(e) => setSiblings(e.target.value)} placeholder={t("family.editor.siblingsPlaceholder")} />
           <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">{t("family.editor.siblingsHint")}</p>
         </div>
 
         {/* Outros familiares — adicionar mais pessoas ligadas a quem já existe */}
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
-            <label className="label !mb-0">Outros familiares</label>
+            <label className="label !mb-0">{t("family.editor.otherRelatives")}</label>
             <button
               type="button"
               onClick={() => setExtras((x) => [...x, { id: crypto.randomUUID(), name: "", rel: "filho", target: defaultTarget }])}
               className="btn btn-ghost !py-1 !text-xs"
             >
-              <Plus className="h-3.5 w-3.5" /> Adicionar pessoa
+              <Plus className="h-3.5 w-3.5" /> {t("family.editor.addPerson")}
             </button>
           </div>
           <p className="mb-2 text-xs text-stone-500 dark:text-stone-500">
-            Cada linha cria <strong>uma pessoa nova</strong>. Um <strong>tio</strong> = «irmão(ã) de» o Pai/Mãe (basta 1 linha — fica logo filho dos dois avós). Um <strong>primo</strong> = «filho(a) de» esse tio.
+            {t("family.editor.extraHint")}
           </p>
           {extras.length > 0 && (
             <div className="space-y-2">
@@ -401,9 +401,9 @@ function PedigreeWizard({
                     value={ex.rel}
                     onChange={(e) => setExtras((x) => x.map((r) => r.id === ex.id ? { ...r, rel: e.target.value as Extra["rel"] } : r))}
                   >
-                    <option value="filho">filho(a) de</option>
-                    <option value="irmao">irmão(ã) de</option>
-                    <option value="casado">casado(a) com</option>
+                    <option value="filho">{t("family.editor.relChildOf")}</option>
+                    <option value="irmao">{t("family.editor.relSiblingOf")}</option>
+                    <option value="casado">{t("family.editor.spouseOf")}</option>
                   </select>
                   <select
                     className="input w-auto"
@@ -477,7 +477,7 @@ export default function FamilyEditor({
         // chosen person's parents onto this one.
         const parents = rels.filter((r) => r.to === to && (r.kind === "pai" || r.kind === "mãe"));
         if (parents.length === 0) {
-          toast.error("Essa pessoa ainda não tem pais definidos. Define primeiro os pais dela (ou liga ambos aos mesmos pais).");
+          toast.error(t("family.editor.noParentsDefined"));
           return;
         }
         for (const p of parents) {
@@ -513,7 +513,12 @@ export default function FamilyEditor({
     try { await delPerson.mutateAsync(p.id); } catch (err) { toast.error(extractErrorMessage(err)); }
   };
 
-  const relVerb = (k: string) => k === "cônjuge" ? t("family.editor.spouseOf") : `${k} ${t("family.editor.of")}`;
+  const relVerb = (k: string) => {
+    if (k === "cônjuge") return t("family.editor.spouseOf");
+    const kind = k === "pai" ? t("family.editor.kindFather")
+      : k === "mãe" ? t("family.editor.kindMother") : k;
+    return `${kind} ${t("family.editor.of")}`;
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-stone-50 dark:bg-stone-950">
@@ -568,8 +573,8 @@ export default function FamilyEditor({
           </select>
           <select className="input w-auto" value={kind} onChange={(e) => setKind(e.target.value)}>
             {KINDS.map((k) => <option key={k} value={k}>{relVerb(k)}</option>)}
-            <option value="filho">filho(a) de</option>
-            <option value="irmao">irmão(ã) de</option>
+            <option value="filho">{t("family.editor.relChildOf")}</option>
+            <option value="irmao">{t("family.editor.relSiblingOf")}</option>
           </select>
           <select className="input max-w-[40%]" value={toId} onChange={(e) => setToId(e.target.value)}>
             <option value="">{t("family.editor.person")}…</option>

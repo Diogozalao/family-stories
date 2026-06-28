@@ -19,12 +19,12 @@ import { cn } from "../lib/utils";
 
 type Section = "account" | "appearance" | "notifications" | "system" | "danger";
 
-const SECTIONS: { id: Section; label: string; icon: typeof UserCircle2 }[] = [
-  { id: "account",       label: "Conta",         icon: UserCircle2 },
-  { id: "appearance",    label: "Aparência",     icon: Palette },
-  { id: "notifications", label: "Notificações",  icon: Bell },
-  { id: "system",        label: "Sistema",       icon: Database },
-  { id: "danger",        label: "Zona de perigo", icon: ShieldAlert },
+const SECTIONS: { id: Section; labelKey: string; icon: typeof UserCircle2 }[] = [
+  { id: "account",       labelKey: "settings.account",       icon: UserCircle2 },
+  { id: "appearance",    labelKey: "settings.appearance",    icon: Palette },
+  { id: "notifications", labelKey: "settings.notifications", icon: Bell },
+  { id: "system",        labelKey: "settings.system",        icon: Database },
+  { id: "danger",        labelKey: "settings.dangerZone",    icon: ShieldAlert },
 ];
 
 export default function SettingsPage() {
@@ -53,6 +53,7 @@ export default function SettingsPage() {
 // ── Sidebar de secções ──────────────────────────────────────────────────────
 
 function SideNav({ active, onChange }: { active: Section; onChange: (s: Section) => void }) {
+  const { t } = useTranslation();
   return (
     <nav className="flex flex-col gap-1 lg:sticky lg:top-24 lg:self-start">
       {SECTIONS.map((s) => {
@@ -74,7 +75,7 @@ function SideNav({ active, onChange }: { active: Section; onChange: (s: Section)
             )}
           >
             <s.icon className="h-4 w-4" />
-            <span>{s.label}</span>
+            <span>{t(s.labelKey)}</span>
           </button>
         );
       })}
@@ -90,15 +91,15 @@ function AccountSection() {
 
   return (
     <div className="space-y-6">
-      <Card title="Perfil" icon={UserCircle2}>
+      <Card title={t("settings.profile")} icon={UserCircle2}>
         <dl className="space-y-3 text-sm">
-          <Field label={t("auth.name")}  value={user?.username ?? "—"} />
-          <Field label="Email"           value={user?.email ?? "—"} />
-          <Field label="ID"              value={user?.id ?? "—"} mono />
+          <Field label={t("auth.name")}      value={user?.username ?? "—"} />
+          <Field label={t("settings.email")} value={user?.email ?? "—"} />
+          <Field label="ID"                  value={user?.id ?? "—"} mono />
         </dl>
       </Card>
 
-      <Card title="Segurança" icon={KeyRound}>
+      <Card title={t("settings.security")} icon={KeyRound}>
         <ChangePasswordForm />
       </Card>
     </div>
@@ -114,9 +115,9 @@ function AppearanceSection() {
 
   return (
     <div className="space-y-6">
-      <Card title="Tema" icon={Palette}>
+      <Card title={t("settings.theme")} icon={Palette}>
         <p className="mb-4 text-sm text-stone-600 dark:text-stone-400">
-          A opção <strong>Sistema</strong> segue automaticamente o que tens definido no SO.
+          {t("settings.themeSystemHint")}
         </p>
         <div className="grid grid-cols-3 gap-2">
           <ThemeBtn current={mode} value="light"  onClick={setMode} icon={Sun}     label={t("settings.light")} />
@@ -125,7 +126,7 @@ function AppearanceSection() {
         </div>
       </Card>
 
-      <Card title="Idioma" icon={Info}>
+      <Card title={t("settings.language")} icon={Info}>
         <div className="grid grid-cols-2 gap-2">
           <LangBtn active={i18n.language === "pt"} onClick={() => setLanguage("pt")} flag="🇵🇹" label="Português" />
           <LangBtn active={i18n.language === "en"} onClick={() => setLanguage("en")} flag="🇬🇧" label="English" />
@@ -138,6 +139,7 @@ function AppearanceSection() {
 // ── Notificações ────────────────────────────────────────────────────────────
 
 function NotificationsSection() {
+  const { t } = useTranslation();
   const [taskToasts, setTaskToasts] = useState(
     () => localStorage.getItem("lm-pref-task-toasts") !== "false",
   );
@@ -146,17 +148,17 @@ function NotificationsSection() {
     const next = !taskToasts;
     setTaskToasts(next);
     localStorage.setItem("lm-pref-task-toasts", String(next));
-    toast.success(`Notificações ${next ? "ativadas" : "desligadas"} (recarrega a página para aplicar)`);
+    toast.success(next ? t("settings.notifyEnabled") : t("settings.notifyDisabled"));
   };
 
   return (
     <div className="space-y-6">
-      <Card title="Notificações em segundo plano" icon={Bell}>
+      <Card title={t("settings.notificationsTitle")} icon={Bell}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Avisar quando uma tarefa termina</p>
+            <p className="font-medium">{t("settings.notifyTaskDone")}</p>
             <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-              Mostra uma notificação no canto sempre que uma geração de história ou vídeo for concluída.
+              {t("settings.notifyTaskDoneHint")}
             </p>
           </div>
           <Toggle on={taskToasts} onClick={toggle} />
@@ -200,35 +202,35 @@ function SystemSection() {
         )}
       </Card>
 
-      <Card title="Manutenção" icon={Zap}>
+      <Card title={t("settings.maintenance")} icon={Zap}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Reindexar factos no RAG</p>
+            <p className="font-medium">{t("settings.reindexTitle")}</p>
             <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-              Útil depois de carregar muitas fotos novas — o ChromaDB volta a vetorizar tudo do zero.
+              {t("settings.reindexHint")}
             </p>
           </div>
           <button
             onClick={() => reindex.mutate(undefined, {
-              onSuccess: () => toast.success("Reindex completo"),
+              onSuccess: () => toast.success(t("settings.reindexDone")),
               onError: (err) => toast.error(extractErrorMessage(err)),
             })}
             disabled={reindex.isPending}
             className="btn btn-outline"
           >
             {reindex.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span>Reindexar</span>
+            <span>{t("settings.reindexBtn")}</span>
           </button>
         </div>
       </Card>
 
-      <Card title="Sobre" icon={Info}>
+      <Card title={t("settings.about")} icon={Info}>
         <dl className="space-y-3 text-sm">
-          <Field label="Aplicação" value="Living Memory" />
-          <Field label="Versão" value="0.3.0" mono />
-          <Field label="Backend" value="FastAPI + SQLite + Celery" />
-          <Field label="LLM local" value="Llama 3.1 (Ollama)" />
-          <Field label="Modo de email" value={import.meta.env.VITE_SMTP_NOTE ?? "Local-first (log-only por defeito)"} />
+          <Field label={t("settings.appLabel")} value="Living Memory" />
+          <Field label={t("settings.version")} value="0.3.0" mono />
+          <Field label={t("settings.backend")} value="FastAPI + SQLite + Celery" />
+          <Field label={t("settings.localLlm")} value="Llama 3.1 (Ollama)" />
+          <Field label={t("settings.emailMode")} value={import.meta.env.VITE_SMTP_NOTE ?? t("settings.emailModeValue")} />
         </dl>
       </Card>
     </div>
@@ -238,10 +240,11 @@ function SystemSection() {
 // ── Zona de perigo ──────────────────────────────────────────────────────────
 
 function DangerSection() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-1 dark:border-rose-900/40 dark:bg-rose-950/20">
-        <Card title="Eliminar conta" icon={AlertTriangle} tone="rose">
+        <Card title={t("settings.deleteAccount")} icon={AlertTriangle} tone="rose">
           <DeleteAccountForm />
         </Card>
       </div>
@@ -250,6 +253,7 @@ function DangerSection() {
 }
 
 function DeleteAccountForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const del = useDeleteAccount();
   const [open, setOpen] = useState(false);
@@ -257,7 +261,8 @@ function DeleteAccountForm() {
   const [confirm, setConfirm] = useState("");
   const [show, setShow] = useState(false);
 
-  const canSubmit = pw.length > 0 && confirm.trim() === "APAGAR";
+  const keyword = t("settings.deleteKeyword");
+  const canSubmit = pw.length > 0 && confirm.trim() === keyword;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -266,7 +271,7 @@ function DeleteAccountForm() {
       { current_password: pw, confirm: confirm.trim() },
       {
         onSuccess: () => {
-          toast.success("Conta e dados eliminados.");
+          toast.success(t("settings.accountDeleted"));
           navigate("/register", { replace: true });
         },
         onError: (err) => toast.error(extractErrorMessage(err)),
@@ -278,12 +283,11 @@ function DeleteAccountForm() {
     return (
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-rose-800 dark:text-rose-300">
-          Apaga a tua conta, todas as fotografias, histórias, vídeos, projetos
-          e tarefas. <strong>Não há undo.</strong>
+          {t("settings.deleteLead")} <strong>{t("settings.deleteNoUndo")}</strong>
         </p>
         <button onClick={() => setOpen(true)} className="btn shrink-0 bg-rose-600 text-white hover:bg-rose-700">
           <Trash2 className="h-4 w-4" />
-          <span>Eliminar conta…</span>
+          <span>{t("settings.deleteAccountBtn")}</span>
         </button>
       </div>
     );
@@ -292,12 +296,11 @@ function DeleteAccountForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-xl border border-rose-300 bg-rose-100/80 p-4 text-sm text-rose-900 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
-        Esta operação é <strong>irreversível</strong>. Vais perder todas as
-        fotografias carregadas, histórias geradas, vídeos e projetos.
+        {t("settings.deleteWarn")}
       </div>
 
       <div>
-        <label className="label" htmlFor="del-pw">Confirma com a tua palavra-passe</label>
+        <label className="label" htmlFor="del-pw">{t("settings.deleteConfirmPw")}</label>
         <div className="relative">
           <input
             id="del-pw"
@@ -320,7 +323,7 @@ function DeleteAccountForm() {
 
       <div>
         <label className="label" htmlFor="del-confirm">
-          Escreve <span className="font-mono text-rose-700 dark:text-rose-300">APAGAR</span> em maiúsculas
+          {t("settings.deleteTypeUpper", { word: keyword })}
         </label>
         <input
           id="del-confirm"
@@ -328,13 +331,13 @@ function DeleteAccountForm() {
           className="input font-mono"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}
-          placeholder="APAGAR"
+          placeholder={keyword}
         />
       </div>
 
       <div className="flex items-center justify-end gap-2">
         <button type="button" onClick={() => { setOpen(false); setPw(""); setConfirm(""); }} className="btn btn-ghost">
-          Cancelar
+          {t("common.cancel")}
         </button>
         <button
           type="submit"
@@ -342,7 +345,7 @@ function DeleteAccountForm() {
           className="btn bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50"
         >
           {del.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          <span>Eliminar tudo</span>
+          <span>{t("settings.deleteAll")}</span>
         </button>
       </div>
     </form>
@@ -497,6 +500,7 @@ function CheckRow({ name, status }: { name: string; status: string }) {
 // ── Mudar palavra-passe (extraído do ficheiro original) ────────────────────
 
 function ChangePasswordForm() {
+  const { t } = useTranslation();
   const change = useChangePassword();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -513,7 +517,7 @@ function ChangePasswordForm() {
       { current_password: current, new_password: next },
       {
         onSuccess: () => {
-          toast.success("Palavra-passe alterada");
+          toast.success(t("settings.passwordChanged"));
           setCurrent("");
           setNext("");
         },
@@ -525,7 +529,7 @@ function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="label" htmlFor="cur-pw">Palavra-passe atual</label>
+        <label className="label" htmlFor="cur-pw">{t("settings.currentPassword")}</label>
         <input
           id="cur-pw"
           type={show ? "text" : "password"}
@@ -537,7 +541,7 @@ function ChangePasswordForm() {
       </div>
 
       <div>
-        <label className="label" htmlFor="new-pw">Nova palavra-passe</label>
+        <label className="label" htmlFor="new-pw">{t("settings.newPassword")}</label>
         <div className="relative">
           <input
             id="new-pw"
@@ -552,7 +556,7 @@ function ChangePasswordForm() {
             type="button"
             onClick={() => setShow((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
-            aria-label={show ? "Ocultar" : "Mostrar"}
+            aria-label={show ? t("settings.hide") : t("settings.show")}
           >
             {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -561,7 +565,7 @@ function ChangePasswordForm() {
           "mt-1.5 text-xs",
           tooShort || same ? "text-rose-600" : "text-stone-500 dark:text-stone-500",
         )}>
-          {same ? "A nova palavra-passe tem de ser diferente da atual" : "Mínimo 8 caracteres"}
+          {same ? t("settings.pwMustDiffer") : t("settings.pwMin8")}
         </p>
       </div>
 
@@ -571,7 +575,7 @@ function ChangePasswordForm() {
         className="btn btn-primary w-full justify-center"
       >
         {change.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-        <span>Alterar palavra-passe</span>
+        <span>{t("settings.changePassword")}</span>
       </button>
     </form>
   );

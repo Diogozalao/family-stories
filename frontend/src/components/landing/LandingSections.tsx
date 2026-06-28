@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   BookOpen, Camera, Clock, Film, Lock,
   Network, Sparkles, Wand2, type LucideIcon,
@@ -7,29 +8,30 @@ import { cn } from "../../lib/utils";
 
 /** Four headline capabilities of the system. */
 export function FeaturesSection() {
+  const { t } = useTranslation();
   const features: { icon: LucideIcon; title: string; body: string; tone: string }[] = [
     {
       icon: Camera,
-      title: "Importa qualquer fotografia",
-      body: "Drag-and-drop de JPG/HEIC/PNG. Cada foto passa por extração EXIF, OCR e análise visual com IA — datas, locais e descrições aparecem sozinhos.",
+      title: t("home.feat1Title"),
+      body: t("home.feat1Body"),
       tone: "from-amber-200/60 to-amber-100/40 dark:from-amber-900/40 dark:to-amber-950/20",
     },
     {
       icon: Network,
-      title: "Árvore genealógica GEDCOM",
-      body: "Compatível com exports do Ancestry, MyHeritage e FamilySearch. As pessoas ficam ligadas às fotografias automaticamente.",
+      title: t("home.feat2Title"),
+      body: t("home.feat2Body"),
       tone: "from-sky-200/60 to-sky-100/40 dark:from-sky-900/40 dark:to-sky-950/20",
     },
     {
       icon: Wand2,
-      title: "Histórias geradas por IA",
-      body: "Llama 3.1 local (Ollama) com RAG sobre o teu arquivo. Templates em português europeu para casamentos, viagens, nascimentos, celebrações.",
+      title: t("home.feat3Title"),
+      body: t("home.feat3Body"),
       tone: "from-rose-200/60 to-rose-100/40 dark:from-rose-900/40 dark:to-rose-950/20",
     },
     {
       icon: Film,
-      title: "Documentários em vídeo",
-      body: "Ken Burns nas fotos, narração TTS, transições suaves. Exporta em MP4 H.264 pronto a partilhar.",
+      title: t("home.feat4Title"),
+      body: t("home.feat4Body"),
       tone: "from-emerald-200/60 to-emerald-100/40 dark:from-emerald-900/40 dark:to-emerald-950/20",
     },
   ];
@@ -38,13 +40,12 @@ export function FeaturesSection() {
     <section id="features" className="relative px-4 py-24 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <header className="mx-auto max-w-3xl text-center">
-          <span className="chip chip-accent">Capacidades</span>
+          <span className="chip chip-accent">{t("home.featuresTag")}</span>
           <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            Tudo o que precisas para preservar memórias.
+            {t("home.featuresTitle")}
           </h2>
           <p className="mt-3 text-stone-600 dark:text-stone-400">
-            Quatro módulos — ingestão, organização temporal, geração narrativa,
-            geração multimédia — encadeados num único pipeline local.
+            {t("home.featuresLead")}
           </p>
         </header>
 
@@ -75,27 +76,12 @@ export function FeaturesSection() {
 
 /** Walkthrough of the four pipeline stages, with a small step-cycler. */
 export function HowItWorksSection() {
+  const { t } = useTranslation();
   const steps = [
-    {
-      tag: "M1",
-      title: "Carrega o arquivo",
-      body: "Fotografias e o ficheiro GEDCOM. Em segundos a IA descreve cada imagem, lê texto em fotos antigas e identifica pessoas.",
-    },
-    {
-      tag: "M2",
-      title: "Organiza no tempo",
-      body: "Datas validadas, conflitos resolvidos, grafo familiar construído. Os eventos aparecem ordenados na linha temporal.",
-    },
-    {
-      tag: "M3",
-      title: "Escreve a narrativa",
-      body: "Escolhes o tema (casamento, viagem, etc.), seleciona pessoas e escreve o que queres contar. O LLM gera prosa em PT-PT.",
-    },
-    {
-      tag: "M4",
-      title: "Gera o documentário",
-      body: "A história vira voz narrada com Ken Burns nas fotos. Exporta MP4 e partilha com a família.",
-    },
+    { tag: "M1", title: t("home.howStep1Title"), body: t("home.howStep1Body") },
+    { tag: "M2", title: t("home.howStep2Title"), body: t("home.howStep2Body") },
+    { tag: "M3", title: t("home.howStep3Title"), body: t("home.howStep3Body") },
+    { tag: "M4", title: t("home.howStep4Title"), body: t("home.howStep4Body") },
   ];
 
   const [active, setActive] = useState(0);
@@ -104,17 +90,17 @@ export function HowItWorksSection() {
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     if (paused) return;
-    const t = window.setInterval(() => setActive((i) => (i + 1) % steps.length), 3500);
-    return () => window.clearInterval(t);
+    const id = window.setInterval(() => setActive((i) => (i + 1) % steps.length), 3500);
+    return () => window.clearInterval(id);
   }, [paused, steps.length]);
 
   return (
     <section id="how" className="relative bg-gradient-to-b from-transparent via-stone-100/60 to-transparent px-4 py-24 dark:via-stone-900/40 sm:py-28">
       <div className="mx-auto max-w-6xl">
         <header className="mx-auto max-w-3xl text-center">
-          <span className="chip chip-accent">Como funciona</span>
+          <span className="chip chip-accent">{t("home.howTag")}</span>
           <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            Quatro passos. Sem deixar a tua máquina.
+            {t("home.howTitle")}
           </h2>
         </header>
 
@@ -168,8 +154,10 @@ export function HowItWorksSection() {
 }
 
 function PipelineMock({ activeIndex }: { activeIndex: number }) {
+  const { t } = useTranslation();
   const icons = [Camera, Network, Wand2, Film];
-  const labels = ["Ingestão", "Linha temporal", "Narrativa", "Vídeo"];
+  const labels = [t("home.pipe1"), t("home.pipe2"), t("home.pipe3"), t("home.pipe4")];
+  const captions = [t("home.pipeCap1"), t("home.pipeCap2"), t("home.pipeCap3"), t("home.pipeCap4")];
   return (
     <div className="flex h-full flex-col justify-center gap-6">
       <div className="flex items-center justify-between gap-3">
@@ -206,15 +194,10 @@ function PipelineMock({ activeIndex }: { activeIndex: number }) {
 
       <div className="rounded-2xl bg-white/70 p-5 backdrop-blur dark:bg-stone-950/40">
         <p className="font-mono text-[11px] uppercase tracking-wider text-stone-500">
-          módulo {activeIndex + 1} de {icons.length}
+          {t("home.moduleOf", { n: activeIndex + 1, total: icons.length })}
         </p>
         <p className="mt-2 font-serif text-lg font-semibold tracking-tight">
-          {[
-            "A ler EXIF, OCR e análise visual com IA…",
-            "A construir o grafo familiar e a ordenar os eventos…",
-            "A redigir a narrativa com Llama 3.1 e RAG…",
-            "A montar o documentário com Ken Burns e voz narrada…",
-          ][activeIndex]}
+          {captions[activeIndex]}
         </p>
       </div>
     </div>
@@ -223,22 +206,22 @@ function PipelineMock({ activeIndex }: { activeIndex: number }) {
 
 /** Trust + privacy section — the local-first promise is the project's core. */
 export function PrivacySection() {
+  const { t } = useTranslation();
   const points = [
-    { icon: Lock,     title: "Tudo fica na tua máquina", body: "Sem cloud, sem terceiros. O Llama corre no teu CPU/GPU. Os dados nunca saem do disco local." },
-    { icon: BookOpen, title: "Open source",              body: "Pipeline auditável de ponta a ponta. Cada decisão da IA está rastreada para um facto persistido." },
-    { icon: Clock,    title: "Funciona offline",         body: "Depois do modelo descarregado uma vez, podes desligar a internet e continuar a gerar histórias." },
+    { icon: Lock,     title: t("home.priv1Title"), body: t("home.priv1Body") },
+    { icon: BookOpen, title: t("home.priv2Title"), body: t("home.priv2Body") },
+    { icon: Clock,    title: t("home.priv3Title"), body: t("home.priv3Body") },
   ];
   return (
     <section id="privacy" className="relative px-4 py-24 sm:py-28">
       <div className="mx-auto max-w-5xl">
         <header className="mx-auto max-w-3xl text-center">
-          <span className="chip chip-accent">Privacidade</span>
+          <span className="chip chip-accent">{t("home.privacyTag")}</span>
           <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-            As memórias da tua família — só tuas.
+            {t("home.privacyTitle")}
           </h2>
           <p className="mt-3 text-stone-600 dark:text-stone-400">
-            Living Memory foi desenhado para correr 100% local. Nenhuma fotografia,
-            nenhuma narrativa, nenhum nome de família é enviado para servidores externos.
+            {t("home.privacyLead")}
           </p>
         </header>
 
@@ -260,18 +243,19 @@ export function PrivacySection() {
 
 /** Final call-to-action — anchor links back to the login form at top. */
 export function CTASection() {
+  const { t } = useTranslation();
   return (
     <section className="relative px-4 py-24 sm:py-28">
       <div className="mx-auto max-w-3xl rounded-3xl border border-stone-200 bg-gradient-to-br from-stone-900 to-brand-900 p-10 text-center text-stone-100 shadow-lift sm:p-14 dark:border-stone-800">
         <Sparkles className="mx-auto h-7 w-7 text-brand-300" />
         <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight sm:text-4xl">
-          Começa o teu arquivo agora.
+          {t("home.ctaTitle")}
         </h2>
         <p className="mt-3 text-stone-300">
-          Cria a conta de dono em segundos. Os teus dados ficam neste computador.
+          {t("home.ctaLead")}
         </p>
         <a href="#top" className="btn btn-accent mt-8 px-6 py-3">
-          Voltar ao registo
+          {t("home.ctaButton")}
         </a>
       </div>
     </section>
