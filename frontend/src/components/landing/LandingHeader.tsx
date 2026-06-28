@@ -51,7 +51,7 @@ export default function LandingHeader() {
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-10">
         <Link to="/" className="flex items-center gap-2 transition hover:opacity-80">
-          <Logo size={28} />
+          <Logo size={34} />
         </Link>
 
         <nav className="ml-8 hidden items-center gap-0.5 md:flex">

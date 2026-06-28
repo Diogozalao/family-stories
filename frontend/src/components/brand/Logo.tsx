@@ -2,7 +2,7 @@ import { cn } from "../../lib/utils";
 
 export default function Logo({
   className,
-  size = 28,
+  size = 34,
   showWordmark = true,
 }: {
   className?: string;
