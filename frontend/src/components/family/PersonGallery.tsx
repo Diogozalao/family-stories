@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { Check, ImagePlus, Loader2, Pencil, Search, Trash2, Upload, X } from "lucide-react";
+import { Check, ImagePlus, Loader2, Pencil, Search, Trash2, Upload, UserPlus, X } from "lucide-react";
 
 import Photo from "../media/Photo";
 import PhotoViewer from "../media/PhotoViewer";
 import {
+  useCreatePerson, useCreateRelationship,
   useMedia, useProjectMedia, useSetMediaPersons, useUpdatePerson, useUploadPhoto,
 } from "../../lib/hooks";
 import { extractErrorMessage } from "../../lib/api";
+import { cn } from "../../lib/utils";
 import type { MediaFile, Person } from "../../lib/types";
 
 /**
@@ -44,6 +46,38 @@ export default function PersonGallery({
   const setPersons   = useSetMediaPersons();
   const updatePerson = useUpdatePerson();
   const uploadPhoto  = useUploadPhoto();
+  const createPerson = useCreatePerson();
+  const createRel    = useCreateRelationship();
+
+  // Quick-add a relative (parent / child / spouse) straight from the editor.
+  const [addKind, setAddKind] = useState<null | "pai" | "mae" | "filho" | "conjuge">(null);
+  const [relName, setRelName] = useState("");
+
+  const addRelative = async () => {
+    const name = relName.trim();
+    if (!name || !addKind) return;
+    try {
+      const sex = addKind === "pai" ? "M" : addKind === "mae" ? "F" : null;
+      const created = await createPerson.mutateAsync({
+        name, sex,
+        family_label: person?.family_label ?? null,
+        project_id: projectId ?? undefined,
+      });
+      // Relationship direction: parents point INTO this person; a child points
+      // out of it (labelled by this person's sex); spouse is mutual.
+      if (addKind === "pai" || addKind === "mae") {
+        await createRel.mutateAsync({ from_person_id: created.id, to_person_id: personId, kind: addKind === "pai" ? "pai" : "mãe" });
+      } else if (addKind === "filho") {
+        await createRel.mutateAsync({ from_person_id: personId, to_person_id: created.id, kind: person?.sex === "F" ? "mãe" : "pai" });
+      } else {
+        await createRel.mutateAsync({ from_person_id: personId, to_person_id: created.id, kind: "cônjuge" });
+      }
+      toast.success(t("common.success"));
+      setAddKind(null); setRelName("");
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -186,6 +220,33 @@ export default function PersonGallery({
                   {updatePerson.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   {t("common.save")}
                 </button>
+              </div>
+
+              {/* Quick-add a relative + connect them automatically. */}
+              <div className="border-t border-stone-100 pt-4 dark:border-stone-800">
+                <p className="label">{t("person.addRelative")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {([["pai", "person.relPai"], ["mae", "person.relMae"], ["filho", "person.relFilho"], ["conjuge", "person.relConjuge"]] as const).map(([k, key]) => (
+                    <button key={k} type="button"
+                            onClick={() => { setAddKind(k); setRelName(""); }}
+                            className={cn("btn btn-ghost", addKind === k && "ring-1 ring-brand-400")}>
+                      <UserPlus className="h-4 w-4" /><span>{t(key)}</span>
+                    </button>
+                  ))}
+                </div>
+                {addKind && (
+                  <div className="mt-3 flex gap-2">
+                    <input className="input flex-1" autoFocus value={relName}
+                           onChange={(e) => setRelName(e.target.value)}
+                           onKeyDown={(e) => { if (e.key === "Enter") addRelative(); }}
+                           placeholder={t("person.relNamePlaceholder")} />
+                    <button className="btn btn-primary" onClick={addRelative}
+                            disabled={createPerson.isPending || createRel.isPending || !relName.trim()}>
+                      {(createPerson.isPending || createRel.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {t("common.save")}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : adding ? (

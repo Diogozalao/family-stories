@@ -69,6 +69,10 @@ export interface Story {
   facts_used?: number;
   status?: "draft" | "completed" | "failed";
   project_id?: number | null;
+  favorite?: boolean;
+  person_ids?: number[];
+  media_ids?: number[];
+  language?: string;
   created_at: string;
 }
 

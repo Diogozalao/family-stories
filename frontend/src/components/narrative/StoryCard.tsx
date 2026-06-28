@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FolderKanban, Trash2 } from "lucide-react";
+import { FolderKanban, Image as ImageIcon, Star, Trash2, Users } from "lucide-react";
 
+import { useUpdateStory } from "../../lib/hooks";
+import { cn } from "../../lib/utils";
 import type { Story } from "../../lib/types";
 
 /**
@@ -20,18 +22,33 @@ export default function StoryCard({
   onDelete?: () => void;
 }) {
   const { t } = useTranslation();
+  const update = useUpdateStory();
+  const fav = !!story.favorite;
 
   return (
     <article className="card group relative flex flex-col p-5 transition hover:-translate-y-0.5 hover:shadow-lift">
-      {onDelete && (
+      <div className="absolute right-3 top-3 flex items-center gap-1">
         <button
-          onClick={onDelete}
-          className="absolute right-3 top-3 rounded-lg p-1.5 text-stone-400 opacity-0 transition hover:bg-stone-100 hover:text-rose-600 group-hover:opacity-100 dark:hover:bg-stone-800"
-          aria-label={t("common.delete")}
+          onClick={() => update.mutate({ id: story.id, favorite: !fav })}
+          className={cn(
+            "rounded-lg p-1.5 transition hover:bg-stone-100 dark:hover:bg-stone-800",
+            fav ? "text-amber-500" : "text-stone-400 opacity-0 group-hover:opacity-100",
+          )}
+          aria-label={t("stories.favorite")}
+          title={t("stories.favorite")}
         >
-          <Trash2 className="h-4 w-4" />
+          <Star className="h-4 w-4" fill={fav ? "currentColor" : "none"} />
         </button>
-      )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="rounded-lg p-1.5 text-stone-400 opacity-0 transition hover:bg-stone-100 hover:text-rose-600 group-hover:opacity-100 dark:hover:bg-stone-800"
+            aria-label={t("common.delete")}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="chip chip-accent">{story.event_type}</span>
         {projectId != null && projectName && (
@@ -54,8 +71,13 @@ export default function StoryCard({
         {(story.narrative ?? "").slice(0, 220)}…
       </p>
       <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 dark:border-stone-800">
-        <span className="text-xs text-stone-500 dark:text-stone-500">
-          {story.facts_used ? `${story.facts_used} factos usados` : ""}
+        <span className="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-500">
+          <span className="inline-flex items-center gap-1" title={t("stories.photosUsed")}>
+            <ImageIcon className="h-3.5 w-3.5" /> {story.media_ids?.length ?? 0}
+          </span>
+          <span className="inline-flex items-center gap-1" title={t("stories.peopleUsed")}>
+            <Users className="h-3.5 w-3.5" /> {story.person_ids?.length ?? 0}
+          </span>
         </span>
         <Link to={`/stories/${story.id}`} className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">
           {t("common.open")} →

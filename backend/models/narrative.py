@@ -59,6 +59,8 @@ class Story(Base):
     # legacy stories — M4 then falls back to the even-split slideshow.
     scenes        = Column(JSONB, nullable=True)
 
+    # Pinned/starred by the user — favourites sort to the top of the list.
+    favorite      = Column(Boolean, nullable=True, default=False)
     created_at    = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at    = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC),
                            onupdate=lambda: datetime.now(UTC))

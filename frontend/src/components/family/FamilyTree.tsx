@@ -1,11 +1,13 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
   Background, Controls, Handle, Panel, Position,
+  getNodesBounds, getViewportForBounds,
   useEdgesState, useNodesState,
-  type Edge, type Node,
+  type Edge, type Node, type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { Loader2, RotateCcw } from "lucide-react";
+import { toPng } from "html-to-image";
+import { Download, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -15,6 +17,28 @@ import { useFamilyTree, useSaveTreePositions } from "../../lib/hooks";
 import type { Person, TreeRelationship } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import Photo from "../media/Photo";
+
+/** Everyone on ``id``'s direct line: ancestors, descendants, and their
+ *  spouses. Used to highlight a lineage (the rest of the tree dims out). */
+function lineageOf(id: number, rels: TreeRelationship[]): Set<number> {
+  const parents = new Map<number, number[]>();
+  const children = new Map<number, number[]>();
+  const spouses = new Map<number, number[]>();
+  const push = (m: Map<number, number[]>, k: number, v: number) => {
+    const a = m.get(k); if (a) a.push(v); else m.set(k, [v]);
+  };
+  for (const r of rels) {
+    if (r.kind === "cônjuge") { push(spouses, r.from, r.to); push(spouses, r.to, r.from); }
+    else { push(parents, r.to, r.from); push(children, r.from, r.to); }
+  }
+  const set = new Set<number>([id]);
+  const up = [id];
+  while (up.length) { const c = up.pop()!; for (const p of parents.get(c) ?? []) if (!set.has(p)) { set.add(p); up.push(p); } }
+  const down = [id];
+  while (down.length) { const p = down.pop()!; for (const c of children.get(p) ?? []) if (!set.has(c)) { set.add(c); down.push(c); } }
+  for (const m of [...set]) for (const s of spouses.get(m) ?? []) set.add(s);
+  return set;
+}
 
 // ── Custom node ─────────────────────────────────────────────────────────────
 
@@ -246,6 +270,64 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
   const qc = useQueryClient();
   const savePos = useSaveTreePositions();
 
+  const rf = useRef<ReactFlowInstance | null>(null);
+  const [focusId, setFocusId] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const persons = data?.persons ?? [];
+
+  // Highlight: the focused person's whole line; everyone else dims.
+  const lineage = useMemo(
+    () => (focusId == null ? null : lineageOf(focusId, data?.relationships ?? [])),
+    [focusId, data],
+  );
+  const displayNodes = useMemo(() => nodes.map((n) => {
+    const inLine = !lineage || lineage.has(Number(n.id));
+    return {
+      ...n,
+      className: focusId === Number(n.id) ? "lm-focus-node" : "",
+      style: { ...n.style, opacity: inLine ? 1 : 0.15, transition: "opacity .25s" },
+    };
+  }), [nodes, lineage, focusId]);
+  const displayEdges = useMemo(() => edges.map((e) => {
+    const inLine = !lineage || (lineage.has(Number(e.source)) && lineage.has(Number(e.target)));
+    return { ...e, style: { ...e.style, opacity: inLine ? 1 : 0.08, transition: "opacity .25s" } };
+  }), [edges, lineage]);
+
+  // Search → centre on the person + highlight their line.
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return persons.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 6);
+  }, [persons, query]);
+
+  const focusPerson = (id: number) => {
+    setFocusId(id);
+    const node = nodes.find((n) => Number(n.id) === id);
+    if (node && rf.current) {
+      rf.current.setCenter(node.position.x + 90, node.position.y + 28, { zoom: 1.1, duration: 700 });
+    }
+    setQuery("");
+  };
+
+  const exportImage = useCallback(() => {
+    if (!nodes.length) return;
+    const bounds = getNodesBounds(nodes);
+    const W = 1920, H = Math.max(1080, Math.round(W * bounds.height / Math.max(bounds.width, 1)));
+    const vp = getViewportForBounds(bounds, W, H, 0.4, 2.5, 0.12);
+    const el = document.querySelector(".react-flow__viewport") as HTMLElement | null;
+    if (!el) return;
+    toPng(el, {
+      backgroundColor: "#0c0a09", width: W, height: H,
+      style: { width: `${W}px`, height: `${H}px`,
+               transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
+    }).then((dataUrl) => {
+      const a = document.createElement("a");
+      a.download = `arvore-familiar-${Date.now()}.png`;
+      a.href = dataUrl;
+      a.click();
+    }).catch((err) => toast.error(extractErrorMessage(err)));
+  }, [nodes]);
+
   useEffect(() => {
     const { nodes: n, edges: e } = buildGraph(data?.persons ?? [], data?.relationships ?? []);
     setNodes(n);
@@ -262,7 +344,6 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
 
   // Clear all saved positions → fall back to the automatic layout.
   const resetLayout = () => {
-    const persons = data?.persons ?? [];
     if (!persons.length) return;
     savePos.mutate(
       { positions: persons.map((p) => ({ id: p.id, x: null, y: null })) },
@@ -289,12 +370,14 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
   return (
     <div className="h-[68vh] w-full overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 dark:border-stone-800 dark:bg-stone-950">
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={displayNodes}
+        edges={displayEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
-        onNodeClick={(_e, node) => onPersonClick?.(Number(node.id))}
+        onInit={(inst) => { rf.current = inst; }}
+        onNodeClick={(_e, node) => { setFocusId(Number(node.id)); onPersonClick?.(Number(node.id)); }}
+        onPaneClick={() => setFocusId(null)}
         nodeTypes={nodeTypes}
         fitView
         minZoom={0.2}
@@ -304,7 +387,51 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
       >
         <Background color="#d6d3d1" gap={20} />
         <Controls showInteractive={false} />
-        <Panel position="top-right">
+
+        {/* Search a person → centre + highlight their line. */}
+        <Panel position="top-left">
+          <div className="relative w-60">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-stone-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("family.searchPerson")}
+              className="w-full rounded-lg border border-stone-200 bg-white/95 py-1.5 pl-8 pr-7 text-sm text-stone-700 shadow-soft backdrop-blur dark:border-stone-700 dark:bg-stone-900/95 dark:text-stone-200"
+            />
+            {(query || focusId != null) && (
+              <button
+                onClick={() => { setQuery(""); setFocusId(null); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200"
+                title={t("common.close")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {matches.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-stone-200 bg-white shadow-lift dark:border-stone-700 dark:bg-stone-900">
+                {matches.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => focusPerson(p.id)}
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </Panel>
+
+        <Panel position="top-right" className="flex gap-2">
+          <button
+            onClick={exportImage}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow-soft backdrop-blur hover:bg-white dark:border-stone-700 dark:bg-stone-900/90 dark:text-stone-200"
+            title={t("family.exportImage")}
+          >
+            <Download className="h-3.5 w-3.5" />
+            {t("family.exportImage")}
+          </button>
           <button
             onClick={resetLayout}
             className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white/90 px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow-soft backdrop-blur hover:bg-white dark:border-stone-700 dark:bg-stone-900/90 dark:text-stone-200"

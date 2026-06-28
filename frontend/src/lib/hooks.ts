@@ -15,6 +15,7 @@ interface PersonInput {
   notes?: string | null;
   family_label?: string | null;
   photo_media_id?: number | null;
+  project_id?: number | null;
 }
 import { useAuthStore } from "../store/auth";
 
@@ -590,10 +591,24 @@ export function useDeleteStory() {
 export function useUpdateStory() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { id: number; title?: string; narrative?: string }) => {
+    mutationFn: async (input: { id: number; title?: string; narrative?: string; favorite?: boolean }) => {
       const { id, ...body } = input;
       return (await api.patch(`/api/v1/narrative/stories/${id}`, body)).data as Story;
     },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["stories"] });
+      qc.invalidateQueries({ queryKey: ["stories", vars.id] });
+    },
+  });
+}
+
+/** Rewrite a story's narrative in place, steered by free-text feedback. */
+export function useRegenerateStory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; feedback: string }) =>
+      (await api.post(`/api/v1/narrative/stories/${input.id}/regenerate`,
+        { feedback: input.feedback })).data as Story,
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["stories"] });
       qc.invalidateQueries({ queryKey: ["stories", vars.id] });

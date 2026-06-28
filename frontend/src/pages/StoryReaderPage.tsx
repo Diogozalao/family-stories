@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Film, FolderKanban, Loader2, Pencil, RefreshCw, X } from "lucide-react";
-import { useGenerateVideo, useProjects, useStory, useUpdateStory } from "../lib/hooks";
+import { ArrowLeft, Check, Film, FileDown, FolderKanban, Loader2, Pencil, RefreshCw, Sparkles, X } from "lucide-react";
+import { useGenerateVideo, useProjects, useRegenerateStory, useStory, useUpdateStory } from "../lib/hooks";
 import { extractErrorMessage, isLostResponse } from "../lib/api";
 
 export default function StoryReaderPage() {
@@ -14,7 +14,11 @@ export default function StoryReaderPage() {
   const { data: story, isLoading, isFetching, error, refetch } = useStory(storyId);
   const genVideo = useGenerateVideo();
   const update = useUpdateStory();
+  const regen = useRegenerateStory();
   const { data: projects } = useProjects();
+
+  const [regenOpen, setRegenOpen] = useState(false);
+  const [feedback, setFeedback] = useState("");
   // The project this story belongs to (if it was generated inside one) —
   // shown as a badge so the story's "home" is always clear.
   const project = projects?.find((p) => p.id === story?.project_id);
@@ -121,9 +125,24 @@ export default function StoryReaderPage() {
     setEditing(false);
   };
 
+  const handleRegenerate = () => {
+    regen.mutate(
+      { id: story.id, feedback: feedback.trim() },
+      {
+        onSuccess: () => {
+          toast.success(t("common.success"));
+          setRegenOpen(false);
+          setFeedback("");
+          refetch();
+        },
+        onError: (err) => toast.error(extractErrorMessage(err)),
+      },
+    );
+  };
+
   return (
-    <article className="mx-auto max-w-3xl">
-      <Link to="/stories" className="mb-6 inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100">
+    <article className="lm-print-story mx-auto max-w-3xl">
+      <Link to="/stories" className="lm-no-print mb-6 inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100">
         <ArrowLeft className="h-4 w-4" />
         {t("common.back")}
       </Link>
@@ -149,15 +168,25 @@ export default function StoryReaderPage() {
             </span>
           )}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 lm-no-print">
             {!editing ? (
-              <button
-                onClick={() => setEditing(true)}
-                className="btn btn-ghost"
-              >
-                <Pencil className="h-4 w-4" />
-                <span>{t("storyReader.edit")}</span>
-              </button>
+              <>
+                <button onClick={() => window.print()} className="btn btn-ghost">
+                  <FileDown className="h-4 w-4" />
+                  <span>{t("stories.exportPdf")}</span>
+                </button>
+                <button onClick={() => setRegenOpen((v) => !v)} className="btn btn-ghost">
+                  <Sparkles className="h-4 w-4" />
+                  <span>{t("stories.regenerate")}</span>
+                </button>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="btn btn-ghost"
+                >
+                  <Pencil className="h-4 w-4" />
+                  <span>{t("storyReader.edit")}</span>
+                </button>
+              </>
             ) : (
               <>
                 <button
@@ -195,6 +224,28 @@ export default function StoryReaderPage() {
         )}
       </header>
 
+      {regenOpen && !editing && (
+        <div className="lm-no-print mb-6 rounded-2xl border border-brand-200 bg-brand-50/60 p-4 dark:border-brand-900/40 dark:bg-brand-950/30">
+          <p className="mb-1 font-medium">{t("stories.regenerateTitle")}</p>
+          <p className="mb-3 text-xs text-stone-500 dark:text-stone-400">{t("stories.regenerateHint")}</p>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            className="input min-h-[80px] resize-y"
+            placeholder={t("stories.regenerateHint")}
+          />
+          <div className="mt-3 flex justify-end gap-2">
+            <button className="btn btn-ghost" onClick={() => setRegenOpen(false)} disabled={regen.isPending}>
+              {t("common.cancel")}
+            </button>
+            <button className="btn btn-primary" onClick={handleRegenerate} disabled={regen.isPending}>
+              {regen.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              <span>{regen.isPending ? t("stories.regenerating") : t("stories.regenerate")}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {editing ? (
         <>
           <textarea
@@ -215,7 +266,7 @@ export default function StoryReaderPage() {
       )}
 
       {!editing && (
-        <div className="mt-10 border-t border-stone-200 pt-6 dark:border-stone-800">
+        <div className="lm-no-print mt-10 border-t border-stone-200 pt-6 dark:border-stone-800">
           <button
             onClick={handleGenerateVideo}
             disabled={genVideo.isPending}

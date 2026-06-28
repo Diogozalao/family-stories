@@ -60,6 +60,13 @@ class UpdateStoryRequest(BaseModel):
     """
     title:     Optional[str] = None
     narrative: Optional[str] = None
+    favorite:  Optional[bool] = None
+
+
+class RegenerateRequest(BaseModel):
+    """Re-run a story's narrative, steering it with a free-text note
+    (e.g. "make it shorter", "focus on grandpa João")."""
+    feedback: str = ""
 
 
 class StoryResponse(BaseModel):
@@ -74,6 +81,10 @@ class StoryResponse(BaseModel):
     project_id:    Optional[int] = None
     language:      str           = "pt"
     scenes:        Optional[List[Scene]] = None
+    favorite:      bool          = False
+    # Metadata for the UI (counts of photos/people the story drew on).
+    person_ids:    List[int]     = []
+    media_ids:     List[int]     = []
     created_at:    datetime
 
     class Config:

@@ -18,7 +18,9 @@ from backend.core.rate_limit import limiter
 from backend.models.narrative import Story
 from backend.modules.m3_narrative.generator import NarrativeGenerator
 from backend.modules.m3_narrative.templates import NARRATIVE_TEMPLATES
-from backend.schemas.narrative import GenerateRequest, StoryResponse, UpdateStoryRequest
+from backend.schemas.narrative import (
+    GenerateRequest, RegenerateRequest, StoryResponse, UpdateStoryRequest,
+)
 
 router    = APIRouter(prefix="/api/v1", tags=["narrative"])
 log       = structlog.get_logger()
@@ -149,9 +151,10 @@ async def list_stories(
     db:   AsyncSession = Depends(get_db),
     user: User         = Depends(get_current_user),
 ):
-    """List the caller's generated stories, newest first."""
+    """List the caller's generated stories — favourites first, then newest."""
     result = await db.execute(
-        select(Story).where(Story.user_id == user.id).order_by(Story.created_at.desc())
+        select(Story).where(Story.user_id == user.id)
+        .order_by(Story.favorite.desc().nullslast(), Story.created_at.desc())
     )
     return result.scalars().all()
 
@@ -196,9 +199,60 @@ async def update_story(
             raise HTTPException(status_code=400, detail="Narrative must be at least 30 characters")
         story.narrative = narrative
 
+    if payload.favorite is not None:
+        story.favorite = payload.favorite
+
     await db.commit()
     await db.refresh(story)
     log.info("story_updated", id=story.id, chars=len(story.narrative or ""))
+    return story
+
+
+@router.post("/narrative/stories/{story_id}/regenerate", response_model=StoryResponse)
+async def regenerate_story(
+    story_id: int,
+    payload:  RegenerateRequest,
+    db:       AsyncSession = Depends(get_db),
+    user:     User         = Depends(get_current_user),
+):
+    """Rewrite a story's narrative in place, steered by the user's feedback.
+
+    Keeps the same photos, people, language and settings — only the prose
+    (and its scene breakdown) is regenerated, so the same story id stays.
+    """
+    story = (await db.execute(
+        select(Story).where(Story.id == story_id, Story.user_id == user.id)
+    )).scalar_one_or_none()
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+
+    feedback = (payload.feedback or "").strip()
+    query = (f"{feedback}\n\n(Reescreve a narrativa tendo isto em conta, "
+             "mantendo-te fiel aos factos e às pessoas.)") if feedback else \
+            "Reescreve a narrativa de forma diferente, mantendo-te fiel aos factos."
+    try:
+        story = await generator.generate(
+            db               = db,
+            user_id          = user.id,
+            title            = story.title,
+            event_type       = story.event_type,
+            query            = query,
+            person_ids       = story.person_ids or [],
+            media_ids        = story.media_ids or [],
+            project_id       = story.project_id,
+            language         = story.language or "pt",
+            voice            = story.voice,
+            subtitles        = story.subtitles if story.subtitles is not None else True,
+            subtitle_size    = story.subtitle_size or "medium",
+            update_story_id  = story.id,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except Exception as exc:
+        log.error("story_regenerate_failed", id=story_id, error=str(exc))
+        raise HTTPException(status_code=500, detail=f"Regeneration failed: {exc}")
+
+    log.info("story_regenerated", id=story_id, feedback=bool(feedback))
     return story
 
 

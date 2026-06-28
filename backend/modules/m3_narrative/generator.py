@@ -102,6 +102,7 @@ class NarrativeGenerator:
         voice:            str  = None,
         subtitles:        bool = True,
         subtitle_size:    str  = "medium",
+        update_story_id:  int  = None,
     ) -> Story:
 
         log.info("generating_narrative",
@@ -257,29 +258,46 @@ class NarrativeGenerator:
         except Exception as exc:
             log.warning("scene_build_failed", error=str(exc))
 
-        story = Story(
-            user_id       = user_id,
-            title         = title,
-            event_type    = event_type,
-            narrative     = narrative_text,
-            template_used = template["name"],
-            llm_backend   = self.llm.backend,
-            facts_used    = len(all_media),
-            prompt_used   = prompt,
-            status        = StoryStatus.COMPLETED,
-            person_ids    = person_ids or [],
-            project_id    = project_id,
-            language      = lang_code,
-            voice         = voice,
-            subtitles     = subtitles,
-            subtitle_size = subtitle_size,
-            scenes        = scenes,
-            # The exact photos this narrative was built from — the video (M4)
-            # reuses ONLY these, so the documentary shows the same selection
-            # the user picked for the story (never the whole library).
-            media_ids     = [m.id for m in all_media],
-        )
-        db.add(story)
+        media_id_list = [m.id for m in all_media]
+
+        if update_story_id is not None:
+            # Regenerate-with-feedback: rewrite the EXISTING story in place
+            # (same id/title/settings), just a fresh narrative + scenes.
+            story = (await db.execute(
+                select(Story).where(Story.id == update_story_id, Story.user_id == user_id)
+            )).scalar_one_or_none()
+            if story is None:
+                raise ValueError(f"Story {update_story_id} not found")
+            story.narrative     = narrative_text
+            story.template_used = template["name"]
+            story.llm_backend   = self.llm.backend
+            story.facts_used    = len(all_media)
+            story.prompt_used   = prompt
+            story.scenes        = scenes
+            story.media_ids     = media_id_list
+        else:
+            story = Story(
+                user_id       = user_id,
+                title         = title,
+                event_type    = event_type,
+                narrative     = narrative_text,
+                template_used = template["name"],
+                llm_backend   = self.llm.backend,
+                facts_used    = len(all_media),
+                prompt_used   = prompt,
+                status        = StoryStatus.COMPLETED,
+                person_ids    = person_ids or [],
+                project_id    = project_id,
+                language      = lang_code,
+                voice         = voice,
+                subtitles     = subtitles,
+                subtitle_size = subtitle_size,
+                scenes        = scenes,
+                # The exact photos this narrative was built from — the video
+                # (M4) reuses ONLY these (never the whole library).
+                media_ids     = media_id_list,
+            )
+            db.add(story)
         await db.commit()
         await db.refresh(story)
 

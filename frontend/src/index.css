@@ -95,3 +95,24 @@
 .subs-small::cue  { font-size: 2.4vh; background: rgba(12,12,16,0.62); }
 .subs-medium::cue { font-size: 3.4vh; background: rgba(12,12,16,0.62); }
 .subs-large::cue  { font-size: 4.8vh; background: rgba(12,12,16,0.62); }
+
+/* ── Family tree: highlighted (focused) person node ───────────────────────── */
+.lm-focus-node {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+  border-radius: 14px;
+}
+
+/* ── Print a single story to PDF (browser Print → Save as PDF) ─────────────
+   Isolate the story article: hide the whole app, show only .lm-print-story. */
+@media print {
+  body * { visibility: hidden !important; }
+  .lm-print-story, .lm-print-story * { visibility: visible !important; }
+  .lm-print-story {
+    position: absolute; left: 0; top: 0; width: 100%;
+    max-width: 100% !important; padding: 0 8mm; color: #000;
+  }
+  .lm-print-story h1 { font-size: 26pt; margin-bottom: 8pt; }
+  .lm-print-story .prose-reader p { font-size: 12pt; line-height: 1.6; color: #111; }
+  .lm-no-print { display: none !important; }
+}
