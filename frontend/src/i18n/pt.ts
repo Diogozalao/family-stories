@@ -352,7 +352,7 @@ export default {
     relPai: "Pai",
     relMae: "Mãe",
     relFilho: "Filho(a)",
-    relConjuge: "Cônjuge",
+    relConjuge: "Casado(a) / Parceiro(a)",
     relNamePlaceholder: "Nome do novo familiar",
     noneToAdd: "Não há mais fotografias no acervo para adicionar.",
     empty: "Esta pessoa ainda não tem fotografias. Carrega em «Adicionar fotos» para escolher do acervo.",

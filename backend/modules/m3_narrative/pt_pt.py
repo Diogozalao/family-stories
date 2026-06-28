@@ -61,6 +61,12 @@ BR_TO_PT: dict[str, str] = {
     "aterrissar": "aterrar",
     "bonde": "elétrico",
     "trilho": "carril",
+    "caminhão": "camião",      # ambos masculinos — seguro
+    "caminhões": "camiões",
+    "fazenda": "quinta",       # ambos femininos — seguro
+    "fazendas": "quintas",
+    "metrô": "metro",          # ambos masculinos — seguro
+    "abacaxi": "ananás",       # ambos masculinos — seguro
 }
 
 # Auxiliaries that, followed by a gerund, mark the BR continuous tense. The

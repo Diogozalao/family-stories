@@ -344,7 +344,7 @@ export default {
     relPai: "Father",
     relMae: "Mother",
     relFilho: "Child",
-    relConjuge: "Spouse",
+    relConjuge: "Spouse / Partner",
     relNamePlaceholder: "Name of the new relative",
     noneToAdd: "No more photos in the library to add.",
     empty: "This person has no photos yet. Click “Add photos” to choose from the library.",
