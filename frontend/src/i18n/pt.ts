@@ -88,10 +88,10 @@ export default {
     heroBadge: "Projeto de tese · UBI",
     heroTitle1: "As memórias da tua família,",
     heroTitle2: "contadas pelas fotografias.",
-    heroLead: "O Living Memory organiza fotografias, documentos e árvores genealógicas, e usa IA generativa para tecer histórias e vídeos que preservam o que de outra forma se perderia. Tudo na tua máquina.",
+    heroLead: "O Living Memory organiza fotografias, documentos e árvores genealógicas, e usa IA generativa para criar histórias e vídeos que preservam o que de outra forma se perderia. Tudo na tua máquina.",
     heroBullet1: "Importação multimodal",
     heroBullet2: "IA local com Llama 3.1",
-    heroBullet3: "Privado por design",
+    heroBullet3: "Privado por princípio",
 
     poweredBy: "Sob a capota",
     platformsTag: "Plataformas",
@@ -204,7 +204,7 @@ export default {
     heroTitle: "Histórias que ficam na família, contadas pelas próprias fotografias.",
     heroLead:
       "O Living Memory é um arquivo familiar inteligente: organiza fotografias, " +
-      "documentos e árvores genealógicas e usa IA para tecer narrativas e vídeos " +
+      "documentos e árvores genealógicas e usa IA para criar narrativas e vídeos " +
       "que preservam memórias que de outra forma se perderiam.",
     cta: "Começar agora",
 
@@ -300,7 +300,7 @@ export default {
     step2: "Importa a tua árvore genealógica",
     step2Body: "Sobe um ficheiro GEDCOM (exportado do Ancestry, MyHeritage…) para enriqueceres a narrativa.",
     step3: "Escreve a primeira história",
-    step3Body: "Escolhe um tema, pessoas, e deixa o LLM tecer o texto a partir dos teus factos.",
+    step3Body: "Escolhe um tema e as pessoas, e deixa o modelo escrever o texto a partir dos teus factos.",
     runningTasks: "Tarefas em curso",
     noRunningTasks: "Nenhuma tarefa em curso.",
   },
