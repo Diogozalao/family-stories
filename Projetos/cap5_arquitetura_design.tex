@@ -114,8 +114,9 @@ A necessidade de disponibilizar o sistema publicamente motivou uma
   \item A \textbf{autenticação} passou de um fluxo HS256 próprio para o
   \textbf{Supabase Auth}, com tokens assinados por chave ECC P-256 e
   validados contra o \emph{endpoint} JWKS público.
-  \item O \textbf{modelo de domínio} deixou de ser \emph{single-owner}
-  para \emph{multi-tenant}: todas as entidades referenciam um
+  \item O \textbf{modelo de domínio} deixou de ser de dono único
+  (\emph{single-owner}) para \textbf{multi-inquilino}: todas as entidades
+  referenciam um
   \texttt{user\_id} (\textsc{uuid}) e todas as consultas filtram por esse
   campo.
   \item O \textbf{armazenamento} migrou do disco local para o
