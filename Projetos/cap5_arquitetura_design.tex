@@ -40,7 +40,7 @@ principais.
 
 % Dados e IA
 \node[svc,below=1.8cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
-\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Ollama (local)\\Gemini (nuvem)\\Groq (\emph{fallback})};
+\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Groq (texto)\\Ollama (local)\\Gemini (visão)};
 
 \draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
 \draw[arrow] (api.east) -- (m1.west);
@@ -117,10 +117,20 @@ A necessidade de disponibilizar o sistema publicamente motivou uma
   uma chave de objeto em vez de um caminho de disco.
 \end{itemize}
 
-A capacidade de inferência local (Ollama) manteve-se como modo
-privilegiado para privacidade, sendo a nuvem (Gemini) um recurso de
-\emph{fallback}. Esta evolução é um exemplo concreto de compromisso
-maduro entre acessibilidade, privacidade e escalabilidade.
+É importante sublinhar que a migração para a nuvem \emph{não} eliminou o
+modo local: o sistema corre de forma \textbf{idêntica nos dois ambientes}
+--- tudo o que se faz \emph{online} é possível \emph{localmente}, e
+vice-versa --- partilhando o mesmo código, a mesma base de dados e o mesmo
+\emph{Storage} (Supabase). Esta paridade é um requisito explícito do
+projeto e tem consequências concretas: por exemplo, os vídeos são
+\emph{produzidos} em ambiente local (onde não há limite de memória) e
+\emph{reproduzidos} no \emph{site} implantado, por escreverem no mesmo
+\emph{Storage} (\Cref{sec:impl_m4}). Quanto à IA, o motor de texto por
+omissão é o \textbf{Groq} (nuvem, gratuito e rápido), mas a inferência
+\textbf{local} via \textbf{Ollama} permanece disponível como opção de
+privacidade e de operação \emph{offline}. Esta evolução é um exemplo
+concreto de compromisso maduro entre acessibilidade, privacidade e
+escalabilidade.
 
 \section{Fluxo de Dados e Execução}
 \label{sec:fluxo}
@@ -199,13 +209,18 @@ em PostgreSQL (Supabase). As entidades principais são:
   descrição, tipo, local, data resolvida).
   \item \texttt{Story} — narrativa gerada (título, texto, tipo de evento,
   \emph{template} usado, \emph{backend} de \textsc{llm}, número de factos
-  usados, \emph{prompt}, idioma, projeto associado). Inclui ainda o campo
-  \texttt{scenes} (\textsc{json}): a forma segmentada em cenas da
-  narrativa --- uma lista de \texttt{\{text, photo\_ids, caption\}} que
-  permite ao M4 sincronizar cada fotografia com a sua narração
-  (\Cref{sub:cenas}).
+  usados, \emph{prompt}, idioma, projeto associado). Guarda ainda as
+  \emph{preferências de produção} do vídeo --- voz (\texttt{voice}),
+  legendas (\texttt{subtitles}, \texttt{subtitle\_size}) ---, a lista de
+  fotografias explicitamente escolhidas (\texttt{media\_ids}), um indicador
+  de \emph{favorita} (\texttt{favorite}) e o campo \texttt{scenes}
+  (\textsc{json}): a forma segmentada em cenas da narrativa --- uma lista de
+  \texttt{\{text, photo\_ids, caption\}} que permite ao M4 sincronizar cada
+  fotografia com a sua narração (\Cref{sub:cenas}).
   \item \texttt{VideoOutput} — vídeo gerado (nome, chave de objeto,
-  tamanho, fotografias usadas, estado, história e projeto associados).
+  tamanho, fotografias usadas, estado, história e projeto associados), bem
+  como a referência à \emph{faixa de legendas} \texttt{.vtt} e o tamanho de
+  legenda escolhido, consumidos pelo leitor (\Cref{sub:narracao_legendas}).
   \item \texttt{Project} e \texttt{ProjectMedia} — projetos (coleções) e
   a relação muitos-para-muitos com as fotografias. Cada projeto é um
   espaço de trabalho \emph{isolado}: as suas fotografias, a sua linha

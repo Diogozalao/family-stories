@@ -27,9 +27,12 @@ GET    & \texttt{/genealogy/persons}             & Listar pessoas. \\
 GET    & \texttt{/timeline}                      & Linha temporal. \\
 GET    & \texttt{/narrative/templates}           & Listar \emph{templates}. \\
 POST   & \texttt{/narrative/generate}            & Gerar narrativa (\texttt{sync}/\texttt{background}). \\
-GET    & \texttt{/narrative/stories}             & Listar histórias. \\
+GET    & \texttt{/narrative/stories}             & Listar histórias (favoritas primeiro). \\
+PATCH  & \texttt{/narrative/stories/\{id\}}       & Editar história (título/texto/favorita). \\
+POST   & \texttt{/narrative/stories/\{id\}/regenerate} & Regenerar a narrativa com \emph{feedback}. \\
 POST   & \texttt{/multimedia/generate/\{id\}}    & Gerar vídeo a partir de uma história. \\
 GET    & \texttt{/multimedia/videos}             & Listar vídeos. \\
+GET    & \texttt{/multimedia/subtitle/\{ficheiro\}} & Servir a faixa de legendas \texttt{.vtt}. \\
 GET/POST & \texttt{/projects} · \texttt{/projects/\{id\}} & CRUD de projetos. \\
 GET    & \texttt{/tasks} · \texttt{/tasks/\{id\}} & Estado de tarefas assíncronas. \\
 \bottomrule
@@ -49,6 +52,6 @@ Resumo da topologia de \emph{deployment} (ver \Cref{sec:impl_deploy}):
   \item \textbf{Supabase} — Auth (JWKS), PostgreSQL (asyncpg), Storage.
 \end{itemize}
 
-\noindent\emph{Nota:} as variáveis sensíveis (chaves Supabase, chave
+\noindent\emph{Nota:} as variáveis sensíveis (chaves Supabase, Groq e
 Gemini) são definidas no painel do Render e nunca versionadas no
 repositório.

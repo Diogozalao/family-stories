@@ -22,13 +22,21 @@ Vercel); e a premissa de privacidade e baixo custo (O6) foi
 ferramentas de código aberto. Em suma, os objetivos centrais do projeto
 foram alcançados.
 
-Para além dos objetivos definidos, o trabalho concretizou dois avanços
+Para além dos objetivos definidos, o trabalho concretizou vários avanços
 que elevam o resultado: a \textbf{narrativa segmentada em cenas}, que
 sincroniza cada fotografia com a sua narração no vídeo (transformando o
-\emph{slideshow} num verdadeiro documentário), e a \textbf{geração
-assíncrona} — quando não há \emph{worker} Celery, as tarefas longas
-correm num executor \emph{in-process}, devolvendo a resposta de imediato
-e atualizando o estado por \emph{polling}.
+\emph{slideshow} num verdadeiro documentário); a \textbf{geração
+assíncrona} — quando não há \emph{worker} Celery, as tarefas longas correm
+num executor \emph{in-process}, devolvendo a resposta de imediato e
+atualizando o estado por \emph{polling}; uma \textbf{árvore familiar
+interativa} (React~Flow) com pesquisa, destaque de linhagem, exportação em
+imagem e edição/adição de familiares; legendas de vídeo como \textbf{faixa
+WebVTT} sincronizada palavra-a-palavra, com escolha de voz; e ferramentas
+de \textbf{curadoria de histórias} (favoritos, pesquisa/filtro,
+regeneração orientada por \emph{feedback} e exportação para PDF). A
+interface está totalmente \textbf{bilingue} (português europeu e inglês),
+reforçada por um pós-processador determinístico que assegura a variante
+europeia mesmo quando o modelo recai no português do Brasil.
 
 Mais do que a integração de modelos, o trabalho destacou-se pela
 \textbf{engenharia de robustez}: a degradação graciosa do RAG, os
@@ -104,10 +112,13 @@ impacto esperado:
   \item \textbf{Identificação de pessoas.} Integrar reconhecimento facial
   (e.g.\ \emph{DeepFace}) com confirmação manual, enriquecendo a
   especificidade das narrativas.
-  \item \textbf{Visualização interativa do grafo familiar.} Tirar partido
-  do \emph{React Flow} (já presente nas dependências) para uma vista
-  navegável da árvore.
-  \item \textbf{Voz personalizada (\emph{voice cloning}).} Explorar o
+  \item \textbf{Sincronização de vídeo ao nível da palavra.} Aproveitar os
+  carimbos temporais por palavra já capturados para as legendas
+  (\Cref{sub:narracao_legendas}) para temporizar a troca de fotografias com
+  precisão de palavra, eliminando a deriva que ainda pode acumular-se em
+  histórias longas.
+  \item \textbf{Voz personalizada (\emph{voice cloning}).} A escolha entre
+  voz masculina e feminina já está disponível; o passo seguinte é explorar o
   \emph{Coqui TTS} para narrar com a voz de um familiar a partir de uma
   amostra — funcionalidade tecnicamente e eticamente rica.
   \item \textbf{Abordagem B de vídeo (IA generativa).} Integrar,

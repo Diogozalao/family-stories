@@ -86,8 +86,9 @@ ChromaDB + \emph{sentence-transformers} (RAG, opcional); Tesseract
 (\textsc{ocr}); NetworkX (grafo). \\
 Multimédia & MoviePy + FFmpeg; Pillow (Ken Burns / \emph{letterbox});
 edge-tts / gTTS (\textsc{tts}). \\
-Dados & Supabase Auth (JWT/JWKS), PostgreSQL (asyncpg), Supabase Storage;
-SQLite (desenvolvimento local). \\
+Dados & Supabase Auth (JWT/JWKS), PostgreSQL (asyncpg) e Supabase Storage
+--- usados \emph{tanto em local como na nuvem}; SQLite como \emph{fallback}
+offline por omissão. \\
 Operação & Docker; Render (\emph{backend}); Vercel (\emph{frontend});
 Supabase (dados); Git. \\
 \bottomrule
@@ -109,9 +110,10 @@ o que se considerou em alternativa e a razão da opção tomada.
 \midrule
 FastAPI & Flask, Django & Assíncrono nativo, validação automática
 (Pydantic) e documentação interativa gerada. \\
-Texto: Ollama (local) $\rightarrow$ Groq $\rightarrow$ Gemini; Visão: Gemini & Apenas uma API
-comercial (GPT-4/Claude) & Privacidade e custo nulo em local; texto na nuvem
-no Groq e visão no Gemini — quotas gratuitas separadas, sem competir entre si. \\
+Texto: Groq $\rightarrow$ Ollama $\rightarrow$ Gemini; Visão: Gemini & Apenas uma API
+comercial (GPT-4/Claude) & Custo nulo. O Groq (70B) é rápido na nuvem; o Ollama
+dá a opção local/\emph{offline}; o Gemini faz a visão e a rede de segurança final.
+Texto e visão em fornecedores gratuitos distintos, sem competir pela quota. \\
 RAG (\emph{retrieval}) & \emph{Fine-tuning}; sem \emph{grounding} & Não
 exige treino e ancora a geração em factos, mitigando alucinação. \\
 MoviePy + FFmpeg & APIs de vídeo IA (Runway/Pika) & Custo nulo, controlo
@@ -138,23 +140,21 @@ forte de ponta a ponta no servidor.
 
 \subsection{IA: estratégia híbrida local/nuvem}
 
-A decisão mais estruturante foi a \textbf{estratégia de IA híbrida}.
-Privilegia-se a inferência \textbf{local} via \textbf{Ollama} (executando
-o \emph{Llama~3.2~3B}) por três razões: \emph{privacidade} (os factos do
-arquivo não saem da máquina), \emph{custo} (nulo) e \emph{autonomia} (não
-depende de conectividade). Como o ambiente de produção gratuito não dispõe
-de \textsc{gpu} para executar modelos locais, a geração de \textbf{texto}
-na nuvem recorre, por esta ordem, ao \textbf{Groq} (modelos abertos
-\emph{Llama~3.3~70B}, camada gratuita generosa) e, só se este falhar, ao
-\textbf{Google Gemini~Flash}. Esta repartição é deliberada: a quota
-gratuita do Gemini fica \textbf{reservada para a análise visual} das
-fotografias (M1), que usa sempre o \textbf{Gemini Vision} (\emph{2.5-Flash};
-o \emph{1.5} foi descontinuado) por ser a única via com capacidade
-multimodal madura na cadeia. Assim, repartindo o texto (Groq) e a visão
-(Gemini) por dois serviços gratuitos distintos, evita-se esgotar a quota
-diária de um único fornecedor. Em ambiente local, o texto é servido
-primeiro pelo Ollama. Esta arquitetura é detalhada no
-\Cref{cap:implementacao}.
+A decisão mais estruturante foi a \textbf{estratégia de IA em cascata},
+assente em fornecedores de camada gratuita. Para a geração de \textbf{texto},
+o motor primário é o \textbf{Groq} (modelos abertos \emph{Llama~3.3~70B},
+camada gratuita generosa); se este não estiver disponível --- tipicamente
+sem ligação à Internet --- recorre-se à inferência \textbf{local} via
+\textbf{Ollama} (\emph{Llama~3.2~3B}), que mantém a opção \emph{totalmente
+offline e privada}; e só se ambos falharem entra o \textbf{Google
+Gemini~Flash} como última rede de segurança. A ordem é deliberada: o
+\emph{Llama~3.2~3B} local, em \textsc{cpu}, é demasiado lento para uso
+interativo, pelo que o Groq (70B na nuvem) oferece simultaneamente melhor
+qualidade e resposta quase imediata. A quota gratuita do Gemini fica ainda
+\textbf{reservada para a análise visual} das fotografias (M1), que usa
+sempre o \textbf{Gemini Vision} (\emph{2.5-Flash}; o \emph{1.5} foi
+descontinuado) por ser a única via com capacidade multimodal madura na
+cadeia. Esta arquitetura é detalhada no \Cref{cap:implementacao}.
 
 \paragraph{Repartir por tarefa, mantendo o custo nulo.} A atribuição de
 \textbf{texto ao Groq} e \textbf{visão ao Gemini} não é arbitrária: cada
@@ -164,10 +164,10 @@ prática, a capacidade gratuita} e evita que a análise de fotografias e a
 geração de narrativas compitam pela mesma quota. A complexidade adicional é
 contida: existe uma única abstração de cliente (\texttt{LLMClient}) que
 encapsula a cascata, pelo que o resto do sistema desconhece qual o
-fornecedor em uso. O \textbf{Ollama} (local) mantém-se como primeira opção
-para texto quando há \textsc{gpu}/\textsc{cpu} disponível, e o Gemini
-permanece como rede de segurança final para texto — garantindo que uma
-falha pontual de um fornecedor nunca impede a geração.
+fornecedor em uso. O \textbf{Ollama} (local) permanece como opção para
+quem privilegie a \emph{privacidade} ou opere sem ligação, e o Gemini é a
+rede de segurança final para texto — garantindo que uma falha pontual de um
+fornecedor nunca impede a geração.
 
 \subsection{RAG: ChromaDB}
 

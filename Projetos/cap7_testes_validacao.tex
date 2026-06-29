@@ -30,7 +30,7 @@ A estratégia de testes assentou em três pilares complementares:
 
 A suíte de testes do \emph{backend} foi implementada com \textbf{pytest}
 (com \texttt{pytest-asyncio} e \texttt{pytest-cov}). Conta atualmente com
-\textbf{36 testes unitários a passar}, a que acresce uma suíte de
+\textbf{50 testes unitários a passar}, a que acresce uma suíte de
 \emph{integração} (autenticação e sondas de saúde) que exige um ambiente
 \textsc{Supabase} configurado para correr. A \Cref{tab:testes} resume a
 distribuição.
@@ -45,9 +45,11 @@ distribuição.
 \textbf{Tipo} & \textbf{Módulo de teste} & \textbf{Âmbito} \\
 \midrule
 Unitário    & \texttt{test\_upload\_validator} & Validação de tipo, \emph{magic bytes} e limites de tamanho (M1). \\
+Unitário    & \texttt{test\_exif\_extractor} & Parsing de datas e conversão GPS (DMS$\rightarrow$decimal, sinal N/S/E/W) (M1). \\
 Unitário    & \texttt{test\_date\_resolver}  & Resolução de datas incompletas e ambíguas (M2). \\
 Unitário    & \texttt{test\_family\_graph}   & Construção do grafo e resumos de parentesco (M2). \\
 Unitário    & \texttt{test\_templates}       & Integridade e formatação dos \emph{templates} narrativos (M3). \\
+Unitário    & \texttt{test\_pt\_pt}          & Pós-processamento PT-PT: substituições de vocabulário e gerúndio$\rightarrow$infinitivo (M3). \\
 Unitário    & \texttt{test\_scene\_builder}  & Segmentação em cenas e atribuição foto$\rightarrow$parágrafo, e cálculo de durações (M3/M4). \\
 Unitário    & \texttt{test\_video\_builder}  & Funções de enquadramento e montagem de vídeo (M4). \\
 Integração  & \texttt{test\_auth\_routes}    & Fluxo de autenticação na API. \\
@@ -104,11 +106,15 @@ persiste (\texttt{task\_records}, \texttt{stories.facts\_used}):
   \item \textbf{Métricas objetivas.}
   \begin{itemize}
     \item \emph{Aderência ao PT-PT}: contagem automática de
-    ``brasileirismos'' proibidos (a lista existe em \texttt{PT\_PT\_RULES})
-    no texto gerado, produzindo uma percentagem de violações.
+    ``brasileirismos'' no texto gerado. A métrica está \textbf{implementada}
+    na função \texttt{count\_brasileirismos} (\texttt{pt\_pt.py}), que
+    deteta o vocabulário do Brasil e a construção de gerúndio; o mesmo
+    módulo corrige-os deterministicamente após a geração
+    (\Cref{sec:impl_m3}), pelo que a métrica serve tanto de avaliação como
+    de rede de segurança.
     \item \emph{Desempenho}: tempo médio de geração de narrativa e de
     vídeo, e taxa de sucesso/falha por \emph{template} e por \emph{backend}
-    de \textsc{llm} (Ollama vs.\ Gemini).
+    de \textsc{llm} (Groq / Ollama / Gemini).
   \end{itemize}
   \item \textbf{Métricas subjetivas.} Avaliação por um painel humano
   (escala 1--5) das dimensões \emph{coerência}, \emph{fidelidade factual}
@@ -167,9 +173,18 @@ desalinhamento de nomes que esvaziava a vista; alinhados os nomes, a linha
 passou a posicionar corretamente os eventos e a mostrar, por evento, a
 família e as pessoas envolvidas. Segundo, a \textbf{geração de vídeo} ficava
 indefinidamente ``A processar'' em produção: a montagem a 720p excedia os
-$\approx$512~MB do plano gratuito (\emph{out-of-memory}); baixar a resolução
-para $854\times480$ resolveu, e foi adicionada a possibilidade de
-\textbf{eliminar vídeos} para limpar \emph{renders} falhados. Globalmente, o
-sistema cumpre os requisitos funcionais essenciais (\rf{1}--\rf{13}),
-produzindo narrativas e vídeos coerentes a partir de arquivos familiares
-reais.
+$\approx$512~MB do plano gratuito (\emph{out-of-memory}). A solução foi
+dupla. Por um lado, a \emph{performance}: um \emph{profiling} revelou que o
+\emph{crossfade} via \texttt{CompositeVideoClip} do MoviePy consumia a maior
+parte do tempo de montagem; substituí-lo por uma implementação própria, que
+mistura apenas os \emph{frames} sobrepostos, reduziu o tempo de
+\emph{render} de várias vezes acima do tempo real para abaixo dele
+($\approx$0{,}9$\times$). Por outro, a \emph{política de execução}: em vez de
+degradar a qualidade, a geração passou a ser \textbf{exclusivamente local}
+--- a nuvem recusa o \emph{render} (\texttt{VIDEO\_LOCAL\_ONLY}) e os vídeos
+são pré-gerados localmente a 720p e reproduzidos a partir do \emph{Storage},
+nunca correndo o risco de \emph{out-of-memory} em produção. Foi ainda
+adicionada a possibilidade de \textbf{eliminar vídeos} para limpar
+\emph{renders} falhados. Globalmente, o sistema cumpre os requisitos
+funcionais essenciais (\rf{1}--\rf{15}), produzindo narrativas e vídeos
+coerentes a partir de arquivos familiares reais.

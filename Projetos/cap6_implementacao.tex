@@ -28,12 +28,17 @@ bem-sucedido — o sistema nunca aloja conteúdo marcado como inseguro. As
 etapas são:
 
 \begin{description}[leftmargin=*]
-  \item[\emph{Security scan}.] Cálculo de \emph{checksum} MD5 e
-  verificação de integridade/segurança; em caso de falha, o registo é
-  marcado \texttt{FAILED} e o \emph{pipeline} interrompe-se.
+  \item[\emph{Security scan}.] Cálculo de \emph{checksum} MD5 e \emph{scan}
+  antivírus com o \textbf{ClamAV} (quando presente no sistema; na sua
+  ausência, o passo degrada graciosamente e regista um aviso). Perante a
+  deteção de uma ameaça, o registo é marcado \texttt{FAILED} e o
+  \emph{pipeline} interrompe-se --- o conteúdo nunca chega ao \emph{Storage}.
   \item[\textsc{exif}.] Data de captura, coordenadas GPS, marca e modelo
-  da câmara (biblioteca \emph{exifread}), preservando o \textsc{exif} em
-  bruto.
+  da câmara, extraídos com a biblioteca \textbf{exifread} (puro Python, sem
+  dependências de sistema, funcionando de forma idêntica em ambiente local
+  e na nuvem) e preservando o \textsc{exif} em bruto. As coordenadas, no
+  formato \emph{graus/minutos/segundos}, são convertidas para decimal com o
+  sinal correto segundo a referência (N/S, E/W).
   \item[Análise visual.] O \textbf{Gemini Vision} produz descrição da
   cena, contagem de pessoas, cenário, emoção dominante, \emph{tags} e uma
   \emph{sugestão narrativa} — a matéria-prima factual do M3.
@@ -63,7 +68,7 @@ operação é \emph{consciente da quota}: indica quantas fotografias serão
 analisadas (uma chamada ao Gemini cada) e pede confirmação antes de avançar.
 
 A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}
-dedicado (o maior módulo, $\approx$380 linhas), que converte o ficheiro em
+dedicado (o maior módulo, $\approx$430 linhas), que converte o ficheiro em
 registos \texttt{Person} e nas respetivas relações, com suporte a
 etiquetagem de famílias (permitindo distinguir várias árvores na mesma
 conta).
@@ -150,30 +155,39 @@ O M3 é o módulo de IA generativa central. Combina três componentes: um
 \subsection{Cliente LLM híbrido e \emph{fallback}}
 
 O \texttt{LLMClient} implementa uma \textbf{cadeia de \emph{fallback} de
-três níveis} para a geração de texto: privilegia a inferência local via
-\emph{Ollama} (Llama~3.2~3B); se esta não estiver disponível --- como
-sucede no alojamento gratuito, sem \textsc{gpu} --- recorre ao \emph{Groq}
-(modelos abertos \emph{Llama~3.3~70B}, camada gratuita), que é o
-\textbf{motor de texto na nuvem}; e só se o Groq falhar entra o
-\emph{Gemini~Flash} como última rede de segurança. Esta ordem é
-\textbf{deliberada}: a quota gratuita do Gemini fica \textbf{reservada para
-a análise visual} (M1), que se mantém \emph{Gemini-only} por o Groq não
-oferecer visão equivalente. Reparte-se assim o texto (Groq) e a visão
-(Gemini) por dois serviços gratuitos distintos, evitando que compitam pela
-mesma quota diária. O \Cref{lst:llm} mostra o coração desta lógica: se um
-nível falhar \emph{durante} a geração, há \emph{fallback} em tempo de
-execução; só quando \emph{todos} falham é lançada uma exceção que marca a
-tarefa como falhada --- evitando guardar uma narrativa falsa.
+três níveis} para a geração de texto. O motor primário é o \emph{Groq}
+(modelos abertos \emph{Llama~3.3~70B}, camada gratuita generosa e rápida);
+na sua ausência --- tipicamente sem ligação à Internet --- recorre-se à
+inferência local via \emph{Ollama} (Llama~3.2~3B), que mantém a opção
+\emph{totalmente offline e privada}; e só se ambos falharem entra o
+\emph{Gemini~Flash} como última rede de segurança. A ordem é
+\textbf{deliberada} por dois motivos. Primeiro, o \emph{desempenho}: o
+Llama~3.2~3B local, executado em \textsc{cpu}, é demasiado lento para uso
+interativo (a história ficava ``a escrever\ldots'' durante minutos), pelo
+que o Groq --- um modelo de 70B servido na nuvem --- oferece
+simultaneamente melhor qualidade e resposta quase imediata. Segundo, a
+quota gratuita do Gemini fica \textbf{reservada para a análise visual}
+(M1), que se mantém \emph{Gemini-only} por o Groq não oferecer visão
+equivalente; reparte-se assim o texto (Groq) e a visão (Gemini) por dois
+serviços gratuitos distintos, evitando que compitam pela mesma quota
+diária. A inferência local (Ollama) permanece disponível para quem
+privilegie a \emph{privacidade} ou opere sem ligação. O \Cref{lst:llm}
+mostra o coração desta lógica: se um nível falhar \emph{durante} a geração,
+há \emph{fallback} em tempo de execução; só quando \emph{todos} falham é
+lançada uma exceção que marca a tarefa como falhada --- evitando guardar
+uma narrativa falsa.
 
 \begin{lstlisting}[language=Python,caption={Cliente LLM com cadeia de
-\emph{fallback} de três níveis para texto (Ollama $\rightarrow$ Groq
+\emph{fallback} de três níveis para texto (Groq $\rightarrow$ Ollama
 $\rightarrow$ Gemini); o Gemini fica reservado para a visão
 (\texttt{llm\_client.py}).},label={lst:llm}]
 def generate(self, prompt: str, max_tokens: int = 1500) -> str:
-    if self._ollama_ok:                            # 1. local (privacidade)
-        return self._ollama_generate(prompt, max_tokens)
-    if self._groq_ok:                              # 2. Groq (texto na nuvem)
+    # Texto: Groq (70B, rapido) -> Ollama (offline/local) -> Gemini.
+    # Groq primeiro porque o Ollama 3B local em CPU e demasiado lento.
+    if self._groq_ok:                              # 1. Groq (nuvem, rapido)
         return self._groq_generate(prompt, max_tokens)
+    if self._ollama_ok:                            # 2. local (offline/privado)
+        return self._ollama_generate(prompt, max_tokens)
     return self._gemini_generate(prompt, max_tokens)  # 3. ultimo recurso
 
 def _groq_generate(self, prompt, max_tokens, _prev_error=None) -> str:
@@ -264,6 +278,19 @@ PT_PT_RULES = """REGRAS OBRIGATORIAS DE PORTUGUES EUROPEU (NAO BRASILEIRO):
 - Colocacao do pronome: "da-me", "faz-me" (NUNCA "me da", "me faz")."""
 \end{lstlisting}
 
+\textbf{Rede de segurança determinística.} Como a instrução por si só não
+é fiável --- mesmo avisados, o Llama e o Gemini reincidem no português do
+Brasil ---, acrescentou-se um \textbf{pós-processador determinístico}
+(\texttt{pt\_pt.py}) que corre \emph{depois} da geração e corrige
+mecanicamente os brasileirismos mais frequentes: substituições de
+vocabulário inequívocas e que preservam género/número (\emph{trem}\,$\rightarrow$\,\emph{comboio},
+\emph{fazenda}\,$\rightarrow$\,\emph{quinta}, \emph{caminhão}\,$\rightarrow$\,\emph{camião}\ldots)
+e a conversão da construção \emph{auxiliar~+~gerúndio} para
+\emph{auxiliar~+~a~+~infinitivo} (``estava chorando''\,$\rightarrow$\,``estava a
+chorar''), o sinal gramatical mais reconhecível da variante. O mesmo
+módulo expõe uma função \texttt{count\_brasileirismos} usada como métrica
+objetiva de aderência ao PT-PT (\Cref{sec:qualidade}).
+
 \subsection{Segmentação em cenas (sincronização narrativa--imagem)}
 \label{sub:cenas}
 
@@ -324,21 +351,49 @@ removem as suas fotografias e documentos (por exemplo, o retrato e uma
 certidão), gerindo o conjunto do lado da pessoa --- o inverso da etiquetagem
 ``quem aparece'' feita do lado da fotografia.
 
+\subsection{Regeneração orientada por \emph{feedback}}
+\label{sub:regenerar}
+
+A geração raramente acerta à primeira no registo pretendido. Para o
+suportar sem obrigar a recomeçar, o leitor de histórias oferece uma
+\textbf{regeneração \emph{in-place} orientada por \emph{feedback}}: o
+utilizador escreve uma nota em texto livre (por exemplo, ``mais curta'',
+``foca-te no avô João'' ou ``tom mais sóbrio'') e o sistema reescreve a
+narrativa \emph{sobre a mesma história}, reutilizando as mesmas
+fotografias, pessoas, idioma e definições de voz/legendas, e preservando o
+mesmo identificador (a nota é incorporada no \emph{prompt} como instrução
+de prioridade máxima). O mecanismo reusa o gerador do M3 com um parâmetro
+\texttt{update\_story\_id}, atualizando o texto e a respetiva segmentação
+em cenas em vez de criar um registo novo --- o que evita acumular versões
+e mantém o vídeo eventualmente já gerado coerente com a última narrativa.
+
 \section{Módulo M4 --- Geração Multimédia}
 \label{sec:impl_m4}
 
 O M4 converte uma narrativa num \textbf{vídeo documental} MP4 (H.264,
 $1280\times720$, 24~fps por defeito --- a resolução e os \emph{frames}/segundo
-são parametrizáveis por variável de ambiente, permitindo aliviar a memória em
-ambientes restritos, \Cref{sec:limitacoes}; em produção usa-se $854\times480$
-a 20~fps, pois a 720p o \emph{render} excedia os 512~MB e deixava o vídeo
-preso indefinidamente em processamento). O \texttt{M4Processor} orquestra a
-seleção cronológica das fotografias, a síntese de voz da narrativa e a montagem
-do vídeo, mantendo apenas espaço de trabalho temporário no disco (as
+são parametrizáveis por variável de ambiente). O \texttt{M4Processor} orquestra
+a seleção cronológica das fotografias, a síntese de voz da narrativa e a
+montagem do vídeo, mantendo apenas espaço de trabalho temporário no disco (as
 fotografias e o vídeo final vivem no \emph{Storage}). A montagem corre numa
 \emph{thread} dedicada e o pedido é tratado de forma \textbf{síncrona}, mantendo
-a instância acordada durante o \emph{render} (evitando o problema das tarefas de
-segundo plano abandonadas no plano gratuito).
+a instância acordada durante o \emph{render}.
+
+\textbf{Geração local, reprodução universal.} A montagem com MoviePy/FFmpeg
+é intensiva em memória e a 720p excede os $\approx$512~MB do plano gratuito do
+Render (\emph{out-of-memory}, que deixava o vídeo preso em processamento). Em
+vez de degradar a qualidade, optou-se por uma política de \textbf{geração
+exclusivamente local}: na nuvem, a flag \texttt{VIDEO\_LOCAL\_ONLY} faz o
+\emph{backend} \textbf{recusar} de imediato o pedido de \emph{render} (com uma
+mensagem clara), ao passo que, em ambiente local, o vídeo é montado a 720p sem
+restrição de memória. Como o \emph{backend} local escreve o MP4 no \emph{mesmo}
+\emph{Storage} (Supabase) que a nuvem consome, o vídeo \textbf{pré-gerado
+localmente} fica disponível e reproduzível no site implantado sem qualquer
+\emph{render} em tempo real --- a reprodução é leve (apenas servir o ficheiro) e
+nunca é afetada pelo limite de memória. Esta separação entre \emph{produzir}
+(local, pesado) e \emph{reproduzir} (nuvem, leve) é uma consequência direta do
+requisito de que tudo o que se faz \emph{online} seja também possível
+\emph{localmente}, e vice-versa.
 
 \subsection{Montagem cinematográfica}
 
@@ -350,19 +405,29 @@ O \texttt{video\_builder} eleva a qualidade percebida acima de um simples
   fotografia cabe inteira no quadro, sem cortes nem distorção, sobre um
   fundo composto pela mesma imagem ampliada, desfocada (\emph{Gaussian
   blur}) e escurecida — um pano de fundo cinematográfico.
-  \item \textbf{Efeito Ken Burns}: \emph{zoom} subtil
-  ($1.0\!\rightarrow\!1.08$) e \emph{pan} direcional com aceleração suave
-  (\emph{smoothstep}). O ângulo de \emph{pan} é determinístico a partir do
-  \emph{hash} do caminho do ficheiro, garantindo que fotografias
-  consecutivas não se movem na mesma direção (\Cref{lst:kenburns}).
+  \item \textbf{Movimento por fotografia configurável}
+  (\texttt{VIDEO\_MOTION}): \emph{none} (estático), \emph{gentle} ou o
+  \textbf{efeito Ken~Burns} --- \emph{zoom} subtil ($1.0\!\rightarrow\!1.06$)
+  e \emph{pan} direcional com aceleração suave (\emph{smoothstep}), com o
+  ângulo determinístico a partir do \emph{hash} do caminho do ficheiro para
+  que fotografias consecutivas não se movam na mesma direção
+  (\Cref{lst:kenburns}). Por \textbf{omissão} usa-se o modo \emph{none}
+  (fotografias estáticas): além de aliviar a montagem, permite ``pré-cozer''
+  uma única vez cada fotograma de cena, acelerando o \emph{render}.
   \item \textbf{Transições} por \emph{crossfade} e \emph{fade-to-black}
-  final, evitando cortes abruptos.
-  \item \textbf{Cartões de título e de fim} de abertura e fecho, e
-  \textbf{legendas} (\emph{lower thirds}) com data e local de cada
-  fotografia.
+  final, evitando cortes abruptos. O \emph{crossfade} usa uma implementação
+  própria (\texttt{\_concatenate\_with\_crossfade}) que mistura apenas os
+  \emph{frames} sobrepostos, em vez do \texttt{CompositeVideoClip} do
+  MoviePy --- uma otimização que reduziu drasticamente o tempo de montagem
+  (\Cref{sec:resultados_testes}).
+  \item \textbf{Cartões de título e de fim} de abertura e fecho. O restante
+  vídeo é mantido \textbf{limpo}, sem texto gravado na imagem: as legendas
+  de narração deixaram de ser ``cozidas'' como \emph{lower thirds} e passaram
+  a uma \textbf{faixa de legendas comutável} (ver
+  \Cref{sub:narracao_legendas}), mais legível e opcional.
   \item \textbf{Ritmo calibrado}: piso de $\sim$4~s por fotografia em modo
   cena (subido de 3~s), para que nenhuma imagem passe a correr contra o
-  \emph{crossfade} de 1.2~s.
+  \emph{crossfade} de 1.6~s.
 \end{itemize}
 
 \begin{lstlisting}[language=Python,caption={Geração de cada fotograma do
@@ -381,13 +446,16 @@ def make_frame(t: float) -> np.ndarray:
     return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H)))
 \end{lstlisting}
 
-\subsection{Narração e sincronização áudio-vídeo por cena}
+\subsection{Narração, voz e legendas}
+\label{sub:narracao_legendas}
 
 A narração é gerada por \textbf{síntese de voz} (vozes neuronais
 europeias do \emph{edge-tts}, com \emph{gTTS} como alternativa) na língua
 em que a história foi escrita (capturada em \texttt{Story.language}),
 garantindo coerência mesmo que o utilizador altere depois o idioma da
-interface.
+interface. O utilizador pode \textbf{escolher a voz} --- masculina ou
+feminina --- no assistente de geração (\texttt{Story.voice}); o M4 resolve
+essa preferência para a voz neuronal correspondente em cada idioma.
 
 Quando a história tem cenas (\Cref{sub:cenas}), o M4 entra em
 \textbf{modo documentário} (\texttt{build\_documentary}): sintetiza
@@ -427,6 +495,21 @@ sistema.}
 \caption{Exemplo de fotograma de um vídeo documental gerado pelo M4.}
 \label{fig:frame_video}
 \end{figure}
+
+\textbf{Legendas como faixa sincronizada (WebVTT).} Em vez de gravar o
+texto na imagem (o que o tornava pequeno e permanente), a narração é
+exportada como uma \textbf{faixa de legendas WebVTT} (\texttt{.vtt})
+\emph{comutável} no leitor. A sincronização é \textbf{ao nível da palavra}:
+o \emph{edge-tts} devolve, com o áudio, os carimbos temporais de cada
+palavra (\emph{WordBoundary}), a partir dos quais se escreve o ficheiro
+\texttt{.vtt} alinhado exatamente com a fala. O ficheiro é carregado para o
+\emph{Storage} ao lado do MP4 e servido por um \emph{endpoint} próprio; no
+leitor, uma faixa \texttt{<track>} permite ligar/desligar as legendas e
+escolher o tamanho (pequeno/médio/grande, via \texttt{::cue}). Para o
+descarregamento, as legendas são ainda \emph{embutidas} no próprio MP4
+(\emph{mux} \texttt{mov\_text} via FFmpeg), de modo que o ficheiro
+transferido as inclua. Assim, o vídeo no ecrã fica limpo por omissão, mas a
+acessibilidade textual está sempre disponível.
 
 \section{Infraestrutura do \emph{Backend}}
 \label{sec:impl_backend}
@@ -503,7 +586,7 @@ async def _sweep_orphans() -> None:
 
 O sistema usa \textbf{structlog} para \emph{logging} estruturado (stdout +
 ficheiro rotativo). A sonda profunda \texttt{/healthz} verifica todas as
-dependências (base de dados, Ollama, Gemini, Redis, ChromaDB, disco). Os
+dependências (base de dados, Ollama, Groq, Gemini, Redis, ChromaDB, disco). Os
 \emph{uploads} são validados por \emph{magic bytes} (libmagic), tipo MIME
 e limites de tamanho (25~MB para fotografias, 100~MB para GEDCOM), e o
 \emph{rate limiting} por IP (slowapi) protege contra abuso, com limites
@@ -529,7 +612,7 @@ Geração (narrativa + vídeo) & 5/minuto \\
 \label{sec:impl_frontend}
 
 A \textsc{spa} React/TypeScript distingue rigorosamente \emph{estado de
-servidor} (gerido pelo \textbf{TanStack Query}, com $\approx$30 \emph{hooks}
+servidor} (gerido pelo \textbf{TanStack Query}, com $\approx$50 \emph{hooks}
 que encapsulam pedidos, \emph{cache}, invalidação e \emph{polling}) de
 \emph{estado de cliente} (gerido pelo \textbf{Zustand}: autenticação e
 tema). O cliente HTTP (axios) injeta automaticamente o \emph{token}
@@ -560,6 +643,26 @@ pertence (com ligação direta), clarificando a organização do acervo. A
 interativa} do \emph{pipeline} (foto $\rightarrow$ análise por IA $\rightarrow$
 narrativa $\rightarrow$ vídeo), com a descrição e a história a serem
 ``escritas'' ao vivo, comunicando o valor do sistema antes do registo.
+
+\textbf{Gestão de histórias.} A lista de histórias ganhou ferramentas de
+curadoria: \textbf{pesquisa} por título/texto, \textbf{filtro} por projeto,
+\textbf{ordenação} (recentes/antigas/título) e \textbf{favoritos} (estrela
+que fixa as histórias preferidas no topo), além de metadados por cartão
+(número de fotografias e de pessoas usadas). No leitor, cada história pode
+ser \textbf{exportada para PDF} (impressão formatada apenas com o título e a
+prosa, via \emph{stylesheet} de impressão) e \textbf{regenerada com
+\emph{feedback}} (\Cref{sub:regenerar}).
+
+\textbf{Árvore familiar interativa.} A vista \emph{React~Flow} da família
+deixou de ser apenas de leitura: permite \textbf{pesquisar} uma pessoa e
+\textbf{centrar} a vista nela, \textbf{destacar a linhagem} ao clicar num nó
+(ascendentes, descendentes e cônjuges iluminam-se enquanto o resto da
+árvore se esbate), \textbf{exportar a árvore como imagem PNG} e
+\textbf{adicionar familiares} diretamente (botões \emph{pai}/\emph{mãe}/\emph{filho(a)}/\emph{cônjuge}
+que criam a pessoa e a ligação no mesmo passo). Toda a interface está
+disponível em \textbf{português europeu} e \textbf{inglês}
+(\Cref{sec:uiux}), incluindo as cadeias geradas no cliente, com o seletor de
+idioma a cobrir a totalidade dos ecrãs.
 
 \subsection{Resiliência a \emph{cold starts}}
 \label{sub:coldstart}
@@ -614,10 +717,14 @@ Supabase Storage, evitando expor as chaves de objeto.
 
 \subsection{Privacidade por inferência local}
 
-A herança \emph{local-first} mantém-se na opção de executar o \textsc{llm}
-localmente (Ollama): nesse modo, os factos do arquivo não são enviados a
-terceiros para a geração de texto. A integração com o Gemini é um
-\emph{fallback} explícito e documentado.
+A herança \emph{local-first} mantém-se na \textbf{opção} de executar o
+\textsc{llm} localmente (Ollama): com o Ollama disponível e sem ligação à
+nuvem, a cadeia recai sobre ele e os factos do arquivo não são enviados a
+terceiros para a geração de texto. Por omissão, e por razões de desempenho
+(\Cref{sec:impl_m3}), o motor de texto na nuvem é o Groq e o Gemini serve a
+visão e a rede de segurança final; mas o caminho totalmente local
+permanece um \emph{fallback} de primeira classe, garantindo que o sistema
+funciona --- e pode ser privado --- mesmo offline.
 
 \section{\emph{Deployment}}
 \label{sec:impl_deploy}

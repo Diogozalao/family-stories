@@ -32,12 +32,15 @@ A solução foi desenvolvida como uma aplicação Web completa, com um
 \textsc{React}/\textsc{TypeScript}, e evoluiu de um protótipo
 \emph{local-first} para uma arquitetura cliente-servidor multi-inquilino
 implantada na nuvem (\textsc{Render}, \textsc{Vercel} e \textsc{Supabase}
-para autenticação, base de dados e armazenamento). Adota uma estratégia
-de inteligência artificial híbrida — inferência local privilegiada via
-\emph{Ollama} (Llama~3.2) com recurso automático ao \emph{Google~Gemini} —
-e técnicas de engenharia de robustez (degradação graciosa do \textsc{rag},
-\emph{fallbacks} de modelo e rebaixamento síncrono) que mantêm o sistema
-operacional mesmo em ambientes com dependências reduzidas. Os resultados
+para autenticação, base de dados e armazenamento), correndo de forma
+idêntica em ambiente local e \emph{online}. Adota uma estratégia de
+inteligência artificial \textbf{em cascata e a custo nulo} — texto via
+\emph{Groq} (Llama~3.3~70B, na nuvem), com a inferência local via
+\emph{Ollama} e o \emph{Google~Gemini} como alternativas, e visão via
+\emph{Gemini} — e técnicas de engenharia de robustez (degradação graciosa
+do \textsc{rag}, \emph{fallbacks} de modelo e rebaixamento síncrono) que
+mantêm o sistema operacional mesmo em ambientes com dependências
+reduzidas. Os resultados
 demonstram a viabilidade de gerar, de forma autónoma e a custo
 essencialmente nulo, narrativas factualmente ancoradas e vídeos
 documentais coerentes a partir de um acervo familiar heterogéneo.
@@ -76,11 +79,13 @@ The solution was built as a complete web application, with an
 asynchronous \textsc{FastAPI} backend and a \textsc{React}/\textsc{TypeScript}
 frontend, evolving from a local-first prototype into a cloud-deployed,
 multi-tenant client–server architecture (Render, Vercel and Supabase for
-authentication, database and storage). It adopts a hybrid AI strategy —
-local-first inference via Ollama (Llama~3.2) with automatic fallback to
-Google~Gemini — and robustness engineering techniques (graceful RAG
-degradation, model fallbacks and synchronous downgrade) that keep the
-system operational even in dependency-constrained environments. The
+authentication, database and storage), running identically in local and
+online environments. It adopts a \textbf{zero-cost, cascading AI strategy}
+— text via Groq (cloud Llama~3.3~70B), with local Ollama inference and
+Google~Gemini as fallbacks, and vision via Gemini — and robustness
+engineering techniques (graceful RAG degradation, model fallbacks and
+synchronous downgrade) that keep the system operational even in
+dependency-constrained environments. The
 results demonstrate the feasibility of autonomously generating, at
 essentially zero cost, factually grounded narratives and coherent
 documentary videos from a heterogeneous family archive.
