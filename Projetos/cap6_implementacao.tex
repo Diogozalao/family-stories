@@ -182,13 +182,13 @@ uma narrativa falsa.
 $\rightarrow$ Gemini); o Gemini fica reservado para a visão
 (\texttt{llm\_client.py}).},label={lst:llm}]
 def generate(self, prompt: str, max_tokens: int = 1500) -> str:
-    # Texto: Groq (70B, rapido) -> Ollama (offline/local) -> Gemini.
-    # Groq primeiro porque o Ollama 3B local em CPU e demasiado lento.
-    if self._groq_ok:                              # 1. Groq (nuvem, rapido)
+    # Texto: Groq (70B, rápido) -> Ollama (offline/local) -> Gemini.
+    # Groq primeiro porque o Ollama 3B local em CPU é demasiado lento.
+    if self._groq_ok:                              # 1. Groq (nuvem, rápido)
         return self._groq_generate(prompt, max_tokens)
     if self._ollama_ok:                            # 2. local (offline/privado)
         return self._ollama_generate(prompt, max_tokens)
-    return self._gemini_generate(prompt, max_tokens)  # 3. ultimo recurso
+    return self._gemini_generate(prompt, max_tokens)  # 3. último recurso
 
 def _groq_generate(self, prompt, max_tokens, _prev_error=None) -> str:
     try:
@@ -234,7 +234,7 @@ permite ao RAG degradar para um \emph{stub} sem ChromaDB
 try:
     import chromadb
     _CHROMA_AVAILABLE = True
-except Exception as _exc:                # wheel indisponivel em deploy
+except Exception as _exc:                # wheel indisponível em deploy
     chromadb = None
     _CHROMA_AVAILABLE = False
     log.info("rag_chromadb_unavailable", reason=str(_exc))
@@ -270,12 +270,12 @@ através de um sufixo de \emph{prompt}, sem \emph{templates} paralelos.
 \begin{lstlisting}[language=Python,caption={Excerto das regras de
 português europeu injetadas em todos os \emph{prompts}
 (\texttt{templates.py}).},label={lst:ptpt}]
-PT_PT_RULES = """REGRAS OBRIGATORIAS DE PORTUGUES EUROPEU (NAO BRASILEIRO):
-- Gerundio proibido em frases simples: usa "a + infinitivo".
-  - "estou a escrever" (NAO "estou escrevendo")
-- Vocabulario europeu: "comboio" (nao "trem"), "telemovel" (nao "celular"),
-  "casa de banho" (nao "banheiro"), "rapariga" (nao "moca")...
-- Colocacao do pronome: "da-me", "faz-me" (NUNCA "me da", "me faz")."""
+PT_PT_RULES = """REGRAS OBRIGATÓRIAS DE PORTUGUÊS EUROPEU (NÃO BRASILEIRO):
+- Gerúndio proibido em frases simples: usa "a + infinitivo".
+  - "estou a escrever" (NÃO "estou escrevendo")
+- Vocabulário europeu: "comboio" (não "trem"), "telemóvel" (não "celular"),
+  "casa de banho" (não "banheiro"), "rapariga" (não "moça")...
+- Colocação do pronome: "dá-me", "faz-me" (NUNCA "me dá", "me faz")."""
 \end{lstlisting}
 
 \textbf{Rede de segurança determinística.} Como a instrução por si só não
@@ -303,7 +303,7 @@ estrutura serializável guardada na coluna \texttt{stories.scenes}:
 
 \begin{lstlisting}[language=Python,caption={Forma de uma cena, guardada em
 \texttt{stories.scenes}.},label={lst:scene}]
-{"text": "Era o verao de 1962, quando...", "photo_ids": [12, 7],
+{"text": "Era o verão de 1962, quando...", "photo_ids": [12, 7],
  "caption": "Lisboa, 1962"}
 \end{lstlisting}
 
@@ -556,7 +556,7 @@ _EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inproc-task")
 def run_in_background(task_record_id, body_factory):
     synthetic_id = f"inproc-{uuid4().hex}"
     def _runner():
-        # asyncio.run num thread proprio -> nao bloqueia o loop do FastAPI
+        # asyncio.run num thread próprio -> não bloqueia o loop do FastAPI
         run_async(run_with_tracking(task_record_id, synthetic_id, body_factory))
     _EXECUTOR.submit(_runner)
     return synthetic_id
