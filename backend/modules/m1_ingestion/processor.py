@@ -43,7 +43,7 @@ MIME_TO_TYPE = {
 
 
 class M1Processor:
-    """Pipeline orchestrator: scan → EXIF → Gemini → OCR → Storage upload."""
+    """Pipeline orchestrator: scan → EXIF → Storage upload → Gemini → OCR."""
 
     def __init__(self):
         self.exif     = ExifExtractor()
