@@ -351,6 +351,8 @@ export default {
     resetLayout: "Reset layout",
     searchPerson: "Search person…",
     exportImage: "Export image",
+    viewDetails: "View details",
+    lineageHighlighted: "lineage highlighted",
     editor: {
       title: "Tree editor",
       finish: "Done",

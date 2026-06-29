@@ -359,6 +359,8 @@ export default {
     resetLayout: "Repor automático",
     searchPerson: "Pesquisar pessoa…",
     exportImage: "Exportar imagem",
+    viewDetails: "Ver detalhes",
+    lineageHighlighted: "linhagem destacada",
     editor: {
       title: "Editor da árvore",
       finish: "Concluir",

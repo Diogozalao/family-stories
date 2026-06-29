@@ -7,7 +7,7 @@ import ReactFlow, {
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toPng } from "html-to-image";
-import { Download, Loader2, RotateCcw, Search, X } from "lucide-react";
+import { Download, Eye, Loader2, RotateCcw, Search, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -376,7 +376,8 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
         onEdgesChange={onEdgesChange}
         onNodeDragStop={onNodeDragStop}
         onInit={(inst) => { rf.current = inst; }}
-        onNodeClick={(_e, node) => { setFocusId(Number(node.id)); onPersonClick?.(Number(node.id)); }}
+        onNodeClick={(_e, node) => setFocusId(Number(node.id))}
+        onNodeDoubleClick={(_e, node) => onPersonClick?.(Number(node.id))}
         onPaneClick={() => setFocusId(null)}
         nodeTypes={nodeTypes}
         fitView
@@ -441,6 +442,40 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
             {t("family.resetLayout")}
           </button>
         </Panel>
+
+        {/* Selected person: a single click only highlights the lineage; the
+            details/editor open from this card or via double-click. */}
+        {focusId != null && (() => {
+          const fp = persons.find((p) => p.id === focusId);
+          if (!fp) return null;
+          const years = yearsLabel(fp);
+          return (
+            <Panel position="bottom-center">
+              <div className="mb-2 flex items-center gap-3 rounded-xl border border-stone-200 bg-white/95 py-2 pl-3.5 pr-2 shadow-lift backdrop-blur dark:border-stone-700 dark:bg-stone-900/95">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold leading-tight text-stone-800 dark:text-stone-100">{fp.name}</p>
+                  <p className="truncate text-xs text-stone-500 dark:text-stone-400">
+                    {years ? `${years} · ` : ""}{t("family.lineageHighlighted")}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onPersonClick?.(fp.id)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-stone-700 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                  {t("family.viewDetails")}
+                </button>
+                <button
+                  onClick={() => setFocusId(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200"
+                  title={t("common.close")}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </Panel>
+          );
+        })()}
       </ReactFlow>
     </div>
   );
