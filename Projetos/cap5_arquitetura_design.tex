@@ -84,14 +84,31 @@ toda a \emph{stack}.
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=\linewidth]{fullstack.png}
-\figph[8cm]{Diagrama vertical \emph{full-stack} (camada a camada):
-Frontend (React/Tailwind) $\rightarrow$ Segurança de rede (CORS, rate
-limiting) $\rightarrow$ Autenticação (JWT/Supabase) $\rightarrow$ API
-Gateway (FastAPI/Pydantic, validação) $\rightarrow$ Fila assíncrona
-(Celery+Redis) $\rightarrow$ Módulos M1, M2, M3, M4 $\rightarrow$ Camada
-de dados (Supabase Postgres + Storage). Existe um esboço deste diagrama
-no documento de estudo inicial que pode ser redesenhado.}
+\begin{tikzpicture}[
+  font=\footnotesize,
+  layer/.style={rectangle,draw,rounded corners,align=center,
+                minimum height=0.82cm,text width=9.2cm,fill=white},
+  arrow/.style={{Latex[length=2mm]}-{Latex[length=2mm]},thick,gray!70},
+  node distance=0.45cm,
+]
+\node[layer,fill=black!5] (l1)
+  {\textbf{Frontend} \;$\cdot$\; React $\cdot$ TypeScript $\cdot$ Tailwind \;(Vercel)};
+\node[layer,below=of l1] (l2)
+  {\textbf{Segurança de rede} \;$\cdot$\; CORS $\cdot$ \emph{rate limiting} (slowapi)};
+\node[layer,below=of l2] (l3)
+  {\textbf{Autenticação} \;$\cdot$\; JWT validado por JWKS (Supabase Auth)};
+\node[layer,below=of l3] (l4)
+  {\textbf{API Gateway} \;$\cdot$\; FastAPI $\cdot$ Pydantic (validação de \emph{schema})};
+\node[layer,below=of l4,fill=accent!14,draw=accent] (l5)
+  {\textbf{Pipeline} \;$\cdot$\; M1 Ingestão $\cdot$ M2 Temporal $\cdot$ M3 Narrativa $\cdot$ M4 Multimédia};
+\node[layer,below=of l5,fill=black!6] (l6)
+  {\textbf{Dados} \;$\cdot$\; Supabase: PostgreSQL (asyncpg) $\cdot$ Storage};
+\draw[arrow] (l1) -- (l2);
+\draw[arrow] (l2) -- (l3);
+\draw[arrow] (l3) -- (l4);
+\draw[arrow] (l4) -- (l5);
+\draw[arrow] (l5) -- (l6);
+\end{tikzpicture}
 \caption{Vista \emph{full-stack} detalhada das camadas do sistema.}
 \label{fig:fullstack}
 \end{figure}
@@ -271,13 +288,32 @@ TaskRecord   & N --- 1 & Story / VideoOutput (resultado) \\
 
 \begin{figure}[H]
 \centering
-% \includegraphics[width=\linewidth]{modelo_er.png}
-\figph[7.5cm]{Diagrama Entidade-Relação (ER). Entidades:
-MediaFile, Person, TimelineEvent, Story, VideoOutput, Project,
-ProjectMedia, TaskRecord — todas com \texttt{user\_id} (UUID). Relações:
-Project~1--N~ProjectMedia~N--1~MediaFile; Story~1--N~VideoOutput;
-Story~N--1~Project. Sugestão: gerar a partir dos modelos SQLAlchemy
-(e.g.\ com \texttt{eralchemy} ou draw.io).}
+\begin{tikzpicture}[
+  font=\scriptsize,
+  ent/.style={rectangle,draw,rounded corners,fill=black!4,
+              minimum height=0.72cm,minimum width=2cm,align=center},
+  rel/.style={thick,gray!75},
+  card/.style={font=\ttfamily\scriptsize,fill=white,inner sep=1pt},
+]
+\node[font=\scriptsize\itshape,gray!70] at (-1.4,3.9)
+  {todas as entidades referenciam \texttt{user\_id} (UUID)};
+\node[ent,fill=accent!16,draw=accent] (proj) at (0,3)    {Project};
+\node[ent] (pm)    at (-3.4,1.4)  {ProjectMedia};
+\node[ent] (mf)    at (-3.4,-0.5) {MediaFile};
+\node[ent] (story) at (1.3,1.4)   {Story};
+\node[ent] (vid)   at (1.3,-0.5)  {VideoOutput};
+\node[ent] (task)  at (4.6,1.4)   {TaskRecord};
+\node[ent] (per)   at (-6.8,1.4)  {Person};
+\node[ent] (tl)    at (-6.8,-0.5) {TimelineEvent};
+
+\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (pm);
+\draw[rel] (pm)    -- node[card,pos=0.22]{N} node[card,pos=0.82]{1} (mf);
+\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (story);
+\draw[rel] (story) -- node[card,pos=0.22]{1} node[card,pos=0.82]{N} (vid);
+\draw[rel] (story) -- node[card,pos=0.25]{1} node[card,pos=0.8]{N} (task);
+\draw[rel] (mf)    -- node[card,pos=0.5]{N:N} (per);
+\draw[rel] (mf)    -- node[card,pos=0.2]{1} node[card,pos=0.82]{N} (tl);
+\end{tikzpicture}
 \caption{Modelo de dados (diagrama entidade-relação).}
 \label{fig:er}
 \end{figure}
