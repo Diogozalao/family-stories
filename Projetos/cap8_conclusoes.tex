@@ -25,10 +25,10 @@ foram alcançados.
 Para além dos objetivos definidos, o trabalho concretizou vários avanços
 que elevam o resultado: a \textbf{narrativa segmentada em cenas}, que
 sincroniza cada fotografia com a sua narração no vídeo (transformando o
-\emph{slideshow} num verdadeiro documentário); a \textbf{geração
-assíncrona} — quando não há \emph{worker} Celery, as tarefas longas correm
-num executor \emph{in-process}, devolvendo a resposta de imediato e
-atualizando o estado por \emph{polling}; uma \textbf{árvore familiar
+\emph{slideshow} num verdadeiro documentário); um \textbf{executor de
+tarefas \emph{in-process}} que substitui um \emph{worker} Celery pago no
+plano gratuito (usado, por exemplo, na análise diferida das fotografias),
+com limpeza de tarefas órfãs no arranque; uma \textbf{árvore familiar
 interativa} (React~Flow) com pesquisa, destaque de linhagem, exportação em
 imagem e edição/adição de familiares; legendas de vídeo como \textbf{faixa
 WebVTT} sincronizada palavra-a-palavra, com escolha de voz; e ferramentas

@@ -63,18 +63,24 @@ IA híbrida local/nuvem.}
 \label{fig:arquitetura}
 \end{figure}
 
-Uma característica determinante da arquitetura é que os módulos M1--M4
-\emph{não} são invocados diretamente no ciclo pedido-resposta da API:
-operações como o \textsc{ocr}, a inferência do \textsc{llm} e a montagem
-de vídeo podem demorar de segundos a minutos. Por isso, estas operações
-correm em segundo plano, por uma de duas vias intermutáveis (ver
+Uma característica determinante da arquitetura é o modo como se gerem as
+operações demoradas dos módulos M1--M4 (\textsc{ocr}, análise visual,
+inferência do \textsc{llm} e montagem de vídeo), que podem demorar de
+segundos a minutos. O sistema dispõe de uma \textbf{infraestrutura de
+tarefas em segundo plano} --- com duas vias intermutáveis (ver
 \Cref{sub:async}): uma \textbf{fila de tarefas} (Celery + Redis) quando
 existe um \emph{worker} dedicado, ou um \textbf{executor \emph{in-process}}
 dentro do próprio \emph{backend} quando não existe (o caso do plano
-gratuito). Em ambas, o utilizador submete o pedido, recebe de imediato um
-identificador de tarefa, e o \emph{frontend} acompanha o progresso por
-\emph{polling}. A \Cref{fig:fullstack} apresenta uma vista detalhada,
-camada a camada, de toda a \emph{stack}.
+gratuito) ---, na qual o utilizador recebe de imediato um identificador de
+tarefa e o \emph{frontend} acompanha o progresso por \emph{polling}. Esta
+via é usada, em produção, para a \textbf{análise visual diferida das
+fotografias} (M1). Em contrapartida, a \textbf{geração de narrativa e de
+vídeo corre de forma síncrona}, mantendo a instância acordada durante o
+processamento: uma escolha deliberada, motivada pela fragilidade dos
+\emph{jobs} de segundo plano no plano gratuito (instâncias que adormecem ou
+reiniciam, abandonando a tarefa --- \Cref{sub:async}). A
+\Cref{fig:fullstack} apresenta uma vista detalhada, camada a camada, de
+toda a \emph{stack}.
 
 \begin{figure}[H]
 \centering
@@ -164,24 +170,28 @@ M4 & \texttt{Story} (cenas) + fotografias do \emph{Storage} &
 \end{tabularx}
 \end{table}
 
-\subsection{Sequência de uma geração assíncrona}
+\subsection{Sequência de uma tarefa em segundo plano}
 
-Para uma geração em segundo plano (narrativa ou vídeo), o fluxo é o
-seguinte:
+Quando uma operação corre em segundo plano (em produção, a análise visual
+diferida das fotografias do M1), o fluxo é o seguinte:
 
 \begin{enumerate}[leftmargin=*]
-  \item O \emph{frontend} envia o pedido com \texttt{mode=background}.
-  \item A API valida, cria um registo \texttt{TaskRecord} (estado
+  \item A API valida o pedido, cria um registo \texttt{TaskRecord} (estado
   \texttt{pending}) e devolve \emph{imediatamente} o seu identificador.
   \item A tarefa é despachada para o Celery ou para o executor
   \emph{in-process} (\Cref{sub:async}), que a marca \texttt{running}.
-  \item O módulo (M3 ou M4) executa; ao terminar, o registo passa a
-  \texttt{done} (ou \texttt{failed}) e é ligado ao artefacto produzido
-  (\texttt{story\_id}/\texttt{video\_id}).
-  \item O \emph{frontend} faz \emph{polling} de \texttt{/api/v1/tasks/\{id\}}
-  e, na transição para \texttt{done}, notifica o utilizador com uma ação
-  para abrir a história/vídeo.
+  \item O corpo da tarefa executa; ao terminar, o registo passa a
+  \texttt{done} (ou \texttt{failed}) e é ligado ao artefacto produzido.
+  \item O \emph{frontend} faz \emph{polling} do estado e atualiza a
+  interface na transição para \texttt{done}.
 \end{enumerate}
+
+A geração de \textbf{narrativa} e de \textbf{vídeo} pode, em código, ser
+pedida nesta modalidade (\texttt{mode=background}); contudo, na
+configuração implantada corre \textbf{sincronamente} (\Cref{sub:async},
+\Cref{sec:impl_m4}), mantendo a instância acordada durante o processamento
+e devolvendo o resultado diretamente --- evitando que uma instância gratuita
+que adormeça abandone a tarefa a meio.
 
 \section{Modelo de Dados}
 \label{sec:modelo_dados}
@@ -283,7 +293,7 @@ secundários sóbrios. A tipografia é dupla: \emph{Inter} para a interface
 (legibilidade) e \emph{Fraunces} (serifada) para títulos e para a prosa
 do leitor de histórias, conferindo um registo literário. As animações são
 discretas (\emph{fade-in}, \emph{slide-up}, \emph{skeletons} de
-carregamento), com recurso ao \emph{Framer Motion}.
+carregamento), realizadas com animações \textsc{css} declaradas no Tailwind.
 
 Um detalhe de implementação relevante para a experiência é o
 \textbf{tema} (claro/escuro/sistema): um \emph{script} embutido no
@@ -296,10 +306,13 @@ carregar a página.
 A aplicação organiza-se em rotas \textbf{públicas} (\emph{landing}/login,
 registo, recuperação de palavra-passe, ``sobre'') e \textbf{protegidas},
 acessíveis após autenticação através de uma barra lateral
-(\emph{sidebar}) responsiva. As secções principais são: \emph{Dashboard},
-\emph{Biblioteca}, \emph{Projetos}, \emph{Família}, \emph{Linha
-temporal}, \emph{Histórias}, \emph{Vídeos}, \emph{Gerar}, \emph{Tarefas} e
-\emph{Definições}.
+(\emph{sidebar}) responsiva. As secções visíveis são: \emph{Início},
+\emph{Biblioteca}, \emph{Família}, \emph{Linha temporal}, \emph{Projetos},
+\emph{Gerar}, \emph{Histórias}, \emph{Vídeos} e \emph{Definições}. A página
+de \emph{Tarefas} permanece acessível pela rota \texttt{/tasks}, mas foi
+\textbf{retirada da barra lateral} por as gerações passarem a correr de
+forma síncrona, tornando o acompanhamento por \emph{polling} dispensável no
+uso corrente.
 
 \subsection{Ecrãs principais}
 

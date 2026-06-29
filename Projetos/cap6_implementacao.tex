@@ -635,10 +635,12 @@ api.interceptors.response.use((r) => r, async (err) => {
 });
 \end{lstlisting}
 
-A \textbf{navegação} cobre os dez destinos da aplicação (Início, Biblioteca,
-Família, Linha Temporal, Projetos, Gerar, Histórias, Vídeos, Tarefas e
-Definições), e cada história exibe um \emph{badge} com o \textbf{projeto} a que
-pertence (com ligação direta), clarificando a organização do acervo. A
+A \textbf{navegação} cobre os nove destinos visíveis da aplicação (Início,
+Biblioteca, Família, Linha Temporal, Projetos, Gerar, Histórias, Vídeos e
+Definições; a página de \emph{Tarefas} mantém-se acessível pela rota, mas
+fora da barra lateral), e cada história exibe um \emph{badge} com o
+\textbf{projeto} a que pertence (com ligação direta), clarificando a
+organização do acervo. A
 \textbf{página pública} (\emph{landing}) inclui uma \textbf{demonstração
 interativa} do \emph{pipeline} (foto $\rightarrow$ análise por IA $\rightarrow$
 narrativa $\rightarrow$ vídeo), com a descrição e a história a serem
