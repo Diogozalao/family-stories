@@ -66,8 +66,9 @@ atual:
   \emph{pgvector} (\Cref{sec:trabalho_futuro}) resolveria isto.
   \item \textbf{Sincronização de vídeo aproximada.} A duração de cada
   fotografia segue a narração da sua cena, mas pequenas derivas podem
-  acumular-se em histórias longas; um alinhamento ao nível da palavra
-  (via transcrição) seria mais preciso.
+  acumular-se em histórias longas; alinhar a troca de fotografias ao nível
+  da palavra --- aproveitando os carimbos temporais por palavra já
+  capturados para as legendas --- seria mais preciso.
   \item \textbf{Sem identificação de pessoas.} O reconhecimento facial
   (que tornaria as narrativas menos genéricas) não foi implementado.
   \item \textbf{Cobertura de testes do \emph{frontend}.} A automação de
@@ -76,16 +77,17 @@ atual:
   \item \textbf{Acessibilidade não auditada formalmente.} Existem boas
   práticas, mas falta uma auditoria \textsc{wcag}~AA.
   \item \textbf{Geração de vídeo limitada pela memória no \emph{deploy}
-  gratuito.} A montagem com MoviePy/FFmpeg pode exceder os 512~MB de RAM do
+  gratuito.} A montagem com MoviePy/FFmpeg a 720p excede os 512~MB de RAM do
   plano gratuito do Render, que termina a instância (\emph{out-of-memory}) a
-  meio do \emph{render}. Mitiga-se de duas formas: \emph{(i)} a resolução e os
-  \emph{fps} são parametrizáveis por ambiente, permitindo baixá-los para caber;
-  e \emph{(ii)} como o MP4 final é persistido no \emph{Storage} (Supabase) e a
-  sua reprodução é leve (apenas servir o ficheiro), os vídeos podem ser
-  \textbf{pré-gerados em ambiente local} --- sem o limite de memória e
-  escrevendo no mesmo \emph{backend} --- e depois reproduzidos no site sem
-  qualquer \emph{render} em tempo real. A reprodução nunca é afetada; apenas a
-  geração em tempo real no plano gratuito.
+  meio do \emph{render}. A solução adotada é uma \textbf{política de geração
+  exclusivamente local}: na nuvem, o \emph{backend} \textbf{recusa} o
+  \emph{render} (\texttt{VIDEO\_LOCAL\_ONLY}), evitando o
+  \emph{out-of-memory}; os vídeos são pré-gerados em ambiente local (a 720p,
+  sem limite de memória), escritos no \emph{mesmo} \emph{Storage} (Supabase)
+  e reproduzidos no \emph{site} sem qualquer \emph{render} em tempo real ---
+  a reprodução é leve (apenas servir o ficheiro) e nunca é afetada. A
+  resolução e os \emph{fps} permanecem parametrizáveis por ambiente como
+  ajuste adicional.
   \item \textbf{Quota de visão limitada no nível gratuito.} A análise visual
   das fotografias (M1) depende do Gemini, cujo nível gratuito permite apenas
   poucas dezenas de pedidos por dia; a geração de texto (M3) não é afetada por

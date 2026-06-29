@@ -145,7 +145,7 @@ Taxa de sucesso       & \% de gerações concluídas por \emph{template}      & 
 \end{tabularx}
 \end{table}
 
-\section{Resultados e Bugs Resolvidos}
+\section{Resultados e Defeitos Resolvidos}
 \label{sec:resultados_testes}
 
 Durante o desenvolvimento foram identificados e corrigidos diversos
@@ -174,7 +174,7 @@ passou a posicionar corretamente os eventos e a mostrar, por evento, a
 família e as pessoas envolvidas. Segundo, a \textbf{geração de vídeo} ficava
 indefinidamente ``A processar'' em produção: a montagem a 720p excedia os
 $\approx$512~MB do plano gratuito (\emph{out-of-memory}). A solução foi
-dupla. Por um lado, a \emph{performance}: um \emph{profiling} revelou que o
+dupla. Por um lado, o \emph{desempenho}: uma análise de \emph{profiling} revelou que o
 \emph{crossfade} via \texttt{CompositeVideoClip} do MoviePy consumia a maior
 parte do tempo de montagem; substituí-lo por uma implementação própria, que
 mistura apenas os \emph{frames} sobrepostos, reduziu o tempo de
