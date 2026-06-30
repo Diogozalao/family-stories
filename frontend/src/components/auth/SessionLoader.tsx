@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "../../lib/supabase";
@@ -17,24 +17,36 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
   const setSession  = useAuthStore((s) => s.setSession);
   const setHydrated = useAuthStore((s) => s.setHydrated);
   const queryClient = useQueryClient();
+  // The user id currently reflected in the cache. We only wipe the cache
+  // when this actually changes — see the handler below.
+  const currentUserId = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
 
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
+      currentUserId.current = data.session?.user?.id ?? null;
       setSession(data.session);
       setHydrated();
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return;
       setSession(session);
 
-      // Drop every cached server response when the identity changes so
-      // we never show user A's photos to user B who just signed in on
-      // the same tab.
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+      // Only drop the cache when the actual USER changes (signing in as a
+      // different person, or signing out) — so we never show user A's data
+      // to user B on the same tab.
+      //
+      // CRUCIAL: Supabase fires SIGNED_IN / USER_UPDATED on *routine token
+      // refreshes* too (hourly, on tab re-focus, during long backend
+      // operations). Wiping the cache on those events made the whole app
+      // flash to "0 photos / 0 people / 0 stories" mid-session until a
+      // manual page reload. Comparing the user id keeps refreshes silent.
+      const nextUserId = session?.user?.id ?? null;
+      if (nextUserId !== currentUserId.current) {
+        currentUserId.current = nextUserId;
         queryClient.clear();
       }
     });
