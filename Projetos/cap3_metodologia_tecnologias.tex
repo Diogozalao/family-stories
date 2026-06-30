@@ -45,17 +45,8 @@ Todo o código foi versionado com \textbf{Git}, com \emph{commits}
 descritivos a marcar cada incremento funcional e cada correção. O
 histórico de versões serviu simultaneamente de registo de progresso e de
 mecanismo de segurança (possibilidade de reverter alterações). A
-\Cref{fig:metodologia} ilustra o cronograma das fases.
-
-\begin{figure}[H]
-\centering
-% \includegraphics[width=\linewidth]{cronograma.png}
-\figph[5.5cm]{Cronograma do projeto (diagrama de Gantt) com as fases
-F1--F6 ao longo do tempo. Sugestão: criar em ferramenta de gestão de
-projeto ou em TikZ.}
-\caption{Cronograma das fases de desenvolvimento.}
-\label{fig:metodologia}
-\end{figure}
+\Cref{fig:metodologia} (Anexo~\ref{ap:diagramas}) ilustra o cronograma das
+fases.
 
 \section{\emph{Stack} Tecnológica e Justificação}
 \label{sec:stack}
@@ -130,7 +121,7 @@ Assíncrono sem custo no plano gratuito (\Cref{sub:async}). \\
 
 \subsection{\emph{Backend}: FastAPI}
 
-Escolheu-se o \textbf{FastAPI} pela sua natureza \emph{assíncrona}
+Escolheu-se o \textbf{FastAPI}~\cite{fastapi} pela sua natureza \emph{assíncrona}
 (essencial para um sistema com operações de I/O e de IA potencialmente
 longas), pela validação automática de dados via \textbf{Pydantic} (que
 elimina uma classe inteira de erros de \emph{input}) e pela geração
@@ -142,12 +133,12 @@ forte de ponta a ponta no servidor.
 
 A decisão mais estruturante foi a \textbf{estratégia de IA em cascata},
 assente em fornecedores de camada gratuita. Para a geração de \textbf{texto},
-o motor primário é o \textbf{Groq} (modelos abertos \emph{Llama~3.3~70B},
+o motor primário é o \textbf{Groq}~\cite{groq} (modelos abertos \emph{Llama~3.3~70B},
 camada gratuita generosa); se este não estiver disponível --- tipicamente
 sem ligação à Internet --- recorre-se à inferência \textbf{local} via
-\textbf{Ollama} (\emph{Llama~3.2~3B}), que mantém a opção \emph{totalmente
+\textbf{Ollama}~\cite{ollama} (\emph{Llama~3.2~3B}), que mantém a opção \emph{totalmente
 offline e privada}; e só se ambos falharem entra o \textbf{Google
-Gemini~Flash} como última rede de segurança. A ordem é deliberada: o
+Gemini~Flash}~\cite{gemini} como última rede de segurança. A ordem é deliberada: o
 \emph{Llama~3.2~3B} local, em \textsc{cpu}, é demasiado lento para uso
 interativo, pelo que o Groq (70B na nuvem) oferece simultaneamente melhor
 qualidade e resposta quase imediata. A quota gratuita do Gemini fica ainda
@@ -165,7 +156,7 @@ fornecedor em uso.
 
 \subsection{RAG: ChromaDB}
 
-Para o subsistema \textbf{RAG} adotou-se o \textbf{ChromaDB} como base
+Para o subsistema \textbf{RAG} adotou-se o \textbf{ChromaDB}~\cite{chromadb} como base
 vetorial, recorrendo à sua função de \emph{embeddings} por omissão
 (sem dependência adicional). A escolha recaiu sobre o ChromaDB pela
 simplicidade de integração (persistência local em ficheiro, sem servidor
@@ -183,12 +174,12 @@ Para a Abordagem A (\Cref{sub:geracao_video}) usaram-se o \textbf{MoviePy}
 (composição programática de vídeo), o \textbf{FFmpeg} (codificação e
 mistura de áudio) e o \textbf{Pillow} (processamento de imagem para o
 efeito \emph{Ken~Burns} e para o enquadramento \emph{letterbox}). Para a
-narração, optou-se pelas vozes neuronais europeias do \textbf{edge-tts},
+narração, optou-se pelas vozes neuronais europeias do \textbf{edge-tts}~\cite{edgetts},
 com o \textbf{gTTS} como alternativa.
 
 \subsection{\emph{Frontend}: React, TypeScript e TanStack Query}
 
-No \emph{frontend} escolheu-se o \textbf{React} com \textbf{TypeScript em
+No \emph{frontend} escolheu-se o \textbf{React}~\cite{react} com \textbf{TypeScript em
 modo estrito} para capturar, em tempo de compilação, incompatibilidades
 de esquema com o \emph{backend}. O \textbf{Vite} foi preferido como
 \emph{bundler} pela velocidade do \emph{Hot Module Replacement}. Para a
@@ -201,7 +192,7 @@ são, na sua maioria, \emph{server-state}.
 
 \subsection{Dados e operação: Supabase, Docker, Render e Vercel}
 
-A camada de dados foi externalizada para o \textbf{Supabase}, que fornece
+A camada de dados foi externalizada para o \textbf{Supabase}~\cite{supabase}, que fornece
 de forma integrada autenticação (com tokens JWT validados por JWKS),
 base de dados \textbf{PostgreSQL} e armazenamento de objetos
 (\emph{Storage}). O \emph{backend} é empacotado em \textbf{Docker} (para

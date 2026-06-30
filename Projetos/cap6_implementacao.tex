@@ -34,7 +34,7 @@ etapas são:
   deteção de uma ameaça, o registo é marcado \texttt{FAILED} e o
   \emph{pipeline} interrompe-se --- o conteúdo nunca chega ao \emph{Storage}.
   \item[\textsc{exif}.] Data de captura, coordenadas GPS, marca e modelo
-  da câmara, extraídos com a biblioteca \textbf{exifread} (puro Python, sem
+  da câmara, extraídos com a biblioteca \textbf{exifread}~\cite{exifread} (puro Python, sem
   dependências de sistema, funcionando de forma idêntica em ambiente local
   e na nuvem) e preservando o \textsc{exif} em bruto. As coordenadas, no
   formato \emph{graus/minutos/segundos}, são convertidas para decimal com o
@@ -42,7 +42,7 @@ etapas são:
   \item[Análise visual.] O \textbf{Gemini Vision} produz descrição da
   cena, contagem de pessoas, cenário, emoção dominante, \emph{tags} e uma
   \emph{sugestão narrativa} — a matéria-prima factual do M3.
-  \item[\textsc{ocr}.] Para documentos, o \textbf{Tesseract} extrai
+  \item[\textsc{ocr}.] Para documentos, o \textbf{Tesseract}~\cite{smith2007tesseract} extrai
   texto, enriquecendo o contexto factual.
 \end{description}
 
@@ -67,7 +67,7 @@ desbloqueando a linha temporal e o vídeo (que dependem desse estado). A
 operação é \emph{consciente da quota}: indica quantas fotografias serão
 analisadas (uma chamada ao Gemini cada) e pede confirmação antes de avançar.
 
-A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}
+A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}~\cite{gedcom}
 dedicado (o maior módulo, $\approx$430 linhas), que converte o ficheiro em
 registos \texttt{Person} e nas respetivas relações, com suporte a
 etiquetagem de famílias (permitindo distinguir várias árvores na mesma
@@ -177,31 +177,6 @@ há \emph{fallback} em tempo de execução; só quando \emph{todos} falham é
 lançada uma exceção que marca a tarefa como falhada --- evitando guardar
 uma narrativa falsa.
 
-\begin{lstlisting}[language=Python,caption={Cliente LLM com cadeia de
-\emph{fallback} de três níveis para texto (Groq $\rightarrow$ Ollama
-$\rightarrow$ Gemini); o Gemini fica reservado para a visão
-(\texttt{llm\_client.py}).},label={lst:llm}]
-def generate(self, prompt: str, max_tokens: int = 1500) -> str:
-    # Texto: Groq (70B, rápido) -> Ollama (offline/local) -> Gemini.
-    # Groq primeiro porque o Ollama 3B local em CPU é demasiado lento.
-    if self._groq_ok:                              # 1. Groq (nuvem, rápido)
-        return self._groq_generate(prompt, max_tokens)
-    if self._ollama_ok:                            # 2. local (offline/privado)
-        return self._ollama_generate(prompt, max_tokens)
-    return self._gemini_generate(prompt, max_tokens)  # 3. último recurso
-
-def _groq_generate(self, prompt, max_tokens, _prev_error=None) -> str:
-    try:
-        resp = Groq(api_key=settings.GROQ_API_KEY).chat.completions.create(
-            model=settings.GROQ_MODEL, messages=[{"role": "user",
-            "content": prompt}], max_tokens=max_tokens, temperature=0.7)
-        return resp.choices[0].message.content.strip()
-    except Exception as groq_exc:                  # Groq falhou -> Gemini
-        self._setup_gemini()
-        return self._gemini_generate(prompt, max_tokens,
-                                     _groq_error=str(groq_exc))
-\end{lstlisting}
-
 \subsection{Retrieval-Augmented Generation com degradação graciosa}
 
 O \texttt{RAGSystem} indexa os factos extraídos pelo M1/M2 numa base
@@ -249,17 +224,6 @@ textual do utilizador determina o \emph{assunto}, enquanto os factos
 servem de matéria-prima. O idioma de saída pode ser comutado para inglês
 através de um sufixo de \emph{prompt}, sem \emph{templates} paralelos.
 
-\begin{lstlisting}[language=Python,caption={Excerto das regras de
-português europeu injetadas em todos os \emph{prompts}
-(\texttt{templates.py}).},label={lst:ptpt}]
-PT_PT_RULES = """REGRAS OBRIGATÓRIAS DE PORTUGUÊS EUROPEU (NÃO BRASILEIRO):
-- Gerúndio proibido em frases simples: usa "a + infinitivo".
-  - "estou a escrever" (NÃO "estou escrevendo")
-- Vocabulário europeu: "comboio" (não "trem"), "telemóvel" (não "celular"),
-  "casa de banho" (não "banheiro"), "rapariga" (não "moça")...
-- Colocação do pronome: "dá-me", "faz-me" (NUNCA "me dá", "me faz")."""
-\end{lstlisting}
-
 \textbf{Rede de segurança determinística.} Como a instrução por si só não
 é fiável --- mesmo avisados, o Llama e o Gemini reincidem no português do
 Brasil ---, acrescentou-se um \textbf{pós-processador determinístico}
@@ -281,13 +245,9 @@ e passe a um verdadeiro documentário, introduziu-se uma etapa de
 \textbf{segmentação em cenas} (\texttt{scene\_builder.py}). Após gerar a
 prosa, o M3 divide-a em parágrafos (cada parágrafo $=$ uma cena) e
 associa a cada cena as fotografias que melhor a ilustram, produzindo uma
-estrutura serializável guardada na coluna \texttt{stories.scenes}:
-
-\begin{lstlisting}[language=Python,caption={Forma de uma cena, guardada em
-\texttt{stories.scenes}.},label={lst:scene}]
-{"text": "Era o verão de 1962, quando...", "photo_ids": [12, 7],
- "caption": "Lisboa, 1962"}
-\end{lstlisting}
+estrutura serializável guardada na coluna \texttt{stories.scenes} --- uma
+lista de \texttt{\{text, photo\_ids, caption\}}, cuja forma se ilustra no
+\Cref{lst:scene} (Anexo~\ref{ap:codigo}).
 
 A atribuição foto\,$\rightarrow$\,parágrafo é \emph{determinística e sem
 dependências externas}: pontua-se a sobreposição léxica entre cada
@@ -412,22 +372,6 @@ O \texttt{video\_builder} eleva a qualidade percebida acima de um simples
   \emph{crossfade} de 1.6~s.
 \end{itemize}
 
-\begin{lstlisting}[language=Python,caption={Geração de cada fotograma do
-efeito Ken Burns com \emph{easing smoothstep} e \emph{pan}
-(\texttt{video\_builder.py}).},label={lst:kenburns}]
-def make_frame(t: float) -> np.ndarray:
-    progress = min(max(t / max(duration, 0.001), 0.0), 1.0)
-    eased = progress * progress * (3.0 - 2.0 * progress)   # smoothstep
-    zoom  = start_zoom + (end_zoom - start_zoom) * eased
-    crop_w = int(TARGET_W / zoom); crop_h = int(TARGET_H / zoom)
-    offset_x = int((eased - 0.5) * pan_dx)
-    offset_y = int((eased - 0.5) * pan_dy)
-    x = max(0, min(TARGET_W - crop_w, (TARGET_W - crop_w)//2 + offset_x))
-    y = max(0, min(TARGET_H - crop_h, (TARGET_H - crop_h)//2 + offset_y))
-    window = base[y:y+crop_h, x:x+crop_w]
-    return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H)))
-\end{lstlisting}
-
 \subsection{Narração, voz e legendas}
 \label{sub:narracao_legendas}
 
@@ -450,34 +394,10 @@ semântica que distingue um documentário de uma simples apresentação. O
 unitariamente) da duração de cada fotografia a partir da narração da
 cena. Na ausência de cenas, mantém-se o alinhamento clássico por
 duração total (silêncio no título, narração única, preenchimento/corte
-para igualar a duração A/V). A \Cref{fig:frame_video} mostra um fotograma
-típico do resultado.
+para igualar a duração A/V). A \Cref{fig:frame_video}
+(Anexo~\ref{ap:capturas}) mostra um fotograma típico do resultado.
 
-\begin{lstlisting}[language=Python,caption={Distribuição da narração de
-cada cena pelas suas fotografias, com piso mínimo e compensação de
-\emph{crossfade} (\texttt{video\_builder.py}).},label={lst:plandur}]
-def plan_scene_durations(scene_audio_durations, scene_photo_counts):
-    durations = []
-    for audio_dur, n_photos in zip(scene_audio_durations, scene_photo_counts):
-        if n_photos <= 0:
-            durations.append(0.0); continue
-        per_photo = max(MIN_SCENE_PHOTO_DURATION,
-                        audio_dur / n_photos + CROSSFADE_SECONDS)
-        durations.append(per_photo)
-    return durations
-\end{lstlisting}
 
-\begin{figure}[H]
-\centering
-% \includegraphics[width=0.8\linewidth]{frame_video.png}
-\figph[5.5cm]{Fotograma de um vídeo gerado: fotografia em
-\emph{letterbox} sobre fundo desfocado, sem texto gravado na imagem (o
-vídeo é mantido limpo; as legendas de narração são uma faixa \texttt{.vtt}
-comutável no leitor). Exportar um \emph{frame} de um MP4 produzido pelo
-sistema.}
-\caption{Exemplo de fotograma de um vídeo documental gerado pelo M4.}
-\label{fig:frame_video}
-\end{figure}
 
 \textbf{Legendas como faixa sincronizada (WebVTT).} Em vez de gravar o
 texto na imagem (o que o tornava pequeno e permanente), a narração é
@@ -635,15 +555,6 @@ memória (TTL de 10~min, indexada por \texttt{kid} para suportar rotação de
 chaves) e verificação da \emph{audience} (\Cref{lst:jwks}). A identidade
 extraída expõe o \textsc{uuid} do utilizador, que é a chave de isolamento:
 \textbf{todas} as consultas de domínio filtram por \texttt{user\_id}.
-
-\begin{lstlisting}[language=Python,caption={Validação do JWT do Supabase
-contra a chave pública correspondente (\texttt{supabase\_auth.py}).},label={lst:jwks}]
-payload = jwt.decode(
-    token, jwk,
-    algorithms=[jwk.get("alg", "ES256")],
-    audience="authenticated",
-    options={"verify_iss": False})
-\end{lstlisting}
 
 \textbf{Eliminação de conta.} A remoção definitiva de uma conta é feita por um
 \emph{endpoint} dedicado que apaga todas as linhas do dono (média, pessoas,

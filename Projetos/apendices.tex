@@ -55,3 +55,377 @@ Resumo da topologia de \emph{deployment} (ver \Cref{sec:impl_deploy}):
 \noindent\emph{Nota:} as variáveis sensíveis (chaves Supabase, Groq e
 Gemini) são definidas no painel do Render e nunca versionadas no
 repositório.
+
+\chapter{Diagramas}
+\label{ap:diagramas}
+
+Este anexo reúne os diagramas do sistema, referenciados ao longo do corpo do
+relatório.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  box/.style={rectangle,draw,rounded corners,align=center,
+              minimum height=0.95cm,minimum width=2.7cm,fill=white},
+  svc/.style={box,fill=black!6,draw=black!75},
+  mod/.style={box,fill=accent!16,draw=accent,minimum width=2.1cm,
+              minimum height=0.75cm},
+  arrow/.style={-{Latex[length=2.2mm]},thick},
+  dash/.style={-{Latex[length=2.2mm]},thick,dashed},
+]
+% Camadas principais
+\node[svc] (front) {\textbf{Frontend}\\React + TS\\(Vercel)};
+\node[svc,right=2.6cm of front] (api) {\textbf{Backend}\\FastAPI\\(Render/Docker)};
+
+% Pipeline (à direita)
+\node[mod,above right=0.05cm and 2.1cm of api] (m1) {M1 · Ingestão};
+\node[mod,below=0.3cm of m1] (m2) {M2 · Temporal};
+\node[mod,below=0.3cm of m2] (m3) {M3 · Narrativa};
+\node[mod,below=0.3cm of m3] (m4) {M4 · Multimédia};
+
+% Dados (centro-baixo) e IA (baixo-direita, sob o pipeline)
+\node[svc,below=2.2cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
+\node[svc,below=1.5cm of m4] (ia) {\textbf{IA}\\Groq (texto)\\Ollama (local)\\Gemini (visão)};
+
+\draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
+\draw[arrow] (api.east) -- (m1.west);
+\draw[arrow] (api.east) -- (m2.west);
+\draw[arrow] (api.east) -- (m3.west);
+\draw[arrow] (api.east) -- (m4.west);
+\draw[arrow] (api) -- node[left,font=\scriptsize]{ORM / Storage} (supa);
+\draw[dash] (front.south) to[out=-90,in=180]
+      node[pos=0.6,below,font=\scriptsize]{auth} (supa.west);
+% Módulos que invocam a IA — curvas pela direita, sem cruzar o Supabase.
+\draw[arrow] (m3.east) to[out=0,in=0,looseness=1.4] (ia.east);
+\draw[arrow] (m1.east) to[out=0,in=30,looseness=1.6] (ia.east);
+
+\begin{scope}[on background layer]
+  \node[draw=accent,dashed,rounded corners,inner sep=5pt,fit=(m1)(m4),
+        label={[font=\scriptsize\itshape,accent]above:Pipeline M1--M4}] {};
+\end{scope}
+\end{tikzpicture}
+\caption{Arquitetura global: \emph{frontend} React, \emph{backend}
+FastAPI com \emph{pipeline} M1--M4, serviços geridos Supabase e camada de
+IA híbrida local/nuvem.}
+\label{fig:arquitetura}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  layer/.style={rectangle,draw,rounded corners,align=center,
+                minimum height=0.82cm,text width=9.2cm,fill=white},
+  arrow/.style={{Latex[length=2mm]}-{Latex[length=2mm]},thick,gray!70},
+  node distance=0.45cm,
+]
+\node[layer,fill=black!5] (l1)
+  {\textbf{Frontend} \;$\cdot$\; React $\cdot$ TypeScript $\cdot$ Tailwind \;(Vercel)};
+\node[layer,below=of l1] (l2)
+  {\textbf{Segurança de rede} \;$\cdot$\; CORS $\cdot$ \emph{rate limiting} (slowapi)};
+\node[layer,below=of l2] (l3)
+  {\textbf{Autenticação} \;$\cdot$\; JWT validado por JWKS (Supabase Auth)};
+\node[layer,below=of l3] (l4)
+  {\textbf{API Gateway} \;$\cdot$\; FastAPI $\cdot$ Pydantic (validação de \emph{schema})};
+\node[layer,below=of l4,fill=accent!14,draw=accent] (l5)
+  {\textbf{Pipeline} \;$\cdot$\; M1 Ingestão $\cdot$ M2 Temporal $\cdot$ M3 Narrativa $\cdot$ M4 Multimédia};
+\node[layer,below=of l5,fill=black!6] (l6)
+  {\textbf{Dados} \;$\cdot$\; Supabase: PostgreSQL (asyncpg) $\cdot$ Storage};
+\draw[arrow] (l1) -- (l2);
+\draw[arrow] (l2) -- (l3);
+\draw[arrow] (l3) -- (l4);
+\draw[arrow] (l4) -- (l5);
+\draw[arrow] (l5) -- (l6);
+\end{tikzpicture}
+\caption{Vista \emph{full-stack} detalhada das camadas do sistema.}
+\label{fig:fullstack}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\scriptsize,
+  ent/.style={rectangle,draw,rounded corners,fill=black!4,
+              minimum height=0.72cm,minimum width=2cm,align=center},
+  rel/.style={thick,gray!75},
+  card/.style={font=\ttfamily\scriptsize,fill=white,inner sep=1pt},
+]
+\node[font=\scriptsize\itshape,gray!70] at (-1.4,3.9)
+  {todas as entidades referenciam \texttt{user\_id} (UUID)};
+\node[ent,fill=accent!16,draw=accent] (proj) at (0,3)    {Project};
+\node[ent] (pm)    at (-3.4,1.4)  {ProjectMedia};
+\node[ent] (mf)    at (-3.4,-0.5) {MediaFile};
+\node[ent] (story) at (1.3,1.4)   {Story};
+\node[ent] (vid)   at (1.3,-0.5)  {VideoOutput};
+\node[ent] (task)  at (4.6,1.4)   {TaskRecord};
+\node[ent] (per)   at (-6.8,1.4)  {Person};
+\node[ent] (tl)    at (-6.8,-0.5) {TimelineEvent};
+
+\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (pm);
+\draw[rel] (pm)    -- node[card,pos=0.22]{N} node[card,pos=0.82]{1} (mf);
+\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (story);
+\draw[rel] (story) -- node[card,pos=0.22]{1} node[card,pos=0.82]{N} (vid);
+\draw[rel] (story) -- node[card,pos=0.25]{1} node[card,pos=0.8]{N} (task);
+\draw[rel] (mf)    -- node[card,pos=0.5]{N:N} (per);
+\draw[rel] (mf)    -- node[card,pos=0.2]{1} node[card,pos=0.82]{N} (tl);
+\end{tikzpicture}
+\caption{Modelo de dados (diagrama entidade-relação).}
+\label{fig:er}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize, x=0.92cm, y=0.72cm]
+  % grelha de tempo (unidades relativas)
+  \foreach \m in {0,2,4,6,8,10} \draw[gray!25] (\m,0.5) -- (\m,6.6);
+  % barras das fases (sobrepostas): y / início / fim / rótulo
+  \def\fase#1#2#3#4{%
+    \fill[accent!70,rounded corners=2pt] (#2,#1-0.27) rectangle (#3,#1+0.27);
+    \node[anchor=east] at (-0.25,#1) {#4};}
+  \fase{6}{0}{3}{F1 $\cdot$ Estado da arte}
+  \fase{5}{1.5}{5}{F2 $\cdot$ Prototipagem (M1--M4)}
+  \fase{4}{3.5}{7}{F3 $\cdot$ Backend}
+  \fase{3}{4.5}{8}{F4 $\cdot$ Frontend}
+  \fase{2}{6.5}{9}{F5 $\cdot$ Migração p/ nuvem}
+  \fase{1}{8}{10}{F6 $\cdot$ Validação e docs.}
+  \draw[gray!55,-{Latex[length=1.6mm]}] (0,0.5) -- (10.4,0.5)
+        node[right,font=\scriptsize]{tempo};
+\end{tikzpicture}
+\caption{Cronograma das fases de desenvolvimento (fases sobrepostas).}
+\label{fig:metodologia}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  uc/.style={ellipse,draw,fill=black!4,align=center,
+             minimum width=3cm,minimum height=0.72cm,inner sep=1pt},
+  ext/.style={draw,rounded corners,align=center,fill=black!6,
+              minimum width=1.6cm,minimum height=0.7cm},
+  link/.style={gray!70}]
+% Casos de uso (coluna única)
+\node[uc] (u1) at (0,3)  {Autenticar-se};
+\node[uc] (u2) at (0,2)  {Carregar fotografias};
+\node[uc] (u3) at (0,1)  {Importar GEDCOM};
+\node[uc] (u4) at (0,0)  {Gerar narrativa};
+\node[uc] (u5) at (0,-1) {Gerar vídeo};
+\node[uc] (u6) at (0,-2) {Gerir projetos};
+\node[uc] (u7) at (0,-3) {Gerir família};
+% Fronteira do sistema
+\begin{scope}[on background layer]
+  \node[draw,rounded corners,inner sep=12pt,fit=(u1)(u7),
+        label={[font=\scriptsize\itshape]above:Sistema}] {};
+\end{scope}
+% Ator principal (figura)
+\begin{scope}[shift={(-4.3,0)}]
+  \draw[thick] (0,0.45) circle (0.17);
+  \draw[thick] (0,0.28) -- (0,-0.3);
+  \draw[thick] (-0.28,0.08) -- (0.28,0.08);
+  \draw[thick] (0,-0.3) -- (-0.22,-0.7);
+  \draw[thick] (0,-0.3) -- (0.22,-0.7);
+  \node[below] at (0,-0.78) {Utilizador};
+\end{scope}
+% Atores secundários (sistemas externos)
+\node[ext] (ia)  at (4.4,1)  {Serviço\\de IA};
+\node[ext] (sup) at (4.4,-1.4) {Supabase};
+% Ligações ator -> casos
+\foreach \u in {u1,u2,u3,u4,u5,u6,u7} \draw[link] (-4.0,0) -- (\u.west);
+% Ligações casos -> sistemas externos
+\draw[link] (u4.east) -- (ia);
+\draw[link] (u5.east) -- (ia);
+\draw[link] (u1.east) -- (sup);
+\draw[link] (u6.east) -- (sup);
+\end{tikzpicture}
+\caption{Diagrama de casos de uso do sistema.}
+\label{fig:casos_uso}
+\end{figure}
+
+% <<DIAGRAMAS>>
+
+\chapter{Capturas de Ecrã da Aplicação}
+\label{ap:capturas}
+
+Este anexo reúne capturas de ecrã da aplicação em funcionamento, referenciadas
+ao longo do corpo do relatório.
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=\linewidth]{ui_dashboard.png}
+\figph[6cm]{Captura de ecrã: \emph{Dashboard} — estatísticas (fotos,
+histórias, vídeos, pessoas), ações rápidas e itens recentes.}
+\caption{Página inicial (\emph{Dashboard}).}
+\label{fig:ui_dashboard}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Biblioteca} — galeria com
+  \emph{drag-and-drop} e \emph{lightbox}.}
+  \caption{Biblioteca de fotografias.}
+  \label{fig:ui_library}
+\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: assistente \emph{Gerar} — passos de seleção de
+  tema, tom e idioma.}
+  \caption{Assistente de geração.}
+  \label{fig:ui_generate}
+\end{subfigure}
+\caption{Ecrãs de biblioteca e de geração de narrativa.}
+\label{fig:ui_pair}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Leitor de histórias} — tipografia
+  serifada com \emph{drop-cap}.}
+  \caption{Leitor de histórias.}
+  \label{fig:ui_reader}
+\end{subfigure}\hfill
+\begin{subfigure}{0.48\textwidth}
+  \centering
+  \figph[4.5cm]{Captura: \emph{Vídeos} — cartões com \emph{player}
+  modal e estado de geração.}
+  \caption{Galeria de vídeos.}
+  \label{fig:ui_videos}
+\end{subfigure}
+\caption{Ecrãs de leitura de histórias e de reprodução de vídeos.}
+\label{fig:ui_pair2}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+% \includegraphics[width=0.8\linewidth]{frame_video.png}
+\figph[5.5cm]{Fotograma de um vídeo gerado: fotografia em
+\emph{letterbox} sobre fundo desfocado, sem texto gravado na imagem (o
+vídeo é mantido limpo; as legendas de narração são uma faixa \texttt{.vtt}
+comutável no leitor). Exportar um \emph{frame} de um MP4 produzido pelo
+sistema.}
+\caption{Exemplo de fotograma de um vídeo documental gerado pelo M4.}
+\label{fig:frame_video}
+\end{figure}
+
+% <<CAPTURAS>>
+
+\chapter{Excertos de Código}
+\label{ap:codigo}
+
+Este anexo reúne os excertos de código mais relevantes, referenciados ao longo
+do corpo do relatório.
+
+\begin{lstlisting}[language=Python,caption={Cliente LLM com cadeia de
+\emph{fallback} de três níveis para texto (Groq $\rightarrow$ Ollama
+$\rightarrow$ Gemini); o Gemini fica reservado para a visão
+(\texttt{llm\_client.py}).},label={lst:llm}]
+def generate(self, prompt: str, max_tokens: int = 1500) -> str:
+    # Texto: Groq (70B, rápido) -> Ollama (offline/local) -> Gemini.
+    # Groq primeiro porque o Ollama 3B local em CPU é demasiado lento.
+    if self._groq_ok:                              # 1. Groq (nuvem, rápido)
+        return self._groq_generate(prompt, max_tokens)
+    if self._ollama_ok:                            # 2. local (offline/privado)
+        return self._ollama_generate(prompt, max_tokens)
+    return self._gemini_generate(prompt, max_tokens)  # 3. último recurso
+
+def _groq_generate(self, prompt, max_tokens, _prev_error=None) -> str:
+    try:
+        resp = Groq(api_key=settings.GROQ_API_KEY).chat.completions.create(
+            model=settings.GROQ_MODEL, messages=[{"role": "user",
+            "content": prompt}], max_tokens=max_tokens, temperature=0.7)
+        return resp.choices[0].message.content.strip()
+    except Exception as groq_exc:                  # Groq falhou -> Gemini
+        self._setup_gemini()
+        return self._gemini_generate(prompt, max_tokens,
+                                     _groq_error=str(groq_exc))
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Excerto das regras de
+português europeu injetadas em todos os \emph{prompts}
+(\texttt{templates.py}).},label={lst:ptpt}]
+PT_PT_RULES = """REGRAS OBRIGATÓRIAS DE PORTUGUÊS EUROPEU (NÃO BRASILEIRO):
+- Gerúndio proibido em frases simples: usa "a + infinitivo".
+  - "estou a escrever" (NÃO "estou escrevendo")
+- Vocabulário europeu: "comboio" (não "trem"), "telemóvel" (não "celular"),
+  "casa de banho" (não "banheiro"), "rapariga" (não "moça")...
+- Colocação do pronome: "dá-me", "faz-me" (NUNCA "me dá", "me faz")."""
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Forma de uma cena, guardada em
+\texttt{stories.scenes}.},label={lst:scene}]
+{"text": "Era o verão de 1962, quando...", "photo_ids": [12, 7],
+ "caption": "Lisboa, 1962"}
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Geração de cada fotograma do
+efeito Ken Burns com \emph{easing smoothstep} e \emph{pan}
+(\texttt{video\_builder.py}).},label={lst:kenburns}]
+def make_frame(t: float) -> np.ndarray:
+    progress = min(max(t / max(duration, 0.001), 0.0), 1.0)
+    eased = progress * progress * (3.0 - 2.0 * progress)   # smoothstep
+    zoom  = start_zoom + (end_zoom - start_zoom) * eased
+    crop_w = int(TARGET_W / zoom); crop_h = int(TARGET_H / zoom)
+    offset_x = int((eased - 0.5) * pan_dx)
+    offset_y = int((eased - 0.5) * pan_dy)
+    x = max(0, min(TARGET_W - crop_w, (TARGET_W - crop_w)//2 + offset_x))
+    y = max(0, min(TARGET_H - crop_h, (TARGET_H - crop_h)//2 + offset_y))
+    window = base[y:y+crop_h, x:x+crop_w]
+    return np.array(Image.fromarray(window).resize((TARGET_W, TARGET_H)))
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Distribuição da narração de
+cada cena pelas suas fotografias, com piso mínimo e compensação de
+\emph{crossfade} (\texttt{video\_builder.py}).},label={lst:plandur}]
+def plan_scene_durations(scene_audio_durations, scene_photo_counts):
+    durations = []
+    for audio_dur, n_photos in zip(scene_audio_durations, scene_photo_counts):
+        if n_photos <= 0:
+            durations.append(0.0); continue
+        per_photo = max(MIN_SCENE_PHOTO_DURATION,
+                        audio_dur / n_photos + CROSSFADE_SECONDS)
+        durations.append(per_photo)
+    return durations
+\end{lstlisting}
+
+\begin{lstlisting}[language=Python,caption={Validação do JWT do Supabase
+contra a chave pública correspondente (\texttt{supabase\_auth.py}).},label={lst:jwks}]
+payload = jwt.decode(
+    token, jwk,
+    algorithms=[jwk.get("alg", "ES256")],
+    audience="authenticated",
+    options={"verify_iss": False})
+\end{lstlisting}
+
+\begin{figure}[H]
+\centering
+\begin{lstlisting}[numbers=none,frame=single,basicstyle=\ttfamily\scriptsize,
+                   xleftmargin=4pt,framexleftmargin=2pt]
+$ pytest tests/unit -v
+============================ test session starts ============================
+collected 50 items
+
+test_upload_validator.py .......                                    [ 14%]
+test_exif_extractor.py ........                                      [ 30%]
+test_date_resolver.py .......                                       [ 44%]
+test_family_graph.py .....                                          [ 54%]
+test_templates.py .....                                             [ 64%]
+test_pt_pt.py ......                                                 [ 76%]
+test_scene_builder.py .......                                       [ 90%]
+test_video_builder.py .....                                         [100%]
+
+  test_gps_west_is_negative ................................ PASSED
+  test_date_before_1800_rejected ........................... PASSED
+  test_gerund_becomes_a_infinitivo ......................... PASSED
+  test_build_scenes_matches_photos_to_relevant_paragraph ... PASSED
+  test_fit_to_frame_does_not_crop_foreground ............... PASSED
+  (... 45 outros ...)
+
+============================= 50 passed in 2.96s ============================
+\end{lstlisting}
+\caption{Resultado da execução da suíte de testes automatizados
+(\texttt{pytest}): 50 testes unitários a passar.}
+\label{fig:pytest}
+\end{figure}

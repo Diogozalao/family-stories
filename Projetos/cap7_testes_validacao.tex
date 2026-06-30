@@ -58,42 +58,11 @@ Integração  & \texttt{test\_health\_route}   & Sondas de \emph{liveness} e \em
 \end{tabularx}
 \end{table}
 
-A \Cref{fig:pytest} apresenta a execução da suíte. Os testes incidem
-deliberadamente sobre a lógica \emph{determinística} (resolução de datas,
-grafo, validação, \emph{templates}): a saída dos \textsc{llm} é
-não-determinística e, por isso, validada por outras vias
-(\Cref{sec:qualidade}).
-
-\begin{figure}[H]
-\centering
-\begin{lstlisting}[numbers=none,frame=single,basicstyle=\ttfamily\scriptsize,
-                   xleftmargin=4pt,framexleftmargin=2pt]
-$ pytest tests/unit -v
-============================ test session starts ============================
-collected 50 items
-
-test_upload_validator.py .......                                    [ 14%]
-test_exif_extractor.py ........                                      [ 30%]
-test_date_resolver.py .......                                       [ 44%]
-test_family_graph.py .....                                          [ 54%]
-test_templates.py .....                                             [ 64%]
-test_pt_pt.py ......                                                 [ 76%]
-test_scene_builder.py .......                                       [ 90%]
-test_video_builder.py .....                                         [100%]
-
-  test_gps_west_is_negative ................................ PASSED
-  test_date_before_1800_rejected ........................... PASSED
-  test_gerund_becomes_a_infinitivo ......................... PASSED
-  test_build_scenes_matches_photos_to_relevant_paragraph ... PASSED
-  test_fit_to_frame_does_not_crop_foreground ............... PASSED
-  (... 45 outros ...)
-
-============================= 50 passed in 2.96s ============================
-\end{lstlisting}
-\caption{Resultado da execução da suíte de testes automatizados
-(\texttt{pytest}): 50 testes unitários a passar.}
-\label{fig:pytest}
-\end{figure}
+A \Cref{fig:pytest} (Anexo~\ref{ap:codigo}) apresenta a saída da execução da
+suíte, com os 50 testes a passar. Os testes incidem deliberadamente sobre a
+lógica \emph{determinística} (resolução de datas, grafo, validação,
+\emph{templates}): a saída dos \textsc{llm} é não-determinística e, por isso,
+validada por outras vias (\Cref{sec:qualidade}).
 
 \section{Validação Funcional do \emph{Pipeline}}
 \label{sec:validacao_funcional}

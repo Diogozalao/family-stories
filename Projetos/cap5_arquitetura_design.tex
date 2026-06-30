@@ -13,57 +13,8 @@ servidor. O cliente é uma \emph{Single-Page Application} (\textsc{spa})
 React; o servidor é uma API \textsc{rest} assíncrona em FastAPI; e a
 camada de dados é externalizada para serviços geridos do Supabase
 (autenticação, base de dados relacional e armazenamento de objetos). A
-\Cref{fig:arquitetura} representa a organização global e os fluxos
-principais.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[
-  font=\footnotesize,
-  box/.style={rectangle,draw,rounded corners,align=center,
-              minimum height=0.95cm,minimum width=2.7cm,fill=white},
-  svc/.style={box,fill=black!6,draw=black!75},
-  mod/.style={box,fill=accent!16,draw=accent,minimum width=2.1cm,
-              minimum height=0.75cm},
-  arrow/.style={-{Latex[length=2.2mm]},thick},
-  dash/.style={-{Latex[length=2.2mm]},thick,dashed},
-]
-% Camadas principais
-\node[svc] (front) {\textbf{Frontend}\\React + TS\\(Vercel)};
-\node[svc,right=2.6cm of front] (api) {\textbf{Backend}\\FastAPI\\(Render/Docker)};
-
-% Pipeline (à direita)
-\node[mod,above right=0.05cm and 2.1cm of api] (m1) {M1 · Ingestão};
-\node[mod,below=0.3cm of m1] (m2) {M2 · Temporal};
-\node[mod,below=0.3cm of m2] (m3) {M3 · Narrativa};
-\node[mod,below=0.3cm of m3] (m4) {M4 · Multimédia};
-
-% Dados (centro-baixo) e IA (baixo-direita, sob o pipeline)
-\node[svc,below=2.2cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
-\node[svc,below=1.5cm of m4] (ia) {\textbf{IA}\\Groq (texto)\\Ollama (local)\\Gemini (visão)};
-
-\draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
-\draw[arrow] (api.east) -- (m1.west);
-\draw[arrow] (api.east) -- (m2.west);
-\draw[arrow] (api.east) -- (m3.west);
-\draw[arrow] (api.east) -- (m4.west);
-\draw[arrow] (api) -- node[left,font=\scriptsize]{ORM / Storage} (supa);
-\draw[dash] (front.south) to[out=-90,in=180]
-      node[pos=0.6,below,font=\scriptsize]{auth} (supa.west);
-% Módulos que invocam a IA — curvas pela direita, sem cruzar o Supabase.
-\draw[arrow] (m3.east) to[out=0,in=0,looseness=1.4] (ia.east);
-\draw[arrow] (m1.east) to[out=0,in=30,looseness=1.6] (ia.east);
-
-\begin{scope}[on background layer]
-  \node[draw=accent,dashed,rounded corners,inner sep=5pt,fit=(m1)(m4),
-        label={[font=\scriptsize\itshape,accent]above:Pipeline M1--M4}] {};
-\end{scope}
-\end{tikzpicture}
-\caption{Arquitetura global: \emph{frontend} React, \emph{backend}
-FastAPI com \emph{pipeline} M1--M4, serviços geridos Supabase e camada de
-IA híbrida local/nuvem.}
-\label{fig:arquitetura}
-\end{figure}
+\Cref{fig:arquitetura} (Anexo~\ref{ap:diagramas}) representa a organização
+global e os fluxos principais.
 
 Uma característica determinante da arquitetura é o modo como se gerem as
 operações demoradas dos módulos M1--M4 (\textsc{ocr}, análise visual,
@@ -81,39 +32,8 @@ vídeo corre de forma síncrona}, mantendo a instância acordada durante o
 processamento: uma escolha deliberada, motivada pela fragilidade dos
 \emph{jobs} de segundo plano no plano gratuito (instâncias que adormecem ou
 reiniciam, abandonando a tarefa --- \Cref{sub:async}). A
-\Cref{fig:fullstack} apresenta uma vista detalhada, camada a camada, de
-toda a \emph{stack}.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[
-  font=\footnotesize,
-  layer/.style={rectangle,draw,rounded corners,align=center,
-                minimum height=0.82cm,text width=9.2cm,fill=white},
-  arrow/.style={{Latex[length=2mm]}-{Latex[length=2mm]},thick,gray!70},
-  node distance=0.45cm,
-]
-\node[layer,fill=black!5] (l1)
-  {\textbf{Frontend} \;$\cdot$\; React $\cdot$ TypeScript $\cdot$ Tailwind \;(Vercel)};
-\node[layer,below=of l1] (l2)
-  {\textbf{Segurança de rede} \;$\cdot$\; CORS $\cdot$ \emph{rate limiting} (slowapi)};
-\node[layer,below=of l2] (l3)
-  {\textbf{Autenticação} \;$\cdot$\; JWT validado por JWKS (Supabase Auth)};
-\node[layer,below=of l3] (l4)
-  {\textbf{API Gateway} \;$\cdot$\; FastAPI $\cdot$ Pydantic (validação de \emph{schema})};
-\node[layer,below=of l4,fill=accent!14,draw=accent] (l5)
-  {\textbf{Pipeline} \;$\cdot$\; M1 Ingestão $\cdot$ M2 Temporal $\cdot$ M3 Narrativa $\cdot$ M4 Multimédia};
-\node[layer,below=of l5,fill=black!6] (l6)
-  {\textbf{Dados} \;$\cdot$\; Supabase: PostgreSQL (asyncpg) $\cdot$ Storage};
-\draw[arrow] (l1) -- (l2);
-\draw[arrow] (l2) -- (l3);
-\draw[arrow] (l3) -- (l4);
-\draw[arrow] (l4) -- (l5);
-\draw[arrow] (l5) -- (l6);
-\end{tikzpicture}
-\caption{Vista \emph{full-stack} detalhada das camadas do sistema.}
-\label{fig:fullstack}
-\end{figure}
+\Cref{fig:fullstack} (Anexo~\ref{ap:diagramas}) apresenta uma vista
+detalhada, camada a camada, de toda a \emph{stack}.
 
 \section{Evolução Arquitetural: de \emph{local-first} a multi-inquilino}
 \label{sec:evolucao}
@@ -268,7 +188,8 @@ As relações principais entre entidades resumem-se na \Cref{tab:relacoes}.
 Uma fronteira de tipos relevante: o \texttt{user\_id} é um \textsc{uuid}
 (proveniente do Supabase Auth), ao passo que as chaves primárias das
 entidades de domínio são inteiros sequenciais do PostgreSQL. A
-\Cref{fig:er} apresenta o diagrama entidade-relação.
+\Cref{fig:er} (Anexo~\ref{ap:diagramas}) apresenta o diagrama
+entidade-relação.
 
 \begin{table}[H]
 \centering
@@ -288,37 +209,6 @@ TaskRecord   & N --- 1 & Story / VideoOutput (resultado) \\
 \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[
-  font=\scriptsize,
-  ent/.style={rectangle,draw,rounded corners,fill=black!4,
-              minimum height=0.72cm,minimum width=2cm,align=center},
-  rel/.style={thick,gray!75},
-  card/.style={font=\ttfamily\scriptsize,fill=white,inner sep=1pt},
-]
-\node[font=\scriptsize\itshape,gray!70] at (-1.4,3.9)
-  {todas as entidades referenciam \texttt{user\_id} (UUID)};
-\node[ent,fill=accent!16,draw=accent] (proj) at (0,3)    {Project};
-\node[ent] (pm)    at (-3.4,1.4)  {ProjectMedia};
-\node[ent] (mf)    at (-3.4,-0.5) {MediaFile};
-\node[ent] (story) at (1.3,1.4)   {Story};
-\node[ent] (vid)   at (1.3,-0.5)  {VideoOutput};
-\node[ent] (task)  at (4.6,1.4)   {TaskRecord};
-\node[ent] (per)   at (-6.8,1.4)  {Person};
-\node[ent] (tl)    at (-6.8,-0.5) {TimelineEvent};
-
-\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (pm);
-\draw[rel] (pm)    -- node[card,pos=0.22]{N} node[card,pos=0.82]{1} (mf);
-\draw[rel] (proj)  -- node[card,pos=0.18]{1} node[card,pos=0.85]{N} (story);
-\draw[rel] (story) -- node[card,pos=0.22]{1} node[card,pos=0.82]{N} (vid);
-\draw[rel] (story) -- node[card,pos=0.25]{1} node[card,pos=0.8]{N} (task);
-\draw[rel] (mf)    -- node[card,pos=0.5]{N:N} (per);
-\draw[rel] (mf)    -- node[card,pos=0.2]{1} node[card,pos=0.82]{N} (tl);
-\end{tikzpicture}
-\caption{Modelo de dados (diagrama entidade-relação).}
-\label{fig:er}
-\end{figure}
 
 \section{Design de Interface (UI/UX)}
 \label{sec:uiux}
@@ -353,59 +243,9 @@ de \emph{Tarefas} permanece acessível pela rota \texttt{/tasks}, mas foi
 forma síncrona, tornando o acompanhamento por \emph{polling} dispensável no
 uso corrente.
 
-\subsection{Ecrãs principais}
-
-As figuras seguintes documentam os ecrãs centrais da aplicação. Devem ser
-substituídas por capturas de ecrã reais do sistema em funcionamento.
-
-\begin{figure}[H]
-\centering
-% \includegraphics[width=\linewidth]{ui_dashboard.png}
-\figph[6cm]{Captura de ecrã: \emph{Dashboard} — estatísticas (fotos,
-histórias, vídeos, pessoas), ações rápidas e itens recentes.}
-\caption{Página inicial (\emph{Dashboard}).}
-\label{fig:ui_dashboard}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{subfigure}{0.48\textwidth}
-  \centering
-  \figph[4.5cm]{Captura: \emph{Biblioteca} — galeria com
-  \emph{drag-and-drop} e \emph{lightbox}.}
-  \caption{Biblioteca de fotografias.}
-  \label{fig:ui_library}
-\end{subfigure}\hfill
-\begin{subfigure}{0.48\textwidth}
-  \centering
-  \figph[4.5cm]{Captura: assistente \emph{Gerar} — passos de seleção de
-  tema, tom e idioma.}
-  \caption{Assistente de geração.}
-  \label{fig:ui_generate}
-\end{subfigure}
-\caption{Ecrãs de biblioteca e de geração de narrativa.}
-\label{fig:ui_pair}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\begin{subfigure}{0.48\textwidth}
-  \centering
-  \figph[4.5cm]{Captura: \emph{Leitor de histórias} — tipografia
-  serifada com \emph{drop-cap}.}
-  \caption{Leitor de histórias.}
-  \label{fig:ui_reader}
-\end{subfigure}\hfill
-\begin{subfigure}{0.48\textwidth}
-  \centering
-  \figph[4.5cm]{Captura: \emph{Vídeos} — cartões com \emph{player}
-  modal e estado de geração.}
-  \caption{Galeria de vídeos.}
-  \label{fig:ui_videos}
-\end{subfigure}
-\caption{Ecrãs de leitura de histórias e de reprodução de vídeos.}
-\label{fig:ui_pair2}
-\end{figure}
+As capturas de ecrã dos ecrãs centrais da aplicação --- \emph{Dashboard},
+Biblioteca, assistente \emph{Gerar}, leitor de histórias e galeria de
+vídeos --- constam do Anexo~\ref{ap:capturas}.
 
 \subsection{Internacionalização e acessibilidade}
 
