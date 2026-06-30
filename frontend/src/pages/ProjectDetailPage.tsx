@@ -4,14 +4,14 @@ import { useDropzone } from "react-dropzone";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Download, FileUp, Film, Images, Loader2,
+  ArrowLeft, Check, Download, FileUp, Film, Images, Library, Loader2,
   Network, Pencil, Plus, ScrollText, Sparkles, Timer, Trash2, UploadCloud,
   User as UserIcon, Users, X,
 } from "lucide-react";
 import PageHeader from "../components/ui/PageHeader";
 import {
-  useClearFamily, useDeleteStory, useFamilies, useFamilyTree,
-  usePersons, useProject, useProjectMedia,
+  useAddMediaToProject, useClearFamily, useDeleteStory, useFamilies,
+  useFamilyTree, useMedia, usePersons, useProject, useProjectMedia,
   useProjectStories, useProjectVideos, useRemoveMediaFromProject,
   useTimeline, useUploadGedcom, useUploadPhoto,
 } from "../lib/hooks";
@@ -119,8 +119,10 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
   const upload = useUploadPhoto();
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const items = photos ?? [];
+  const existingIds = useMemo(() => new Set(items.map((m) => m.id)), [items]);
 
   // Photos go STRAIGHT into the project (stamped with project_id) and are
   // never added to the global Library — the project is its own isolated
@@ -162,10 +164,16 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
         <p className="text-sm text-stone-600 dark:text-stone-400">
           {t("projectDetail.photosHint")}
         </p>
-        <button onClick={open} disabled={uploading} className="btn btn-primary">
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          <span>{t("projectDetail.addPhotos")}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setPickerOpen(true)} className="btn btn-ghost">
+            <Library className="h-4 w-4" />
+            <span>{t("projectDetail.fromLibrary")}</span>
+          </button>
+          <button onClick={open} disabled={uploading} className="btn btn-primary">
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            <span>{t("projectDetail.addPhotos")}</span>
+          </button>
+        </div>
       </div>
 
       {/* Direct, isolated upload into THIS project (not the Library). */}
@@ -240,7 +248,124 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
           projectId={projectId}
         />
       )}
+
+      {pickerOpen && (
+        <LibraryPickerModal
+          projectId={projectId}
+          existingIds={existingIds}
+          onClose={() => setPickerOpen(false)}
+        />
+      )}
     </>
+  );
+}
+
+// ── Library Picker (ligar fotos já analisadas da Biblioteca) ────────────────
+
+function LibraryPickerModal({
+  projectId, existingIds, onClose,
+}: { projectId: number; existingIds: Set<number>; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { data: library, isLoading } = useMedia();
+  const add = useAddMediaToProject();
+  const [selected, setSelected] = useState<number[]>([]);
+
+  // Só fotos da Biblioteca que ainda não estão neste projeto.
+  const available = useMemo(
+    () => (library ?? []).filter((m) => !existingIds.has(m.id)),
+    [library, existingIds],
+  );
+
+  const toggle = (id: number) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const confirm = async () => {
+    if (!selected.length) return;
+    try {
+      await add.mutateAsync({ projectId, mediaIds: selected });
+      toast.success(t("projectDetail.linked", { count: selected.length }));
+      onClose();
+    } catch (err) {
+      toast.error(extractErrorMessage(err));
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-stone-900"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4 dark:border-stone-800">
+          <div>
+            <h3 className="font-display text-lg text-stone-900 dark:text-stone-100">
+              {t("projectDetail.libraryPickerTitle")}
+            </h3>
+            <p className="text-xs text-stone-500">{t("projectDetail.libraryPickerHint")}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1.5 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800"
+            aria-label={t("common.cancel")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-5">
+          {isLoading ? (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="skeleton aspect-square rounded-xl" />)}
+            </div>
+          ) : available.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-300 p-12 text-center text-sm text-stone-500 dark:border-stone-700">
+              {t("projectDetail.libraryPickerEmpty")}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+              {available.map((m) => {
+                const on = selected.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggle(m.id)}
+                    className={cn(
+                      "group relative aspect-square overflow-hidden rounded-xl border-2 transition",
+                      on
+                        ? "border-brand-500 ring-2 ring-brand-500/40"
+                        : "border-transparent hover:border-stone-300 dark:hover:border-stone-700",
+                    )}
+                  >
+                    <Photo mediaId={m.id} alt={m.original_filename} className="h-full w-full object-cover" />
+                    {on && (
+                      <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                        <Check className="h-3 w-3" />
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-stone-200 px-5 py-4 dark:border-stone-800">
+          <span className="text-sm text-stone-500">
+            {t("projectDetail.selectedCount", { count: selected.length })}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={onClose} className="btn btn-ghost">{t("common.cancel")}</button>
+            <button onClick={confirm} disabled={!selected.length || add.isPending} className="btn btn-primary">
+              {add.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              <span>{t("projectDetail.addSelected", { count: selected.length })}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -419,10 +544,6 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
           </button>
         </div>
       </div>
-
-      <p className="mb-4 text-xs text-stone-500 dark:text-stone-500">
-        {t("projectDetail.familyIndependent", { label: projectLabel })}
-      </p>
 
       <div
         {...getRootProps()}
