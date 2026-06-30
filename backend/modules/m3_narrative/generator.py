@@ -16,6 +16,7 @@ from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
     NARRATIVE_TEMPLATES,
     ORIGINALITY_RULES,
+    STYLE_RULES,
     get_template,
 )
 
@@ -209,6 +210,7 @@ class NarrativeGenerator:
                 "memoir tone and the structure described above."
             )
         else:
+            prompt += "\n\n" + STYLE_RULES
             prompt += "\n\nIMPORTANTE: Escreve a narrativa inteira em português europeu (pt-PT)."
 
         try:

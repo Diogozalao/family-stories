@@ -80,6 +80,27 @@ ORIGINALITY_RULES = """REGRAS DE ORIGINALIDADE (escreve algo NOVO, não um molde
   caber — escolhe os que constroem uma cena viva e distinta desta família."""
 
 
+STYLE_RULES = """REGRAS DE ESCRITA E LÍNGUA (português europeu cuidado):
+- Escreve em português europeu correto e natural: respeita a ortografia, a
+  concordância (género e número), a regência dos verbos e a pontuação. Usa a
+  colocação pronominal de Portugal (ênclise/próclise: "lembro-me",
+  "contava-lhe", "não me esqueço"), NUNCA o registo brasileiro ("eu me lembro"
+  ou gerúndios em vez do infinitivo: diz "estava a contar", não "estava
+  contando").
+- NÃO REPITAS os nomes próprios. Depois de apresentares alguém, retoma-o com
+  pronomes (ele, ela), determinantes e perífrases ("o avô", "a irmã mais
+  velha", "o velho ferreiro"). Nunca comeces frases seguidas com o mesmo nome
+  nem repitas o mesmo nome duas vezes na mesma frase.
+- Varia os verbos e os conectores. Foge de repetir "ser", "ter", "estar" e
+  "ir"; prefere verbos de ação concretos. Liga as ideias com conectores
+  variados (contudo, por isso, quando, à medida que, embora, então) e não só
+  com "e".
+- NUNCA uses a palavra "cônjuge". Conforme o caso e o género, escreve "marido",
+  "esposa", "mulher", "companheiro" ou "companheira".
+- Evita a voz passiva pesada e a repetição da mesma palavra na mesma frase.
+  Cada frase deve fazer a história avançar — corta o que for ornamento vazio."""
+
+
 NARRATIVE_TEMPLATES = {
 
     "default": {

@@ -10,6 +10,25 @@ from backend.models.timeline import Person
 
 log = structlog.get_logger()
 
+
+def _rel_phrase(rel: str, name: str) -> str:
+    """Frase de parentesco natural em PT-PT para o resumo dado ao LLM.
+
+    Evita a palavra ``cônjuge`` (que o utilizador não quer ver nas
+    narrativas) e corrige o duplo ``de`` de ``"filho de"``.
+    """
+    r = (rel or "familiar").strip().lower()
+    if r == "cônjuge":
+        return f"casado(a) com {name}"
+    if r in ("filho de", "filha de", "filho", "filha"):
+        return f"filho(a) de {name}"
+    if r == "pai":
+        return f"pai de {name}"
+    if r in ("mãe", "mae"):
+        return f"mãe de {name}"
+    return f"{r} de {name}"
+
+
 class FamilyGraph:
     """
     Constrói e gere o grafo de relações familiares usando NetworkX.
@@ -107,13 +126,14 @@ class FamilyGraph:
                 to_name = self.graph.nodes[to_nid].get("name", "")
                 rel = data.get("relation", "familiar")
                 if to_name:
-                    rels.append(f"{rel} de {to_name}")
+                    rels.append(_rel_phrase(rel, to_name))
             # Also check incoming edges
             for from_nid, _, data in self.graph.in_edges(nid, data=True):
                 from_name = self.graph.nodes[from_nid].get("name", "")
                 rel = data.get("relation", "familiar")
-                if from_name and f"{rel} de {from_name}" not in rels:
-                    rels.append(f"{rel} de {from_name}")
+                phrase = _rel_phrase(rel, from_name)
+                if from_name and phrase not in rels:
+                    rels.append(phrase)
 
             entry = ", ".join(info_parts)
             if rels:
@@ -142,7 +162,7 @@ class FamilyGraph:
             for _, to_id, data in self.graph.out_edges(node_id, data=True):
                 to_name = self.graph.nodes[to_id].get("name", f"Pessoa {to_id}")
                 rel = data.get("relation", "familiar")
-                relations.append(f"{rel} de {to_name}")
+                relations.append(_rel_phrase(rel, to_name))
 
             note = node.get("notes")
             suffix = f" — {note}" if note else ""
