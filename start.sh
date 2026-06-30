@@ -65,12 +65,12 @@ fuser -k 5173/tcp 2>/dev/null || true
 say "A iniciar backend (FastAPI :8000, --reload)…"
 uvicorn backend.main:app --port 8000 --reload > "$LOG_DIR/backend.log" 2>&1 &
 PIDS+=($!)
-for _ in {1..30}; do
+for _ in {1..60}; do
   curl -fs http://127.0.0.1:8000/healthz >/dev/null 2>&1 && break
   sleep 1
 done
 curl -fs http://127.0.0.1:8000/healthz >/dev/null 2>&1 \
-  || fail "Backend não respondeu em 30 s — vê $LOG_DIR/backend.log"
+  || fail "Backend não respondeu em 60 s — vê $LOG_DIR/backend.log"
 say "Backend ✓"
 
 # 5. Frontend
