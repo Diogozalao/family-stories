@@ -99,59 +99,42 @@ atual:
 \section{Trabalho Futuro}
 \label{sec:trabalho_futuro}
 
-Numa eventual versão 2.0, propõem-se as seguintes evoluções, ordenadas por
+Identificam-se as seguintes direções de trabalho futuro, por ordem de
 impacto esperado:
 
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Implantação privada e soberana com modelo local.} A direção
-  mais alinhada com o espírito do projeto é levar a inferência inteiramente
-  para dentro de casa: instalar o sistema completo numa \emph{máquina virtual}
-  ou servidor dedicado (eventualmente com \textsc{gpu}) a correr um
-  \textsc{llm} \emph{local} quantizado (via Ollama), eliminando qualquer
-  dependência de modelos na nuvem. Assim, nenhum dado --- fotografia, rosto,
-  nome ou narrativa --- chega sequer a sair da infraestrutura do dono,
-  concretizando, à escala de produção, a promessa \emph{local-first} que hoje
-  só é parcial (limitada pela lentidão do modelo local em \textsc{cpu}).
+  \item \textbf{Implantação local privada.} Executar o sistema completo numa
+  máquina dedicada (com \textsc{gpu}) a correr um \textsc{llm} local via
+  Ollama, eliminando a dependência de modelos na nuvem. \emph{Exemplo:} uma
+  família gera as histórias no seu próprio servidor, sem que os dados saiam de
+  casa.
 
-  \item \textbf{Reconhecimento facial com confirmação humana.} Agrupar e
-  identificar rostos ao longo de todo o acervo (e.g.\ \emph{InsightFace}/
-  \emph{DeepFace}), com validação do utilizador, faria as narrativas deixarem
-  de ser genéricas: o sistema saberia \emph{quem} aparece em cada fotografia e
-  poderia construir uma linha temporal por pessoa --- ``o avô João, presente
-  em 14 fotografias entre 1958 e 1991''.
+  \item \textbf{Reconhecimento facial.} Identificar automaticamente as
+  pessoas nas fotografias, com confirmação do utilizador, para tornar as
+  narrativas mais específicas. \emph{Exemplo:} construir a linha temporal de
+  uma pessoa a partir das fotografias em que é reconhecida.
 
-  \item \textbf{``Pergunta ao arquivo'': assistente conversacional da
-  memória.} Sobre o índice de factos já existente (\textsc{rag}), oferecer um
-  modo de \emph{chat} em linguagem natural --- ``onde passámos o verão de
-  1985?'', ``quem está nesta fotografia com a avó?'' ---, transformando um
-  acervo passivo numa \emph{base de conhecimento familiar} interrogável.
+  \item \textbf{Consulta conversacional do arquivo.} Permitir perguntas em
+  linguagem natural sobre o arquivo, respondidas pelo subsistema \textsc{rag}.
+  \emph{Exemplo:} responder a ``que pessoas aparecem nas fotografias de
+  1985?''.
 
-  \item \textbf{Mapa de memórias geo-temporal.} Cruzar as coordenadas
-  \textsc{gps} do \textsc{exif} com os locais reconhecidos para traçar, num
-  mapa interativo e ao longo do tempo, o percurso geográfico da família ---
-  emigrações, viagens, o sítio onde se passava cada verão. Acrescenta uma
-  dimensão \emph{espacial} à dimensão temporal que já existe.
+  \item \textbf{Mapa geo-temporal.} Posicionar as fotografias num mapa a
+  partir das coordenadas \textsc{gps} do \textsc{exif}. \emph{Exemplo:}
+  visualizar o percurso geográfico da família ao longo dos anos.
 
-  \item \textbf{Ingestão de áudio e vídeo caseiro.} Estender o M1 para além da
-  fotografia: transcrever vídeos antigos e gravações de voz (e.g.\ com o
-  \emph{Whisper}) e incorporar esse conteúdo como matéria-prima factual ---
-  uma história contada pelos próprios avós passa a poder integrar o
-  documentário gerado.
+  \item \textbf{Ingestão de áudio e vídeo.} Estender o módulo de ingestão a
+  vídeos e gravações de voz, transcritos automaticamente (e.g.\ com o
+  \emph{Whisper}). \emph{Exemplo:} incorporar o relato gravado de um familiar
+  na narrativa.
 
-  \item \textbf{Voz do próprio familiar (\emph{voice cloning} ético).} Já é
-  possível escolher entre voz masculina e feminina; o passo seguinte, técnica
-  e emocionalmente marcante, é clonar a voz de um familiar a partir de uma
-  curta amostra (e.g.\ \emph{XTTS}/\emph{Coqui~TTS}) para narrar a sua própria
-  história --- sempre com consentimento explícito e salvaguardas éticas
-  rigorosas.
+  \item \textbf{Clonagem de voz.} Narrar com a voz de um familiar a partir de
+  uma amostra de áudio, mediante consentimento. \emph{Exemplo:} um
+  documentário narrado na voz do próprio.
 
-  \item \textbf{Avaliação científica e estudo com utilizadores.} Fechar o
-  ciclo com uma avaliação formal: um painel humano a pontuar coerência,
-  fidelidade factual e qualidade literária (com concordância entre
-  avaliadores), a par das métricas automáticas já instrumentadas (aderência
-  ao PT-PT) e de um estudo ablativo do impacto do \textsc{rag} --- viabilizado
-  pela migração da base vetorial para \emph{pgvector} ---, produzindo
-  evidência mensurável e publicável da qualidade do sistema.
+  \item \textbf{Avaliação formal.} Validar a qualidade das narrativas com um
+  painel humano e métricas automáticas. \emph{Exemplo:} pontuar a coerência e
+  a fidelidade factual numa amostra de histórias geradas.
 \end{enumerate}
 
 \section{Considerações Finais}
@@ -162,7 +145,7 @@ estendível, que materializa uma ideia com valor humano evidente:
 preservar e dar voz à memória familiar. Demonstra, em concreto, que é
 hoje possível construir — com ferramentas de código aberto e a custo
 essencialmente nulo — um sistema de IA generativa multimodal que
-transforma um acervo passivo num documentário narrado. O caminho de
+transforma um arquivo passivo num documentário narrado. O caminho de
 evolução traçado, rumo a uma avaliação quantitativa rigorosa e a
 funcionalidades de colaboração, confirma o potencial do trabalho para além
 do âmbito desta licenciatura.
