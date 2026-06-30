@@ -317,8 +317,13 @@ async def gedcom_to_database(
             # importing without a label keeps the existing grouping.
             if family_label:
                 person.family_label = family_label
-            if project_id is not None:
-                person.project_id = project_id
+            # The scope follows the LATEST import: a global import (project_id
+            # None) moves the person back to the global Family; a project
+            # import moves it into that project. Without always assigning it,
+            # re-importing a family that already existed inside a project left
+            # it stuck there — invisible in the global Family even though the
+            # import reported success.
+            person.project_id = project_id
             persons_updated += 1
         else:
             person = Person(
