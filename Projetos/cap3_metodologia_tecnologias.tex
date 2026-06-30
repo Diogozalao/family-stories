@@ -82,8 +82,8 @@ CSS~3, TanStack Query, Zustand, React Router~6, react-i18next, React Flow,
 Pydantic~v2, slowapi, structlog, Celery + Redis (opcional). \\
 IA / ML & Ollama (Llama~3.2~3B, local); Google Gemini~Flash (nuvem ---
 \emph{2.5} visão, \emph{2.0} texto); Groq (texto, rede de segurança);
-ChromaDB + \emph{sentence-transformers} (RAG, opcional); Tesseract
-(\textsc{ocr}); NetworkX (grafo). \\
+ChromaDB com a sua função de \emph{embeddings} por omissão (RAG, opcional);
+Tesseract (\textsc{ocr}); NetworkX (grafo). \\
 Multimédia & MoviePy + FFmpeg; Pillow (Ken Burns / \emph{letterbox});
 edge-tts / gTTS (\textsc{tts}). \\
 Dados & Supabase Auth (JWT/JWKS), PostgreSQL (asyncpg) e Supabase Storage
@@ -172,9 +172,10 @@ fornecedor nunca impede a geração.
 \subsection{RAG: ChromaDB}
 
 Para o subsistema \textbf{RAG} adotou-se o \textbf{ChromaDB} como base
-vetorial, com \emph{embeddings} de \emph{sentence-transformers}. A
-escolha recaiu sobre o ChromaDB pela simplicidade de integração
-(persistência local em ficheiro, sem servidor dedicado). O passo de
+vetorial, recorrendo à sua função de \emph{embeddings} por omissão
+(sem dependência adicional). A escolha recaiu sobre o ChromaDB pela
+simplicidade de integração (persistência local em ficheiro, sem servidor
+dedicado). O passo de
 \emph{retrieval} está ligado à geração — seleciona, de entre uma
 biblioteca grande, as fotografias relevantes ao tema antes de construir o
 \emph{prompt}. Como se verá, o subsistema foi ainda desenhado para
