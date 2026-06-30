@@ -156,18 +156,12 @@ sempre o \textbf{Gemini Vision} (\emph{2.5-Flash}; o \emph{1.5} foi
 descontinuado) por ser a única via com capacidade multimodal madura na
 cadeia. Esta arquitetura é detalhada no \Cref{cap:implementacao}.
 
-\paragraph{Repartir por tarefa, mantendo o custo nulo.} A atribuição de
-\textbf{texto ao Groq} e \textbf{visão ao Gemini} não é arbitrária: cada
-serviço tem uma camada gratuita com \emph{limites diários próprios}, pelo
-que separar as duas cargas por dois fornecedores \textbf{duplica, na
-prática, a capacidade gratuita} e evita que a análise de fotografias e a
-geração de narrativas compitam pela mesma quota. A complexidade adicional é
-contida: existe uma única abstração de cliente (\texttt{LLMClient}) que
-encapsula a cascata, pelo que o resto do sistema desconhece qual o
-fornecedor em uso. O \textbf{Ollama} (local) permanece como opção para
-quem privilegie a \emph{privacidade} ou opere sem ligação, e o Gemini é a
-rede de segurança final para texto — garantindo que uma falha pontual de um
-fornecedor nunca impede a geração.
+\paragraph{Repartir por tarefa duplica a capacidade gratuita.} Como cada
+serviço tem limites diários próprios, separar o texto (Groq) da visão
+(Gemini) por dois fornecedores evita que ambos compitam pela mesma quota.
+Toda a cascata é encapsulada numa única abstração de cliente
+(\texttt{LLMClient}), pelo que o resto do sistema desconhece qual o
+fornecedor em uso.
 
 \subsection{RAG: ChromaDB}
 

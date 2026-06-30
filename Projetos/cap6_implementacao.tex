@@ -224,29 +224,11 @@ graciosa}. Quando a biblioteca ChromaDB não está instalada — por exemplo,
 no \emph{deploy} gratuito do Render, onde o custo de \emph{build} é
 incomportável — o \texttt{RAGSystem} converte-se num \emph{stub}: a
 indexação torna-se inócua e a pesquisa devolve listas vazias, passando o
-M3 a usar a totalidade dos factos como contexto. O sistema mantém-se
-\emph{funcional}, perdendo apenas o passo de \emph{retrieval}
-(\Cref{lst:rag}).
-
-\begin{lstlisting}[language=Python,caption={Importação condicional que
-permite ao RAG degradar para um \emph{stub} sem ChromaDB
-(\texttt{rag\_system.py}).},label={lst:rag}]
-try:
-    import chromadb
-    _CHROMA_AVAILABLE = True
-except Exception as _exc:                # wheel indisponível em deploy
-    chromadb = None
-    _CHROMA_AVAILABLE = False
-    log.info("rag_chromadb_unavailable", reason=str(_exc))
-
-class RAGSystem:
-    def __init__(self):
-        if not _CHROMA_AVAILABLE:
-            self.client = self.collection = None
-            log.info("rag_ready", mode="stub")     # modo degradado
-            return
-        ...
-\end{lstlisting}
+M3 a usar a totalidade dos factos como contexto. Na prática, uma importação
+condicional do \texttt{chromadb} deteta a ausência da biblioteca e comuta o
+\texttt{RAGSystem} para esse modo \emph{stub}, sem que o resto do sistema o
+note. O sistema mantém-se \emph{funcional}, perdendo apenas o passo de
+\emph{retrieval}.
 
 \subsection{\emph{Templates} e calibração para português europeu}
 
@@ -545,43 +527,18 @@ Ambas as vias partilham os mesmos \emph{corpos} de tarefa
 (\texttt{tasks/bodies.py}) e o mesmo mecanismo de transição de estado
 (\texttt{running}\,$\rightarrow$\,\texttt{done}/\texttt{failed}), pelo que
 a experiência do utilizador é idêntica independentemente do ambiente. O
-executor \emph{in-process} (\Cref{lst:inproc}) usa um \emph{thread pool}
-limitado a um trabalhador — suficiente para um sistema single-tenant e
-prudente face aos $\approx$512~MB de memória do plano gratuito.
-
-\begin{lstlisting}[language=Python,caption={Despacho de uma tarefa para o
-executor \emph{in-process}, com o mesmo seguimento de estado do Celery
-(\texttt{tasks/inproc.py}).},label={lst:inproc}]
-_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="inproc-task")
-
-def run_in_background(task_record_id, body_factory):
-    synthetic_id = f"inproc-{uuid4().hex}"
-    def _runner():
-        # asyncio.run num thread próprio -> não bloqueia o loop do FastAPI
-        run_async(run_with_tracking(task_record_id, synthetic_id, body_factory))
-    _EXECUTOR.submit(_runner)
-    return synthetic_id
-\end{lstlisting}
+executor \emph{in-process} usa um \emph{thread pool} limitado a um
+trabalhador — suficiente para um sistema single-tenant e prudente face aos
+$\approx$512~MB de memória do plano gratuito; cada \emph{thread} corre o seu
+próprio \texttt{asyncio.run}, para não bloquear o \emph{loop} principal do
+FastAPI.
 
 Uma decisão de robustez relevante é o \textbf{\emph{sweep} de tarefas
 órfãs} no arranque: como nem um \emph{worker} Celery nem um \emph{thread}
 \emph{in-process} sobrevivem a um reinício do \emph{backend}, qualquer
 tarefa que ficasse \texttt{pending}/\texttt{running} de um arranque
-anterior é, por definição, órfã, sendo marcada como falhada
-(\Cref{lst:sweep}).
-
-\begin{lstlisting}[language=Python,caption={Limpeza de tarefas órfãs no
-arranque da aplicação (\texttt{main.py}).},label={lst:sweep}]
-async def _sweep_orphans() -> None:
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(TaskRecord).where(
-            TaskRecord.state.in_([TaskState.PENDING, TaskState.RUNNING])))
-        orphans = result.scalars().all()
-        for r in orphans:
-            r.state = TaskState.FAILED
-            r.error = "Tarefa abandonada (worker reiniciado antes de terminar)"
-        await db.commit()
-\end{lstlisting}
+anterior é, por definição, órfã, sendo marcada como falhada --- o que evita
+o sintoma de tarefas eternamente ``em execução''.
 
 \subsection{Observabilidade e validação}
 
@@ -616,25 +573,11 @@ A \textsc{spa} React/TypeScript distingue rigorosamente \emph{estado de
 servidor} (gerido pelo \textbf{TanStack Query}, com $\approx$50 \emph{hooks}
 que encapsulam pedidos, \emph{cache}, invalidação e \emph{polling}) de
 \emph{estado de cliente} (gerido pelo \textbf{Zustand}: autenticação e
-tema). O cliente HTTP (axios) injeta automaticamente o \emph{token}
-\emph{bearer} e, perante uma resposta \texttt{401}, termina a sessão de
-forma limpa (\Cref{lst:axios}). Um \texttt{SessionLoader} hidrata a sessão
-Supabase no arranque e instala um \emph{listener} que mantém o
-\emph{token} fresco, incluindo renovações silenciosas.
-
-\begin{lstlisting}[caption={Interceptores axios:
-injeção do \emph{token} e \emph{logout} automático no \texttt{401}
-(\texttt{lib/api.ts}).},label={lst:axios}]
-api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-api.interceptors.response.use((r) => r, async (err) => {
-  if (err.response?.status === 401) await supabase.auth.signOut();
-  return Promise.reject(err);
-});
-\end{lstlisting}
+tema). Um interceptor do cliente HTTP (axios) injeta automaticamente o
+\emph{token} \emph{bearer} em cada pedido e, perante uma resposta
+\texttt{401}, termina a sessão de forma limpa. Um \texttt{SessionLoader}
+hidrata a sessão Supabase no arranque e instala um \emph{listener} que
+mantém o \emph{token} fresco, incluindo renovações silenciosas.
 
 A \textbf{navegação} cobre os nove destinos visíveis da aplicação (Início,
 Biblioteca, Família, Linha Temporal, Projetos, Gerar, Histórias, Vídeos e

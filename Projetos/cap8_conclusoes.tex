@@ -71,23 +71,16 @@ atual:
   capturados para as legendas --- seria mais preciso.
   \item \textbf{Sem identificação de pessoas.} O reconhecimento facial
   (que tornaria as narrativas menos genéricas) não foi implementado.
-  \item \textbf{Cobertura de testes do \emph{frontend}.} A automação de
-  testes incide sobre o \emph{backend}; faltam testes ponta-a-ponta
-  (E2E) da interface.
-  \item \textbf{Acessibilidade não auditada formalmente.} Existem boas
-  práticas, mas falta uma auditoria \textsc{wcag}~AA.
+  \item \textbf{Validação do \emph{frontend} incompleta.} A automação de
+  testes incide sobre o \emph{backend}; faltam testes ponta-a-ponta (E2E) da
+  interface e uma auditoria formal de acessibilidade (\textsc{wcag}~AA),
+  embora existam já boas práticas.
   \item \textbf{Geração de vídeo limitada pela memória no \emph{deploy}
-  gratuito.} A montagem com MoviePy/FFmpeg a 720p excede os 512~MB de RAM do
-  plano gratuito do Render, que termina a instância (\emph{out-of-memory}) a
-  meio do \emph{render}. A solução adotada é uma \textbf{política de geração
-  exclusivamente local}: na nuvem, o \emph{backend} \textbf{recusa} o
-  \emph{render} (\texttt{VIDEO\_LOCAL\_ONLY}), evitando o
-  \emph{out-of-memory}; os vídeos são pré-gerados em ambiente local (a 720p,
-  sem limite de memória), escritos no \emph{mesmo} \emph{Storage} (Supabase)
-  e reproduzidos no \emph{site} sem qualquer \emph{render} em tempo real ---
-  a reprodução é leve (apenas servir o ficheiro) e nunca é afetada. A
-  resolução e os \emph{fps} permanecem parametrizáveis por ambiente como
-  ajuste adicional.
+  gratuito.} A montagem a 720p excede os 512~MB do plano gratuito do Render.
+  A solução foi gerar os vídeos \textbf{apenas em ambiente local} (a nuvem
+  recusa o \emph{render} via \texttt{VIDEO\_LOCAL\_ONLY}) e reproduzi-los a
+  partir do \emph{Storage} (\Cref{sec:impl_m4}) --- a reprodução nunca é
+  afetada, apenas a geração em tempo real na nuvem.
   \item \textbf{Quota de visão limitada no nível gratuito.} A análise visual
   das fotografias (M1) depende do Gemini, cujo nível gratuito permite apenas
   poucas dezenas de pedidos por dia; a geração de texto (M3) não é afetada por
