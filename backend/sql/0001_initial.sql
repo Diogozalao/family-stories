@@ -9,23 +9,30 @@
 -- em desenvolvimento. NUNCA em produção com dados a sério.
 -- =============================================================
 
--- ── 0. Limpar (DEV apenas — destrói dados!) ───────────────────
-DROP TABLE IF EXISTS task_records      CASCADE;
-DROP TABLE IF EXISTS video_outputs     CASCADE;
-DROP TABLE IF EXISTS project_media     CASCADE;
-DROP TABLE IF EXISTS stories           CASCADE;
-DROP TABLE IF EXISTS projects          CASCADE;
-DROP TABLE IF EXISTS timeline_events   CASCADE;
-DROP TABLE IF EXISTS persons           CASCADE;
-DROP TABLE IF EXISTS media_files       CASCADE;
+-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-- !!  STOP — NÃO CORRAS ESTE FICHEIRO NUMA BD COM DADOS.       !!
+-- !!  Os DROP abaixo estão DESATIVADOS (comentados) de propósito,
+-- !!  porque já apagaram dados uma vez. Só os descomentes se     !!
+-- !!  quiseres mesmo destruir TUDO e começar do zero.            !!
+-- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-DROP TYPE IF EXISTS task_state;
-DROP TYPE IF EXISTS task_kind;
-DROP TYPE IF EXISTS video_status;
-DROP TYPE IF EXISTS story_status;
-DROP TYPE IF EXISTS confidence_level;
-DROP TYPE IF EXISTS processing_status;
-DROP TYPE IF EXISTS media_type;
+-- ── 0. Limpar (DEV apenas — DESTRÓI DADOS! DESATIVADO) ─────────
+-- DROP TABLE IF EXISTS task_records      CASCADE;
+-- DROP TABLE IF EXISTS video_outputs     CASCADE;
+-- DROP TABLE IF EXISTS project_media     CASCADE;
+-- DROP TABLE IF EXISTS stories           CASCADE;
+-- DROP TABLE IF EXISTS projects          CASCADE;
+-- DROP TABLE IF EXISTS timeline_events   CASCADE;
+-- DROP TABLE IF EXISTS persons           CASCADE;
+-- DROP TABLE IF EXISTS media_files       CASCADE;
+
+-- DROP TYPE IF EXISTS task_state;
+-- DROP TYPE IF EXISTS task_kind;
+-- DROP TYPE IF EXISTS video_status;
+-- DROP TYPE IF EXISTS story_status;
+-- DROP TYPE IF EXISTS confidence_level;
+-- DROP TYPE IF EXISTS processing_status;
+-- DROP TYPE IF EXISTS media_type;
 
 -- ── 1. Enums ──────────────────────────────────────────────────
 CREATE TYPE media_type        AS ENUM ('photo', 'video', 'document', 'gedcom');
