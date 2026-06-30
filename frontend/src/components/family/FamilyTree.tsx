@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactFlow, {
-  Background, Controls, Handle, Panel, Position,
+  Background, BaseEdge, Controls, Handle, Panel, Position,
   getNodesBounds, getViewportForBounds,
-  useEdgesState, useNodesState,
-  type Edge, type Node, type ReactFlowInstance,
+  useEdgesState, useNodesState, useStore,
+  type Edge, type EdgeProps, type Node, type ReactFlowInstance,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { toPng } from "html-to-image";
@@ -75,6 +75,34 @@ function PersonNode({ data }: { data: PersonNodeData }) {
 }
 
 const nodeTypes = { person: PersonNode };
+
+// ── Custom edge: genealogy "bus" connector ──────────────────────────────────
+// Instead of one independent (crossing) line per parent→child, every child of
+// the same couple shares: a single vertical drop from the marriage line's
+// midpoint, and a single horizontal sibling bar. Each child then has only a
+// short vertical stub up to the bar — the classic family-tree look, with no
+// overlapping lines. The drop's X is the LIVE midpoint of the child's parents,
+// so it stays correct while nodes are dragged.
+function FamilyEdge({ id, sourceY, targetX, targetY, data, style }: EdgeProps) {
+  const parentIds: number[] = data?.parentIds ?? [];
+  const anchorX = useStore((s) => {
+    const xs = parentIds
+      .map((pid) => {
+        const n = s.nodeInternals.get(String(pid));
+        if (!n) return null;
+        const x = n.positionAbsolute?.x ?? n.position.x;
+        return x + (n.width ?? 150) / 2;          // node centre (live width)
+      })
+      .filter((v): v is number => v != null);
+    return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+  });
+  const ax = anchorX ?? targetX;                  // couple midpoint (fallback: child)
+  const busY = targetY - 22;                       // shared sibling bar, just above the row
+  const path = `M ${ax},${sourceY} L ${ax},${busY} L ${targetX},${busY} L ${targetX},${targetY}`;
+  return <BaseEdge id={id} path={path} style={style} />;
+}
+
+const edgeTypes = { family: FamilyEdge };
 
 // ── Layout (generational + barycenter ordering) ───────────────────────────────
 
@@ -234,22 +262,34 @@ function buildGraph(persons: Person[], rels: TreeRelationship[]): { nodes: Node<
     data: { name: p.name, years: yearsLabel(p), sex: p.sex, photoId: p.photo_media_id },
   }));
 
-  const edges: Edge[] = rels.flatMap((r): Edge[] => {
-    if (!idset.has(r.from) || !idset.has(r.to)) return [];
-    if (r.kind === "cônjuge") {
-      return [{
-        id: `r${r.id}`, source: String(r.from), target: String(r.to),
-        sourceHandle: "r", targetHandle: "l", type: "straight",
-        style: { stroke: "#f43f5e", strokeDasharray: "4 3" },
-      }];
-    }
+  // Marriage lines: one horizontal dashed edge per couple relationship.
+  const spouseEdges: Edge[] = rels.flatMap((r): Edge[] => {
+    if (r.kind !== "cônjuge" || !idset.has(r.from) || !idset.has(r.to)) return [];
     return [{
       id: `r${r.id}`, source: String(r.from), target: String(r.to),
-      type: "smoothstep", style: { stroke: "#a8a29e" },
+      sourceHandle: "r", targetHandle: "l", type: "straight",
+      style: { stroke: "#f43f5e", strokeDasharray: "4 3" },
     }];
   });
 
-  return { nodes, edges };
+  // Parent→child: collapse all of a child's parent links into a SINGLE "family"
+  // connector (routed through the shared sibling bar). One edge per child, with
+  // both parents passed in so the drop anchors on their midpoint.
+  const parentsByChild = new Map<number, number[]>();
+  for (const r of rels) {
+    if (r.kind === "cônjuge" || !idset.has(r.from) || !idset.has(r.to)) continue;
+    pushMap(parentsByChild, r.to, r.from);          // r.from is parent of r.to
+  }
+  const childEdges: Edge[] = [...parentsByChild.entries()].map(([child, parents]) => ({
+    id: `c${child}`,
+    source: String(parents[0]),
+    target: String(child),
+    type: "family",
+    data: { parentIds: parents },
+    style: { stroke: "#a8a29e" },
+  }));
+
+  return { nodes, edges: [...spouseEdges, ...childEdges] };
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -380,6 +420,7 @@ export default function FamilyTree({ familyLabel, projectId, onPersonClick }: {
         onNodeDoubleClick={(_e, node) => onPersonClick?.(Number(node.id))}
         onPaneClick={() => setFocusId(null)}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.2}
         nodesConnectable={false}
