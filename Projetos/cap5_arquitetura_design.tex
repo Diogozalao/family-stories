@@ -22,7 +22,7 @@ principais.
   font=\footnotesize,
   box/.style={rectangle,draw,rounded corners,align=center,
               minimum height=0.95cm,minimum width=2.7cm,fill=white},
-  svc/.style={box,fill=ubiblue!10,draw=ubiblue},
+  svc/.style={box,fill=black!6,draw=black!75},
   mod/.style={box,fill=accent!16,draw=accent,minimum width=2.1cm,
               minimum height=0.75cm},
   arrow/.style={-{Latex[length=2.2mm]},thick},
@@ -32,25 +32,27 @@ principais.
 \node[svc] (front) {\textbf{Frontend}\\React + TS\\(Vercel)};
 \node[svc,right=2.6cm of front] (api) {\textbf{Backend}\\FastAPI\\(Render/Docker)};
 
-% Pipeline
+% Pipeline (à direita)
 \node[mod,above right=0.05cm and 2.1cm of api] (m1) {M1 · Ingestão};
 \node[mod,below=0.3cm of m1] (m2) {M2 · Temporal};
 \node[mod,below=0.3cm of m2] (m3) {M3 · Narrativa};
 \node[mod,below=0.3cm of m3] (m4) {M4 · Multimédia};
 
-% Dados e IA
-\node[svc,below=1.8cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
-\node[svc,below=1.8cm of front] (ia) {\textbf{IA}\\Groq (texto)\\Ollama (local)\\Gemini (visão)};
+% Dados (centro-baixo) e IA (baixo-direita, sob o pipeline)
+\node[svc,below=2.2cm of api] (supa) {\textbf{Supabase}\\Auth · PostgreSQL · Storage};
+\node[svc,below=1.5cm of m4] (ia) {\textbf{IA}\\Groq (texto)\\Ollama (local)\\Gemini (visão)};
 
 \draw[arrow] (front) -- node[above,font=\scriptsize]{HTTPS / JWT} (api);
 \draw[arrow] (api.east) -- (m1.west);
 \draw[arrow] (api.east) -- (m2.west);
 \draw[arrow] (api.east) -- (m3.west);
 \draw[arrow] (api.east) -- (m4.west);
-\draw[arrow] (api) -- node[right,font=\scriptsize]{ORM / Storage} (supa);
-\draw[dash] (front) to[bend right=12] node[below,font=\scriptsize,sloped]{auth} (supa);
-\draw[arrow] (m3.south) to[bend left=10] (ia.east);
-\draw[arrow] (m1.south) to[bend left=22] (ia.east);
+\draw[arrow] (api) -- node[left,font=\scriptsize]{ORM / Storage} (supa);
+\draw[dash] (front.south) to[out=-90,in=180]
+      node[pos=0.6,below,font=\scriptsize]{auth} (supa.west);
+% Módulos que invocam a IA — curvas pela direita, sem cruzar o Supabase.
+\draw[arrow] (m3.east) to[out=0,in=0,looseness=1.4] (ia.east);
+\draw[arrow] (m1.east) to[out=0,in=30,looseness=1.6] (ia.east);
 
 \begin{scope}[on background layer]
   \node[draw=accent,dashed,rounded corners,inner sep=5pt,fit=(m1)(m4),

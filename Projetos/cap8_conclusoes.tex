@@ -103,32 +103,55 @@ Numa eventual versão 2.0, propõem-se as seguintes evoluções, ordenadas por
 impacto esperado:
 
 \begin{enumerate}[leftmargin=*]
-  \item \textbf{Reativar o RAG na nuvem via \emph{pgvector}.} Migrar a
-  base vetorial do ChromaDB para a extensão \emph{pgvector} do PostgreSQL
-  (Supabase) eliminaria a dependência pesada e manteria o
-  \emph{retrieval} ativo em produção — provavelmente a melhoria de maior
-  valor, inclusive para um estudo ablativo do impacto do RAG.
-  \item \textbf{Painel de métricas e avaliação.} Construir o painel
-  proposto no \Cref{sec:qualidade}, incluindo o \emph{script} de aderência
-  ao PT-PT e um estudo comparativo Ollama vs.\ Gemini.
-  \item \textbf{Identificação de pessoas.} Integrar reconhecimento facial
-  (e.g.\ \emph{DeepFace}) com confirmação manual, enriquecendo a
-  especificidade das narrativas.
-  \item \textbf{Sincronização de vídeo ao nível da palavra.} Aproveitar os
-  carimbos temporais por palavra já capturados para as legendas
-  (\Cref{sub:narracao_legendas}) para temporizar a troca de fotografias com
-  precisão de palavra, eliminando a deriva que ainda pode acumular-se em
-  histórias longas.
-  \item \textbf{Voz personalizada (\emph{voice cloning}).} A escolha entre
-  voz masculina e feminina já está disponível; o passo seguinte é explorar o
-  \emph{Coqui TTS} para narrar com a voz de um familiar a partir de uma
-  amostra — funcionalidade tecnicamente e eticamente rica.
-  \item \textbf{Abordagem B de vídeo (IA generativa).} Integrar,
-  opcionalmente, APIs como o \emph{Runway} para animar fotografias-chave.
-  \item \textbf{Colaboração familiar.} Evoluir o modelo multi-inquilino
-  para permitir partilha de arquivos e colaboração entre membros de uma
-  família.
-  \item \textbf{Testes E2E e auditoria de acessibilidade.}
+  \item \textbf{Implantação privada e soberana com modelo local.} A direção
+  mais alinhada com o espírito do projeto é levar a inferência inteiramente
+  para dentro de casa: instalar o sistema completo numa \emph{máquina virtual}
+  ou servidor dedicado (eventualmente com \textsc{gpu}) a correr um
+  \textsc{llm} \emph{local} quantizado (via Ollama), eliminando qualquer
+  dependência de modelos na nuvem. Assim, nenhum dado --- fotografia, rosto,
+  nome ou narrativa --- chega sequer a sair da infraestrutura do dono,
+  concretizando, à escala de produção, a promessa \emph{local-first} que hoje
+  só é parcial (limitada pela lentidão do modelo local em \textsc{cpu}).
+
+  \item \textbf{Reconhecimento facial com confirmação humana.} Agrupar e
+  identificar rostos ao longo de todo o acervo (e.g.\ \emph{InsightFace}/
+  \emph{DeepFace}), com validação do utilizador, faria as narrativas deixarem
+  de ser genéricas: o sistema saberia \emph{quem} aparece em cada fotografia e
+  poderia construir uma linha temporal por pessoa --- ``o avô João, presente
+  em 14 fotografias entre 1958 e 1991''.
+
+  \item \textbf{``Pergunta ao arquivo'': assistente conversacional da
+  memória.} Sobre o índice de factos já existente (\textsc{rag}), oferecer um
+  modo de \emph{chat} em linguagem natural --- ``onde passámos o verão de
+  1985?'', ``quem está nesta fotografia com a avó?'' ---, transformando um
+  acervo passivo numa \emph{base de conhecimento familiar} interrogável.
+
+  \item \textbf{Mapa de memórias geo-temporal.} Cruzar as coordenadas
+  \textsc{gps} do \textsc{exif} com os locais reconhecidos para traçar, num
+  mapa interativo e ao longo do tempo, o percurso geográfico da família ---
+  emigrações, viagens, o sítio onde se passava cada verão. Acrescenta uma
+  dimensão \emph{espacial} à dimensão temporal que já existe.
+
+  \item \textbf{Ingestão de áudio e vídeo caseiro.} Estender o M1 para além da
+  fotografia: transcrever vídeos antigos e gravações de voz (e.g.\ com o
+  \emph{Whisper}) e incorporar esse conteúdo como matéria-prima factual ---
+  uma história contada pelos próprios avós passa a poder integrar o
+  documentário gerado.
+
+  \item \textbf{Voz do próprio familiar (\emph{voice cloning} ético).} Já é
+  possível escolher entre voz masculina e feminina; o passo seguinte, técnica
+  e emocionalmente marcante, é clonar a voz de um familiar a partir de uma
+  curta amostra (e.g.\ \emph{XTTS}/\emph{Coqui~TTS}) para narrar a sua própria
+  história --- sempre com consentimento explícito e salvaguardas éticas
+  rigorosas.
+
+  \item \textbf{Avaliação científica e estudo com utilizadores.} Fechar o
+  ciclo com uma avaliação formal: um painel humano a pontuar coerência,
+  fidelidade factual e qualidade literária (com concordância entre
+  avaliadores), a par das métricas automáticas já instrumentadas (aderência
+  ao PT-PT) e de um estudo ablativo do impacto do \textsc{rag} --- viabilizado
+  pela migração da base vetorial para \emph{pgvector} ---, produzindo
+  evidência mensurável e publicável da qualidade do sistema.
 \end{enumerate}
 
 \section{Considerações Finais}
