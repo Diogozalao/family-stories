@@ -104,37 +104,58 @@ impacto esperado:
 
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Implantação local privada.} Executar o sistema completo numa
-  máquina dedicada (com \textsc{gpu}) a correr um \textsc{llm} local via
-  Ollama, eliminando a dependência de modelos na nuvem. \emph{Exemplo:} uma
-  família gera as histórias no seu próprio servidor, sem que os dados saiam de
-  casa.
+  máquina dedicada (com \textsc{gpu}) a correr um \textsc{llm} local através do
+  Ollama, eliminando a dependência de modelos na nuvem. Esta evolução serve
+  diretamente o princípio central do projeto --- privacidade e custo nulo ---,
+  hoje apenas parcialmente cumprido: como o modelo local de 3B em \textsc{cpu}
+  é demasiado lento para uso interativo, a geração recai no Groq (na nuvem).
+  Com aceleração por \textsc{gpu}, a inferência local tornar-se-ia rápida o
+  suficiente para uso corrente, garantindo que nenhum dado familiar saísse da
+  infraestrutura do dono.
 
   \item \textbf{Reconhecimento facial.} Identificar automaticamente as
-  pessoas nas fotografias, com confirmação do utilizador, para tornar as
-  narrativas mais específicas. \emph{Exemplo:} construir a linha temporal de
-  uma pessoa a partir das fotografias em que é reconhecida.
+  pessoas presentes nas fotografias, com confirmação do utilizador. As
+  narrativas atuais são genéricas quanto a \emph{quem} aparece nas imagens;
+  saber as identidades torná-las-ia muito mais específicas e pessoais ---
+  o objetivo último do projeto --- e aproveitaria diretamente o grafo de
+  parentesco e a linha temporal por pessoa que o sistema já constrói.
 
-  \item \textbf{Consulta conversacional do arquivo.} Permitir perguntas em
-  linguagem natural sobre o arquivo, respondidas pelo subsistema \textsc{rag}.
-  \emph{Exemplo:} responder a ``que pessoas aparecem nas fotografias de
-  1985?''.
+  \item \textbf{Consulta conversacional do arquivo.} Oferecer um modo de
+  perguntas e respostas em linguagem natural sobre o arquivo, servido pelo
+  subsistema \textsc{rag} já existente. Como os factos do M1/M2 já são
+  indexados para \emph{retrieval}, expor uma interface de conversa
+  transformaria esse índice passivo numa forma interativa de explorar a
+  memória familiar, complementando a geração de narrativas com a capacidade de
+  responder a questões pontuais.
 
-  \item \textbf{Mapa geo-temporal.} Posicionar as fotografias num mapa a
-  partir das coordenadas \textsc{gps} do \textsc{exif}. \emph{Exemplo:}
-  visualizar o percurso geográfico da família ao longo dos anos.
+  \item \textbf{Mapa geo-temporal.} Posicionar as fotografias num mapa
+  interativo a partir das coordenadas \textsc{gps} do \textsc{exif}, ao longo
+  do tempo. O sistema já extrai estas coordenadas mas ainda não as explora;
+  uma vista espacial acrescentaria uma nova dimensão à organização temporal do
+  M2, permitindo visualizar emigrações, viagens e percursos da família e
+  reforçando o objetivo de dar sentido ao arquivo.
 
-  \item \textbf{Ingestão de áudio e vídeo.} Estender o módulo de ingestão a
-  vídeos e gravações de voz, transcritos automaticamente (e.g.\ com o
-  \emph{Whisper}). \emph{Exemplo:} incorporar o relato gravado de um familiar
-  na narrativa.
+  \item \textbf{Ingestão de áudio e vídeo.} Estender o módulo de ingestão
+  (M1), hoje centrado na fotografia, a vídeos antigos e a gravações de voz,
+  transcritos automaticamente (e.g.\ com o \emph{Whisper}). Grande parte da
+  memória familiar vive nesses formatos; transcrevê-los alimentaria as
+  narrativas com factos na primeira pessoa, alargando significativamente a
+  matéria-prima sem alterar a arquitetura do \emph{pipeline}.
 
-  \item \textbf{Clonagem de voz.} Narrar com a voz de um familiar a partir de
-  uma amostra de áudio, mediante consentimento. \emph{Exemplo:} um
-  documentário narrado na voz do próprio.
+  \item \textbf{Clonagem de voz.} Narrar o documentário com a voz de um
+  familiar, reconstruída a partir de uma curta amostra de áudio. A seleção de
+  voz (masculina/feminina) já existe; clonar a voz real de um familiar seria a
+  expressão mais forte da missão do projeto --- preservar e dar voz à memória
+  ---, tornando o resultado profundamente pessoal. Exigiria consentimento
+  explícito e salvaguardas éticas.
 
-  \item \textbf{Avaliação formal.} Validar a qualidade das narrativas com um
-  painel humano e métricas automáticas. \emph{Exemplo:} pontuar a coerência e
-  a fidelidade factual numa amostra de histórias geradas.
+  \item \textbf{Avaliação formal.} Validar sistematicamente a qualidade das
+  narrativas com um painel humano (coerência, fidelidade factual e qualidade
+  literária) e com as métricas automáticas já instrumentadas (aderência ao
+  PT-PT), incluindo um estudo ablativo do impacto do \textsc{rag} viabilizado
+  pela migração para \emph{pgvector}. A avaliação é apontada como limitação
+  atual; um estudo rigoroso converteria o ``funciona'' em evidência mensurável
+  da qualidade, reforçando a contribuição académica do trabalho.
 \end{enumerate}
 
 \section{Considerações Finais}
