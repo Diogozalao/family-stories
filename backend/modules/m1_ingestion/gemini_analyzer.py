@@ -10,19 +10,19 @@ from backend.core.config import settings
 
 log = structlog.get_logger()
 
-ANALYSIS_PROMPT = """Analisa esta fotografia familiar e responde APENAS em JSON válido com esta estrutura exata:
+ANALYSIS_PROMPT = """Analisa esta fotografia familiar com atenção e responde APENAS em JSON válido com esta estrutura exata:
 
 {
-  "description": "Descrição detalhada da fotografia em português (2-3 frases)",
+  "description": "Descrição rica em português (3-4 frases): quem ou o que se vê e o que estão a fazer; o ESPAÇO e o ambiente (interior ou exterior, a divisão da casa ou a paisagem, mobiliário e objetos presentes); a luz e a atmosfera; e a época que a roupa e os objetos sugerem.",
   "people_count": número de pessoas visíveis (0 se nenhuma),
-  "setting": "local/contexto (ex: 'sala de estar', 'jardim', 'praia', 'casamento')",
+  "setting": "o lugar e o espaço, de forma específica (ex: 'cozinha antiga com fogão a lenha', 'quintal com muro de pedra e roseiras', 'praia ao fim da tarde', 'salão de um casamento')",
   "emotion": "emoção predominante (ex: 'alegria', 'nostalgia', 'celebração', 'quotidiano')",
-  "tags": ["tag1", "tag2", "tag3"],
-  "narrative_hint": "Uma frase sugerindo como esta foto poderia aparecer numa narrativa familiar",
-  "estimated_decade": "década estimada (ex: '1980s', '1990s', 'desconhecido')"
+  "tags": ["tag1", "tag2", "tag3", "tag4"],
+  "narrative_hint": "Uma frase sugerindo como esta foto poderia surgir, de forma natural, numa narrativa familiar — incluindo uma transição para o espaço/momento.",
+  "estimated_decade": "década estimada pelas roupas e objetos (ex: '1980s', '1990s', 'desconhecido')"
 }
 
-Sê específico e sensível ao contexto familiar. Não inventes detalhes que não vês."""
+Observa com cuidado o ESPAÇO e os pormenores que situam a cena (o lugar, a época, os objetos, a atmosfera). Sê específico e sensível ao contexto familiar. NÃO inventes detalhes que não vês."""
 
 class GeminiAnalyzer:
     def __init__(self):

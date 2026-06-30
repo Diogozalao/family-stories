@@ -14,6 +14,7 @@ from backend.modules.m3_narrative.rag_system import RAGSystem
 from backend.modules.m3_narrative.pt_pt import count_brasileirismos, pt_pt_postprocess
 from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
+    MEDIA_GROUNDING,
     NARRATIVE_TEMPLATES,
     ORIGINALITY_RULES,
     STYLE_RULES,
@@ -196,6 +197,10 @@ class NarrativeGenerator:
         # ...and the originality rules, which push the model off its default
         # clichés towards a fresh, concrete narrative for *this* family.
         prompt += "\n\n" + ORIGINALITY_RULES
+        # ...and the media-grounding rules, so each photo enters the prose in
+        # context (its place + people named first) instead of abruptly — the
+        # narration and the slideshow then flow together in the video.
+        prompt += "\n\n" + MEDIA_GROUNDING
 
         # The templates are written in Portuguese; we steer the LLM with a
         # short suffix that overrides the output language when the caller
@@ -322,7 +327,9 @@ class NarrativeGenerator:
                 who = [person_names.get(pid) for pid in (getattr(m, "person_ids", None) or [])]
                 who = [n for n in who if n]
                 if who:               parts.append(f"Quem aparece: {', '.join(who)}")
-            if m.ai_setting:          parts.append(f"Local: {m.ai_setting}")
+            if m.ai_setting:          parts.append(f"Espaço/cenário: {m.ai_setting}")
+            if getattr(m, "location_name", None):
+                                      parts.append(f"Lugar: {m.location_name}")
             if m.ai_emotion:          parts.append(f"Emoção: {m.ai_emotion}")
             if m.ai_tags:             parts.append(f"Tags: {', '.join(m.ai_tags)}")
             if m.ai_narrative_hint:   parts.append(f"Sugestão: {m.ai_narrative_hint}")

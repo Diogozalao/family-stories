@@ -101,6 +101,21 @@ STYLE_RULES = """REGRAS DE ESCRITA E LÍNGUA (português europeu cuidado):
   Cada frase deve fazer a história avançar — corta o que for ornamento vazio."""
 
 
+MEDIA_GROUNDING = """INTEGRAÇÃO DAS FOTOGRAFIAS (para a narrativa e o vídeo fluírem):
+- Os "momentos" listados no contexto são FOTOGRAFIAS REAIS que vão ilustrar a
+  narrativa. Trata cada momento como uma cena a entrar em imagem.
+- Antes de descreveres uma cena, PREPARA a entrada da imagem: situa o ESPAÇO e
+  o LUGAR (a cozinha, o quintal, a praia, a aldeia) e quem lá está, de forma
+  natural — para que a fotografia surja em contexto, e nunca de forma brusca.
+- Faz transições suaves entre momentos, no tempo e no espaço: liga uma cena à
+  seguinte com uma ponte ("anos mais tarde, na mesma casa…", "do quintal
+  passámos à cozinha…") em vez de saltar sem aviso.
+- Aproveita os pormenores do espaço (objetos, divisão, paisagem, época) para
+  dar verdade à cena, mas sem inventares o que não está nos factos.
+- Segue a ordem cronológica e os lugares reais indicados em cada momento,
+  para que a sequência de imagens acompanhe naturalmente o texto."""
+
+
 NARRATIVE_TEMPLATES = {
 
     "default": {
