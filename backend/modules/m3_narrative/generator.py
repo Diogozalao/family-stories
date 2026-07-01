@@ -11,7 +11,11 @@ from backend.models.timeline import Person, Relationship, TimelineEvent
 from backend.modules.m2_temporal.family_graph import FamilyGraph
 from backend.modules.m3_narrative.llm_client import LLMClient, LLMUnavailableError
 from backend.modules.m3_narrative.rag_system import RAGSystem
-from backend.modules.m3_narrative.pt_pt import count_brasileirismos, pt_pt_postprocess
+from backend.modules.m3_narrative.pt_pt import (
+    count_brasileirismos,
+    dedupe_and_trim,
+    pt_pt_postprocess,
+)
 from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
     LENGTH_SPECS,
@@ -227,8 +231,16 @@ class NarrativeGenerator:
         _guide = _spec.get(lang_code, _spec["pt"])
         if lang_code == "en":
             prompt += "\n\nLENGTH (this overrides any paragraph count above): " + _guide
+            prompt += ("\n\nNEVER repeat paragraphs, sentences or ideas to reach the "
+                       "length. If the facts are not enough for the requested length, "
+                       "write a SHORTER but complete narrative — not repeating is more "
+                       "important than the length.")
         else:
             prompt += "\n\nEXTENSÃO (tem prioridade sobre qualquer número de parágrafos indicado acima): " + _guide
+            prompt += ("\n\nNUNCA repitas parágrafos, frases ou ideias para atingir a "
+                       "extensão. Se os factos não chegarem para o comprimento pedido, "
+                       "escreve um texto MAIS CURTO mas completo — não repetir é mais "
+                       "importante do que o comprimento.")
 
         try:
             # The LLM SDK call is synchronous and takes ~30 s. Off-load it to a
@@ -261,6 +273,13 @@ class NarrativeGenerator:
             if fixed:
                 log.info("pt_pt_corrected",
                          title=title, tells_before=before, substitutions=fixed)
+
+        # Remove any repeated paragraphs (padding on thin facts) and trim a
+        # sentence left dangling by the token cap, so the text never repeats
+        # itself nor ends mid-word — applies to both languages.
+        narrative_text, dedup = dedupe_and_trim(narrative_text)
+        if dedup["removed_paragraphs"] or dedup["trimmed"]:
+            log.info("narrative_deduped", title=title, **dedup)
 
         # ── Scene segmentation ───────────────────────────────────────────
         # Pair each paragraph of prose with the photos that illustrate it,
