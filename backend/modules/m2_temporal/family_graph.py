@@ -2,9 +2,6 @@ import networkx as nx
 import structlog
 import json
 from pathlib import Path
-from typing import Optional
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from backend.models.timeline import Person
 

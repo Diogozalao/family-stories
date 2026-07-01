@@ -122,7 +122,7 @@ function PhotosTab({ projectId, projectLabel }: { projectId: number; projectLabe
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const items = photos ?? [];
-  const existingIds = useMemo(() => new Set(items.map((m) => m.id)), [items]);
+  const existingIds = useMemo(() => new Set((photos ?? []).map((m) => m.id)), [photos]);
 
   // Photos go STRAIGHT into the project (stamped with project_id) and are
   // never added to the global Library — the project is its own isolated

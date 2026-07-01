@@ -144,7 +144,7 @@ export default function GeneratePage() {
         mode: "sync",
       },
       {
-        onSuccess: (data: any) => {
+        onSuccess: (data) => {
           // Sync result (or a background request that the cloud downgraded
           // to sync because there's no Celery worker) gives us a Story.
           if (data?.id) {
