@@ -31,12 +31,11 @@ from backend.core.database import get_db
 from backend.core.rate_limit import limiter
 from backend.core.supabase_storage import (
     cached_signed_url,
-    create_signed_url,
     delete_object,
     invalidate_signed_url,
 )
 from backend.core.upload_validator import validate_photo
-from backend.models.media import MediaFile, ProcessingStatus
+from backend.models.media import MediaFile
 from backend.modules.m1_ingestion.processor import M1Processor
 from backend.schemas.media import MediaFileResponse, UploadResponse
 

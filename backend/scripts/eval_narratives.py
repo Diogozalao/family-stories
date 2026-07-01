@@ -174,7 +174,7 @@ def main() -> None:
 
     llm = None
     if not args.dry_run:
-        from backend.modules.m3_narrative.llm_client import LLMClient, LLMUnavailableError
+        from backend.modules.m3_narrative.llm_client import LLMClient
         llm = LLMClient()
         print(f"Backend de LLM: {llm.backend}\n")
 

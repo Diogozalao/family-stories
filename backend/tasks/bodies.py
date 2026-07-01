@@ -54,20 +54,6 @@ async def narrative_body(payload: dict) -> dict:
         }
 
 
-async def analyze_media_body(media_id: int, user_id: UUID) -> dict:
-    """Run the deferred M1 AI analysis (Gemini/OCR) for one uploaded media."""
-    from backend.modules.m1_ingestion.processor import M1Processor
-
-    async with AsyncSessionLocal() as session:
-        processor = M1Processor()
-        record    = await processor.analyze(media_id, session, user_id=user_id)
-        status    = getattr(record, "status", None)
-        return {
-            "media_id": media_id,
-            "status":   status.value if hasattr(status, "value") else status,
-        }
-
-
 async def video_body(story_id: int, user_id: UUID) -> dict:
     """Build the documentary video for ``story_id`` owned by ``user_id``."""
     async with AsyncSessionLocal() as session:

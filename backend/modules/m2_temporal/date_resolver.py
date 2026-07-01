@@ -1,5 +1,5 @@
 import structlog
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Optional
 
 log = structlog.get_logger()

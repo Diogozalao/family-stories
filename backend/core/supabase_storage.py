@@ -19,7 +19,6 @@ auth.uid()::text`` keeps direct browser access scoped per user.
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -75,15 +74,6 @@ async def upload_bytes(
             resp.raise_for_status()
 
     log.info("storage_upload_ok", key=object_key, bytes=len(content))
-
-
-def upload_bytes_sync(
-    object_key:   str,
-    content:      bytes,
-    content_type: Optional[str] = None,
-) -> None:
-    """Blocking variant — convenient for Celery workers that aren't async."""
-    asyncio.run(upload_bytes(object_key, content, content_type))
 
 
 async def download_to_disk(object_key: str, dest_path: Path) -> Path:

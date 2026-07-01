@@ -252,9 +252,3 @@ class M1Processor:
         await db.commit()
         await db.refresh(record)
         return record
-
-
-async def process_gedcom(file_path: Path, db: AsyncSession, user_id) -> dict:
-    """Processa ficheiro GEDCOM e importa árvore genealógica para ``user_id``."""
-    from backend.modules.m1_ingestion.gedcom_parser import gedcom_to_database
-    return await gedcom_to_database(file_path, db, user_id=user_id)
