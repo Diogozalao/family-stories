@@ -563,14 +563,20 @@ function FamilyTab({ familyLabel, projectId }: { familyLabel: string; projectId:
         </p>
       </div>
 
-      {/* Sub-family chips — keep each imported tree separate. */}
-      {subFamilies.length > 1 && (
+      {/* Sub-family chips — identify each imported tree. Shown even for a
+          single family, so the imported family (e.g. "Gomes") is labelled,
+          matching the global Family page. The "All families" toggle only
+          appears when there is an actual choice (more than one tree). */}
+      {subFamilies.length > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <SubChip active={activeSub === null} label={t("family.allFamilies")}
-                   count={subFamilies.reduce((s, f) => s + f.count, 0)}
-                   onClick={() => setActiveSub(null)} />
+          {subFamilies.length > 1 && (
+            <SubChip active={activeSub === null} label={t("family.allFamilies")}
+                     count={subFamilies.reduce((s, f) => s + f.count, 0)}
+                     onClick={() => setActiveSub(null)} />
+          )}
           {subFamilies.map((f) => (
-            <SubChip key={f.label} active={activeSub === f.label}
+            <SubChip key={f.label}
+                     active={activeSub === f.label || subFamilies.length === 1}
                      label={subDisplay(f.label)} count={f.count}
                      onClick={() => setActiveSub(f.label)}
                      onDelete={() => deleteTree(f.label)} />
