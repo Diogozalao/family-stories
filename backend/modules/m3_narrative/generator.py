@@ -20,7 +20,6 @@ from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
     LENGTH_SPECS,
     MEDIA_GROUNDING,
-    NARRATIVE_TEMPLATES,
     ORIGINALITY_RULES,
     STYLE_RULES,
     get_template,

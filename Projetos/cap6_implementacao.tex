@@ -66,6 +66,10 @@ síncrona as fotografias ainda sem descrição, marcando-as \texttt{COMPLETED} e
 desbloqueando a linha temporal e o vídeo (que dependem desse estado). A
 operação é \emph{consciente da quota}: indica quantas fotografias serão
 analisadas (uma chamada ao Gemini cada) e pede confirmação antes de avançar.
+Para não exceder a memória da instância gratuita, a re-análise processa as
+fotografias em \textbf{pequenos lotes} por pedido, prosseguindo até estarem
+todas tratadas --- em vez de carregar a biblioteca inteira de uma só vez, o
+que esgotava a instância.
 
 A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}~\cite{gedcom}
 dedicado (o maior módulo, $\approx$430 linhas), que converte o ficheiro em
