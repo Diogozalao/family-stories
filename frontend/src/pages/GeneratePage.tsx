@@ -42,7 +42,7 @@ export default function GeneratePage() {
   // doesn't wipe what the user has filled in.
   const {
     step, eventType, title, query, customTone, customStructure,
-    selectedIds, selectedMediaIds, voice, subtitles, subtitleSize, patch, reset,
+    selectedIds, selectedMediaIds, voice, subtitles, subtitleSize, length, patch, reset,
   } = useGenerateDraft();
   const setStep = (s: Step) => patch({ step: s });
 
@@ -135,6 +135,8 @@ export default function GeneratePage() {
         // Subtitle track on/off + size in the player.
         subtitles,
         subtitle_size: subtitleSize,
+        // Narrative length → spoken duration of the documentary.
+        length,
         // Narratives are short (~30 s) and we always run them synchronously:
         // the open request keeps the free-tier instance awake and returns the
         // story directly, which avoids the in-process background worker
@@ -321,6 +323,32 @@ export default function GeneratePage() {
               />
               <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
                 {t("generate.queryHint")}
+              </p>
+            </div>
+
+            {/* Narrative length → drives the spoken duration. */}
+            <div>
+              <label className="label">{t("generate.lengthLabel")}</label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(["short", "medium", "long", "epic"] as const).map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    onClick={() => patch({ length: l })}
+                    className={cn(
+                      "rounded-xl border px-3 py-2.5 text-sm font-medium transition",
+                      length === l
+                        ? "border-brand-500 bg-brand-50 text-brand-700 dark:border-brand-500 dark:bg-brand-950/40 dark:text-brand-300"
+                        : "border-stone-200 text-stone-600 hover:bg-stone-50 dark:border-stone-700 dark:text-stone-400 dark:hover:bg-stone-800/50",
+                    )}
+                  >
+                    <span className="block">{t(`generate.length_${l}`)}</span>
+                    <span className="mt-0.5 block text-[11px] font-normal text-stone-400">{t(`generate.length_${l}_time`)}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-stone-500 dark:text-stone-500">
+                {t("generate.lengthHint")}
               </p>
             </div>
 

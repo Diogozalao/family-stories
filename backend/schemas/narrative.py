@@ -29,6 +29,9 @@ class GenerateRequest(BaseModel):
     subtitles:        bool          = True
     # Subtitle size in the player: "small" / "medium" / "large".
     subtitle_size:    str           = "medium"
+    # Narrative length: "short" (~1 min) / "medium" (~2-3) / "long" (~4-5) /
+    # "epic" (~6-8). Steers the paragraph count and spoken duration.
+    length:           str           = "medium"
 
     class Config:
         json_schema_extra = {

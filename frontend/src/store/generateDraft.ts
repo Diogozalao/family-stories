@@ -28,6 +28,8 @@ interface GenerateDraft {
   subtitles: boolean;
   /** Subtitle size in the player. */
   subtitleSize: "small" | "medium" | "large";
+  /** Narrative length: short ~1min, medium ~2-3, long ~4-5, epic ~6-8. */
+  length: "short" | "medium" | "long" | "epic";
   mode: "sync" | "background";
   patch: (partial: Partial<GenerateDraftFields>) => void;
   reset: () => void;
@@ -47,6 +49,7 @@ const INITIAL: GenerateDraftFields = {
   voice: "male",
   subtitles: true,
   subtitleSize: "medium",
+  length: "medium",
   mode: "background",
 };
 

@@ -101,6 +101,48 @@ STYLE_RULES = """REGRAS DE ESCRITA E LÍNGUA (português europeu cuidado):
   Cada frase deve fazer a história avançar — corta o que for ornamento vazio."""
 
 
+# Length steer for the narrative. Appended LAST in the prompt so it overrides
+# the per-template paragraph count. The word counts drive the spoken duration
+# (~140 palavras/minuto na narração).
+# ``max_tokens`` is a per-length ceiling so the narration lands near the target
+# duration (~140 words/minute ≈ ~1.4 tokens/word in PT) instead of running to
+# the global cap. The paragraph count in the prompt steers the model; the cap
+# stops it overshooting (small local models tend to fill whatever is allowed).
+LENGTH_SPECS: dict[str, dict] = {
+    "short": {
+        "max_tokens": 500,
+        "pt": "Escreve uma narrativa CURTA: 2 a 3 parágrafos (cerca de 1 minuto lida em voz alta).",
+        "en": "Write a SHORT narrative: 2 to 3 paragraphs (about 1 minute read aloud).",
+    },
+    "medium": {
+        "max_tokens": 1000,
+        "pt": "Escreve uma narrativa de comprimento MÉDIO: 4 a 6 parágrafos (cerca de 2 a 3 minutos).",
+        "en": "Write a MEDIUM-length narrative: 4 to 6 paragraphs (about 2 to 3 minutes).",
+    },
+    "long": {
+        "max_tokens": 1700,
+        "pt": ("Escreve uma narrativa LONGA e detalhada: 8 a 11 parágrafos "
+               "(cerca de 4 a 5 minutos). Aprofunda cada momento — o espaço, as "
+               "pessoas, o tempo e os pequenos episódios — sem repetir nem encher "
+               "com frases vazias."),
+        "en": ("Write a LONG, detailed narrative: 8 to 11 paragraphs (about 4 to "
+               "5 minutes). Develop each moment — the place, the people, the time "
+               "and the small episodes — without repetition or filler."),
+    },
+    "epic": {
+        "max_tokens": 2200,
+        "pt": ("Escreve uma narrativa MUITO LONGA e rica: 12 a 16 parágrafos "
+               "(cerca de 6 a 8 minutos). Desenvolve cada cena com pormenor (o "
+               "espaço, as pessoas, a época, os episódios), mantém sempre o fio "
+               "condutor e a cronologia, e não repitas nem enchas com frases vazias."),
+        "en": ("Write a VERY LONG, rich narrative: 12 to 16 paragraphs (about 6 to "
+               "8 minutes). Develop every scene in detail (place, people, era, "
+               "episodes), keep the thread and chronology throughout, and avoid "
+               "repetition or filler."),
+    },
+}
+
+
 MEDIA_GROUNDING = """INTEGRAÇÃO DAS FOTOGRAFIAS (para a narrativa e o vídeo fluírem):
 - Os "momentos" listados no contexto são FOTOGRAFIAS REAIS que vão ilustrar a
   narrativa. Trata cada momento como uma cena a entrar em imagem.

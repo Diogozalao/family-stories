@@ -14,6 +14,7 @@ from backend.modules.m3_narrative.rag_system import RAGSystem
 from backend.modules.m3_narrative.pt_pt import count_brasileirismos, pt_pt_postprocess
 from backend.modules.m3_narrative.templates import (
     GROUNDING_RULES,
+    LENGTH_SPECS,
     MEDIA_GROUNDING,
     NARRATIVE_TEMPLATES,
     ORIGINALITY_RULES,
@@ -104,6 +105,7 @@ class NarrativeGenerator:
         voice:            str  = None,
         subtitles:        bool = True,
         subtitle_size:    str  = "medium",
+        length:           str  = "medium",
         update_story_id:  int  = None,
     ) -> Story:
 
@@ -218,6 +220,16 @@ class NarrativeGenerator:
             prompt += "\n\n" + STYLE_RULES
             prompt += "\n\nIMPORTANTE: Escreve a narrativa inteira em português europeu (pt-PT)."
 
+        # Length steer — appended LAST so it overrides the per-template
+        # paragraph count ("3 a 5 parágrafos"), letting the user pick anything
+        # from a short vignette to a ~6–8 minute epic.
+        _spec  = LENGTH_SPECS.get(length, LENGTH_SPECS["medium"])
+        _guide = _spec.get(lang_code, _spec["pt"])
+        if lang_code == "en":
+            prompt += "\n\nLENGTH (this overrides any paragraph count above): " + _guide
+        else:
+            prompt += "\n\nEXTENSÃO (tem prioridade sobre qualquer número de parágrafos indicado acima): " + _guide
+
         try:
             # The LLM SDK call is synchronous and takes ~30 s. Off-load it to a
             # worker thread so the FastAPI event loop stays responsive (health
@@ -225,7 +237,7 @@ class NarrativeGenerator:
             narrative_text = await asyncio.to_thread(
                 self.llm.generate,
                 prompt,
-                settings.NARRATIVE_MAX_TOKENS,
+                min(_spec.get("max_tokens", 1000), settings.NARRATIVE_MAX_TOKENS),
             )
         except LLMUnavailableError as exc:
             log.error("narrative_llm_unavailable", title=title, error=str(exc))

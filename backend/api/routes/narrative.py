@@ -126,6 +126,7 @@ async def generate_narrative(
             voice            = payload.voice,
             subtitles        = payload.subtitles,
             subtitle_size    = payload.subtitle_size,
+            length           = payload.length,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -230,6 +231,12 @@ async def regenerate_story(
     query = (f"{feedback}\n\n(Reescreve a narrativa tendo isto em conta, "
              "mantendo-te fiel aos factos e às pessoas.)") if feedback else \
             "Reescreve a narrativa de forma diferente, mantendo-te fiel aos factos."
+    # Preserve the approximate length on regenerate by inferring it from the
+    # current narrative's word count (~140 words/minute), so a long story stays
+    # long — no dedicated ``length`` column needed on the Story.
+    _wc = len((getattr(story, "narrative", "") or "").split())
+    _len = ("short" if _wc < 220 else "medium" if _wc < 500
+            else "long" if _wc < 900 else "epic")
     try:
         story = await generator.generate(
             db               = db,
@@ -244,6 +251,7 @@ async def regenerate_story(
             voice            = story.voice,
             subtitles        = story.subtitles if story.subtitles is not None else True,
             subtitle_size    = story.subtitle_size or "medium",
+            length           = _len,
             update_story_id  = story.id,
         )
     except PermissionError as exc:
