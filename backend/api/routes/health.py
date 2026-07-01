@@ -65,13 +65,21 @@ def _check_groq() -> dict:
 
 
 def _check_redis() -> dict:
+    # Redis backs the OPTIONAL Celery task queue. The app degrades gracefully
+    # to the in-process executor without it, so a missing/disabled Redis is
+    # "disabled" (like the other optional backends), never a fatal error —
+    # otherwise the aggregate health is falsely reported as "error".
+    url = settings.REDIS_URL or ""
+    if not url or "disabled" in url or "invalid" in url:
+        return {"status": "disabled",
+                "detail": "Redis not configured (in-process executor in use)"}
     try:
         import redis
-        client = redis.Redis.from_url(settings.REDIS_URL,
-                                      socket_connect_timeout=PROBE_TIMEOUT_SECONDS)
-        return {"status": "ok" if client.ping() else "error"}
+        client = redis.Redis.from_url(url, socket_connect_timeout=PROBE_TIMEOUT_SECONDS)
+        return {"status": "ok" if client.ping() else "warning"}
     except Exception as exc:
-        return {"status": "error", "detail": str(exc)}
+        # Optional dependency — an unreachable Redis degrades, it doesn't fail.
+        return {"status": "warning", "detail": str(exc)}
 
 
 def _check_chroma() -> dict:

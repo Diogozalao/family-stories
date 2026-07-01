@@ -560,6 +560,8 @@ export interface GenerateInput {
   subtitles?: boolean;
   /** Subtitle size in the player: "small" | "medium" | "large". */
   subtitle_size?: string;
+  /** Narrative length: "short" | "medium" | "long" | "epic". */
+  length?: string;
 }
 
 export function useGenerateNarrative() {
