@@ -425,11 +425,32 @@ test_video_builder.py .....                                         [100%]
   test_gerund_becomes_a_infinitivo ......................... PASSED
   test_build_scenes_matches_photos_to_relevant_paragraph ... PASSED
   test_fit_to_frame_does_not_crop_foreground ............... PASSED
-  (... 45 outros ...)
+  test_scenes_alternate_when_few_photos_and_long_narrative . PASSED
+  (... 50 outros ...)
 
-============================= 50 passed in 2.96s ============================
+============================= 56 passed in 3.10s ============================
 \end{lstlisting}
 \caption{Resultado da execução da suíte de testes automatizados
 (\texttt{pytest}): 56 testes unitários a passar.}
 \label{fig:pytest}
 \end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Grelha proposta para avaliação da qualidade das narrativas
+geradas (referida na \Cref{sec:qualidade}).}
+\label{tab:metricas}
+\small
+\begin{tabularx}{\linewidth}{@{}p{3.6cm}Yc@{}}
+\toprule
+\textbf{Métrica} & \textbf{Como medir} & \textbf{Tipo} \\
+\midrule
+Aderência PT-PT       & \% de violações às regras \texttt{PT\_PT\_RULES} & Objetiva \\
+Fidelidade factual    & \% de factos da narrativa presentes no material   & Mista \\
+Coerência             & Pontuação humana 1--5                              & Subjetiva \\
+Qualidade literária   & Pontuação humana 1--5                              & Subjetiva \\
+Tempo de geração      & Segundos (narrativa / vídeo)                       & Objetiva \\
+Taxa de sucesso       & \% de gerações concluídas por \emph{template}      & Objetiva \\
+\bottomrule
+\end{tabularx}
+\end{table}

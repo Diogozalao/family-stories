@@ -21,11 +21,9 @@ $\rightarrow$ análise visual $\rightarrow$ \textsc{ocr}, persistindo um
 registo \texttt{MediaFile}.
 
 O processamento decorre sobre um ficheiro temporário (as bibliotecas de
-\textsc{exif}/\textsc{ocr}/visão esperam um caminho de sistema), sempre
-removido no final. Uma decisão de segurança importante: os \emph{bytes} só
-são enviados para o \emph{Storage} \emph{após} um \emph{scan} de segurança
-bem-sucedido — o sistema nunca aloja conteúdo marcado como inseguro. As
-etapas são:
+\textsc{exif}/\textsc{ocr}/visão esperam um caminho de sistema), removido no
+final. Por segurança, os \emph{bytes} só chegam ao \emph{Storage} \emph{após}
+um \emph{scan} bem-sucedido. As etapas são:
 
 \begin{description}[leftmargin=*]
   \item[\emph{Security scan}.] Cálculo de \emph{checksum} MD5 e \emph{scan}
@@ -46,30 +44,24 @@ etapas são:
   texto, enriquecendo o contexto factual.
 \end{description}
 
-\textbf{Análise diferida.} O passo mais lento do M1 é a análise visual
-(uma chamada de rede ao Gemini, da ordem dos segundos). Para que o
-carregamento não bloqueie — sobretudo em lotes de muitas fotografias — o
-M1 executa apenas a parte rápida no próprio pedido HTTP (\emph{security
-scan}, \textsc{exif} e o carregamento para o \emph{Storage}) e \emph{difere}
-a análise de IA (Gemini / \textsc{ocr}) para segundo plano, através do
-executor \emph{in-process} (\Cref{sec:impl_backend}). A fotografia fica
-imediatamente visível (já está no \emph{Storage}); o registo permanece em
-\texttt{PROCESSING} e a descrição preenche-se quando a análise termina,
-sinalizada na interface por um indicador ``a analisar''. O \emph{frontend}
-faz \emph{polling} da biblioteca enquanto houver registos por concluir.
+\textbf{Análise diferida.} A análise visual é o passo mais lento (uma
+chamada ao Gemini, da ordem dos segundos). Para não bloquear o carregamento
+--- sobretudo em lotes ---, o M1 corre no pedido HTTP apenas a parte rápida
+(\emph{scan}, \textsc{exif} e \emph{Storage}) e \emph{difere} a IA
+(Gemini/\textsc{ocr}) para segundo plano, no executor \emph{in-process}
+(\Cref{sec:impl_backend}). A fotografia fica logo visível; o registo
+permanece em \texttt{PROCESSING} e a descrição preenche-se no fim,
+sinalizada por um indicador ``a analisar'' na interface, que faz
+\emph{polling} enquanto houver registos por concluir.
 
 \textbf{Re-análise sob procura.} Como o executor de segundo plano pode ser
 terminado pela plataforma gratuita antes de concluir (deixando fotografias
-presas em \texttt{PROCESSING}), expõe-se um \emph{endpoint} de
-\textbf{re-análise} --- e um botão na Biblioteca --- que reprocessa de forma
-síncrona as fotografias ainda sem descrição, marcando-as \texttt{COMPLETED} e
-desbloqueando a linha temporal e o vídeo (que dependem desse estado). A
-operação é \emph{consciente da quota}: indica quantas fotografias serão
-analisadas (uma chamada ao Gemini cada) e pede confirmação antes de avançar.
-Para não exceder a memória da instância gratuita, a re-análise processa as
-fotografias em \textbf{pequenos lotes} por pedido, prosseguindo até estarem
-todas tratadas --- em vez de carregar a biblioteca inteira de uma só vez, o
-que esgotava a instância.
+presas em \texttt{PROCESSING}), um \emph{endpoint} de \textbf{re-análise}
+--- e um botão na Biblioteca --- reprocessa de forma síncrona as que ficaram
+sem descrição, marcando-as \texttt{COMPLETED} e desbloqueando a linha
+temporal e o vídeo. É \emph{consciente da quota} (indica quantas serão
+analisadas antes de avançar) e processa em \textbf{pequenos lotes} por
+pedido, para não esgotar a memória da instância gratuita.
 
 A árvore genealógica é tratada por um \emph{parser} \textbf{GEDCOM}~\cite{gedcom}
 dedicado (o maior módulo, $\approx$430 linhas), que converte o ficheiro em
@@ -102,40 +94,29 @@ nós são pessoas e as arestas representam relações (\emph{parent},
 Maria, marido de Ana)''}), consumidos diretamente pelo M3 para dar ao
 \textsc{llm} o contexto de \emph{quem é quem}.
 
-\textbf{Relações na base de dados e edição manual.} As relações passaram
-a ser persistidas numa tabela \texttt{relationships} (em vez de um grafo
-JSON em disco, efémero na nuvem), tornando-se a fonte de verdade durável.
-Isto sustenta duas funcionalidades novas na página \emph{Família}: uma
-\textbf{vista interativa da árvore} (\emph{React~Flow}, com \emph{layout}
-por gerações, casais lado a lado e nós coloridos por sexo; as ligações
-genealógicas usam um \textbf{barramento} partilhado --- uma descida a
-partir do casal, uma barra de irmãos e uma ligação curta a cada filho ---,
-evitando linhas sobrepostas) alternável com a lista, e um \textbf{editor
-manual} que permite criar/editar pessoas e ligações à mão
-(\emph{pai}/\emph{mãe}/\emph{filho}/\emph{irmão}/\emph{casado(a)/parceiro(a)})
---- incluindo um assistente de \textbf{criação rápida de árvore}
-pré-estruturada (eu, pais, avós, irmãos) --- sem depender de um GEDCOM. Após cada edição, o grafo
-\texttt{FamilyGraph} é reconstruído a partir da base de dados, mantendo o
-M3 sincronizado. O grafo continua isolado \emph{por utilizador}. Mais
-importante, os próprios \textbf{caminhos de leitura} (a visualização do
-grafo e o contexto fornecido ao M3) passaram a construí-lo \emph{diretamente
-da base de dados}, eliminando a dependência de um ficheiro JSON em disco que,
-sendo efémero na nuvem, deixava o contexto familiar vazio após cada reinício
-da instância — uma fonte subtil de narrativas sem relações.
+\textbf{Relações na base de dados e edição manual.} As relações passaram a
+ser persistidas numa tabela \texttt{relationships} --- a fonte de verdade
+durável ---, em vez de um grafo JSON em disco que, sendo efémero na nuvem,
+deixava o contexto familiar vazio após cada reinício da instância (uma
+fonte subtil de narrativas sem relações). Isto sustenta, na página
+\emph{Família}, uma \textbf{vista interativa da árvore} (\emph{React~Flow},
+\emph{layout} por gerações, casais lado a lado, nós coloridos por sexo e
+ligações desenhadas com um \textbf{barramento} partilhado --- descida do
+casal, barra de irmãos e ligação curta a cada filho ---, evitando linhas
+sobrepostas) e um \textbf{editor manual} de pessoas e ligações
+(\emph{pai}/\emph{mãe}/\emph{filho}/\emph{irmão}/\emph{casado(a)}), com um
+assistente de \textbf{criação rápida de árvore} (eu, pais, avós, irmãos).
+Após cada edição, o \texttt{FamilyGraph} é reconstruído da base de dados,
+isolado \emph{por utilizador}, mantendo o M3 sincronizado.
 
-As \textbf{descrições (notas)} de cada pessoa são incorporadas no contexto
-familiar fornecido ao M3, influenciando diretamente a narrativa gerada.
-Cada fotografia pode ainda ser \textbf{etiquetada com as pessoas que nela
-aparecem} (\texttt{media\_files.person\_ids}); esses nomes entram no
-contexto do M3 (``quem aparece''), ligando \emph{rostos a nomes} — a ponte
-entre a árvore familiar e a narrativa. Cada pessoa pode também ter uma
-\textbf{fotografia de perfil} (\texttt{persons.photo\_media\_id}, escolhida de
-entre o arquivo), apresentada como \emph{avatar} na lista e \textbf{nos nós da
-árvore interativa}, tornando o grafo mais legível. A
-árvore pode ainda ser \textbf{exportada de volta para GEDCOM~5.5.1}
-(re-importável noutras plataformas de genealogia), demonstrando
-\emph{interoperabilidade} com o formato standard — um inverso do
-\emph{parser} de importação.
+As \textbf{notas} de cada pessoa entram no contexto do M3, influenciando a
+narrativa. Cada fotografia pode ser \textbf{etiquetada com quem nela
+aparece} (\texttt{media\_files.person\_ids}), ligando \emph{rostos a nomes}
+--- a ponte entre a árvore e a narrativa ---, e cada pessoa pode ter uma
+\textbf{foto de perfil} (\texttt{persons.photo\_media\_id}), usada como
+\emph{avatar} na lista e nos nós da árvore. A árvore pode ainda ser
+\textbf{exportada para GEDCOM~5.5.1} (re-importável noutras plataformas),
+demonstrando \emph{interoperabilidade} com o formato standard.
 
 \textbf{Isolamento de múltiplas árvores.} Importar vários ficheiros GEDCOM
 levantava um problema subtil: as exportações genealógicas reiniciam quase
@@ -162,55 +143,39 @@ O M3 é o módulo de IA generativa central. Combina três componentes: um
 \subsection{Cliente LLM híbrido e \emph{fallback}}
 
 O \texttt{LLMClient} implementa uma \textbf{cadeia de \emph{fallback} de
-três níveis} para a geração de texto. O motor primário é o \emph{Groq}
-(modelos abertos \emph{Llama~3.3~70B}, camada gratuita generosa e rápida);
-na sua ausência --- tipicamente sem ligação à Internet --- recorre-se à
-inferência local via \emph{Ollama} (Llama~3.2~3B), que mantém a opção
-\emph{totalmente offline e privada}; e só se ambos falharem entra o
-\emph{Gemini~Flash} como última rede de segurança. A ordem é
-\textbf{deliberada} por dois motivos. Primeiro, o \emph{desempenho}: o
-Llama~3.2~3B local, executado em \textsc{cpu}, é demasiado lento para uso
-interativo (a história ficava ``a escrever\ldots'' durante minutos), pelo
-que o Groq --- um modelo de 70B servido na nuvem --- oferece
-simultaneamente melhor qualidade e resposta quase imediata. Segundo, a
-quota gratuita do Gemini fica \textbf{reservada para a análise visual}
-(M1), que se mantém \emph{Gemini-only} por o Groq não oferecer visão
-equivalente; reparte-se assim o texto (Groq) e a visão (Gemini) por dois
-serviços gratuitos distintos, evitando que compitam pela mesma quota
-diária. A inferência local (Ollama) permanece disponível para quem
-privilegie a \emph{privacidade} ou opere sem ligação. O \Cref{lst:llm}
-mostra o coração desta lógica: se um nível falhar \emph{durante} a geração,
-há \emph{fallback} em tempo de execução; só quando \emph{todos} falham é
-lançada uma exceção que marca a tarefa como falhada --- evitando guardar
-uma narrativa falsa.
+três níveis} para o texto: o motor primário é o \emph{Groq}
+(\emph{Llama~3.3~70B}, camada gratuita rápida); na sua ausência ---
+tipicamente sem Internet --- recorre-se ao \emph{Ollama} local
+(Llama~3.2~3B), \emph{offline e privado}; e só se ambos falharem entra o
+\emph{Gemini~Flash}. A ordem é \textbf{deliberada}: o Llama~3.2~3B local, em
+\textsc{cpu}, é demasiado lento para uso interativo, pelo que o Groq (70B na
+nuvem) dá melhor qualidade e resposta quase imediata; e a quota do Gemini
+fica \textbf{reservada para a visão} (M1), que se mantém \emph{Gemini-only}
+por o Groq não oferecer visão --- repartindo texto e visão por dois
+serviços gratuitos sem competirem pela mesma quota. Como mostra o
+\Cref{lst:llm}, se um nível falhar \emph{durante} a geração há
+\emph{fallback} em tempo de execução; só quando \emph{todos} falham é
+lançada uma exceção que marca a tarefa como falhada, evitando guardar uma
+narrativa falsa.
 
 \subsection{Retrieval-Augmented Generation com degradação graciosa}
 
 O \texttt{RAGSystem} indexa os factos extraídos pelo M1/M2 numa base
-vetorial (ChromaDB~\cite{chromadb}), anexando o \texttt{user\_id} à
-\emph{metadata} de cada documento; a pesquisa filtra sempre por esse
-campo, garantindo o isolamento multi-inquilino. No momento da geração,
-apenas os factos relevantes são injetados no \emph{prompt}, reduzindo a
-alucinação.
+vetorial (ChromaDB~\cite{chromadb}), com o \texttt{user\_id} na
+\emph{metadata} de cada documento; a pesquisa filtra sempre por esse campo
+(isolamento multi-inquilino). Quando a biblioteca é grande e o utilizador
+indica um foco, o método \texttt{search\_media\_ids} injeta no \emph{prompt}
+apenas o subconjunto de fotografias mais relevante ao tema (por
+similaridade vetorial), mantendo o contexto focado, dentro da janela do
+modelo e menos sujeito a alucinação.
 
-O passo de \emph{retrieval} está efetivamente ligado à geração: quando a
-biblioteca de fotografias é grande e o utilizador indica um foco, o
-método \texttt{search\_media\_ids} seleciona o subconjunto de fotografias
-mais relevante ao tema (via similaridade vetorial, filtrada por
-\texttt{user\_id}), e só esse subconjunto entra no \emph{prompt} — o que
-mantém o contexto focado e dentro da janela do modelo, reduzindo a
-alucinação.
-
-A decisão de engenharia mais interessante é a \textbf{degradação
-graciosa}. Quando a biblioteca ChromaDB não está instalada — por exemplo,
-no \emph{deploy} gratuito do Render, onde o custo de \emph{build} é
-incomportável — o \texttt{RAGSystem} converte-se num \emph{stub}: a
-indexação torna-se inócua e a pesquisa devolve listas vazias, passando o
-M3 a usar a totalidade dos factos como contexto. Na prática, uma importação
-condicional do \texttt{chromadb} deteta a ausência da biblioteca e comuta o
-\texttt{RAGSystem} para esse modo \emph{stub}, sem que o resto do sistema o
-note. O sistema mantém-se \emph{funcional}, perdendo apenas o passo de
-\emph{retrieval}.
+A decisão de engenharia mais interessante é a \textbf{degradação graciosa}.
+Quando o ChromaDB não está instalado --- por exemplo, no \emph{deploy}
+gratuito do Render, onde o custo de \emph{build} é incomportável ---, uma
+importação condicional deteta a ausência e comuta o \texttt{RAGSystem} para
+um \emph{stub}: a indexação torna-se inócua e a pesquisa devolve listas
+vazias, passando o M3 a usar a totalidade dos factos. O sistema mantém-se
+\emph{funcional}, perdendo apenas o passo de \emph{retrieval}.
 
 \subsection{\emph{Templates} e calibração para português europeu}
 
@@ -242,35 +207,30 @@ e a conversão da construção \emph{auxiliar~+~gerúndio} para
 \emph{auxiliar~+~a~+~infinitivo} (``estava chorando''\,$\rightarrow$\,``estava a
 chorar''), o sinal gramatical mais reconhecível da variante. O mesmo
 módulo expõe uma função \texttt{count\_brasileirismos} usada como métrica
-objetiva de aderência ao PT-PT (\Cref{sec:qualidade}). O pós-processador foi
-ainda estendido com a correção de \textbf{concordância de género} num conjunto
-curado de substantivos (por exemplo, ``o~lã''\,$\rightarrow$\,``a~lã''), a
-\textbf{remoção de parágrafos repetidos} --- que o modelo por vezes produz
-para preencher extensões longas com poucos factos --- e o \textbf{corte de uma
-frase final incompleta}, deixada por um limite de \emph{tokens} atingido a
-meio.
+objetiva de aderência ao PT-PT (\Cref{sec:qualidade}). O pós-processador
+corrige ainda a \textbf{concordância de género} num conjunto curado de
+substantivos (``o~lã''\,$\rightarrow$\,``a~lã''), \textbf{remove parágrafos
+repetidos} (que o modelo por vezes produz para encher extensões longas) e
+\textbf{corta uma frase final incompleta} deixada por um limite de
+\emph{tokens}.
 
-\textbf{Regras de estilo e integração das imagens.} Dois blocos adicionais
-foram anexados ao \emph{prompt} para elevar a qualidade literária. As
-\texttt{STYLE\_RULES} combatem os defeitos típicos do texto gerado: proíbem a
-repetição de nomes próprios (impondo pronomes, determinantes e perífrases ---
-``o avô'', ``ela''), exigem variedade de verbos e de conectores, e reforçam a
-colocação pronominal europeia. As \texttt{MEDIA\_GROUNDING} instruem o modelo
-a \emph{preparar} a entrada de cada fotografia --- situando o espaço, o lugar
-e as pessoas antes de descrever a cena --- e a fazer transições suaves entre
-momentos, para que a imagem surja em contexto e não de forma abrupta.
+\textbf{Estilo e integração das imagens.} Dois blocos de \emph{prompt}
+elevam a qualidade literária: as \texttt{STYLE\_RULES} proíbem a repetição
+de nomes próprios (impondo pronomes e perífrases), exigem variedade de
+verbos e conectores e reforçam a colocação pronominal europeia; as
+\texttt{MEDIA\_GROUNDING} instruem o modelo a situar o espaço, o lugar e as
+pessoas \emph{antes} de descrever a cena, com transições suaves, para que
+cada fotografia surja em contexto e não de forma abrupta.
 
-\textbf{Controlo de extensão.} O assistente permite escolher a duração da
-narrativa em quatro níveis --- \emph{curta} ($\approx$1\,min), \emph{média}
-($\approx$2--3\,min), \emph{longa} ($\approx$4--5\,min) e \emph{épica}
-($\approx$6--8\,min). Cada nível traduz-se numa instrução de extensão de
-prioridade máxima (que sobrepõe o número de parágrafos do \emph{template}) e
-num limite de \emph{tokens} calibrado para a duração pretendida
-($\approx$140~palavras por minuto de narração), evitando que o texto dispare
-ou fique cortado. Para não sacrificar a qualidade, o \emph{prompt} estabelece
-que a \textbf{não-repetição tem prioridade sobre o comprimento}: se os factos
-não sustentarem a extensão pedida, o modelo escreve um texto mais curto mas
-completo, em vez de encher com repetições.
+\textbf{Controlo de extensão.} O assistente permite escolher a duração em
+quatro níveis --- \emph{curta} ($\approx$1\,min), \emph{média}
+($\approx$2--3), \emph{longa} ($\approx$4--5) e \emph{épica}
+($\approx$6--8). Cada nível gera uma instrução de extensão prioritária (que
+sobrepõe o número de parágrafos do \emph{template}) e um limite de
+\emph{tokens} calibrado para a duração ($\approx$140~palavras/minuto). Para
+não sacrificar a qualidade, a \textbf{não-repetição tem prioridade sobre o
+comprimento}: se os factos não bastarem, o modelo escreve um texto mais
+curto mas completo.
 
 \subsection{Segmentação em cenas (sincronização narrativa--imagem)}
 \label{sub:cenas}
@@ -289,14 +249,13 @@ dependências externas}: pontua-se a sobreposição léxica entre cada
 parágrafo e a ``impressão digital'' textual de cada fotografia (descrição
 de IA, \emph{tags}, cenário, sugestão narrativa, \textsc{ocr}, local). É,
 na prática, um passo de \emph{retrieval} que ancora os visuais à prosa.
-Quando não há sinal léxico, recorre-se a uma distribuição cronológica
-equitativa. Numa narrativa \textbf{longa ilustrada por poucas fotografias},
-os parágrafos que sobram --- aqueles em que a narração já não se refere a
-uma imagem em concreto --- são preenchidos \textbf{alternando} ciclicamente
-as fotografias disponíveis (evitando repetir a da cena anterior), de modo
-que o vídeo continua a mudar de imagem em vez de congelar numa só; cada
-fotografia surge primeiro no parágrafo que a descreve e só depois é
-reaproveitada. Assim, nenhuma cena fica sem fotografia. Toda a etapa é
+Quando não há sinal léxico, distribuem-se cronologicamente. Numa narrativa
+\textbf{longa ilustrada por poucas fotografias}, os parágrafos que sobram
+--- onde a narração já não se refere a uma imagem em concreto --- são
+preenchidos \textbf{alternando} ciclicamente as disponíveis (sem repetir a
+da cena anterior), de modo que o vídeo continua a mudar de imagem em vez de
+congelar; cada fotografia surge primeiro no parágrafo que a descreve e só
+depois é reaproveitada. Toda a etapa é
 defensiva: qualquer falha deixa \texttt{scenes\,=\,None} e o M4 regressa ao
 \emph{slideshow} clássico. Esta abordagem responde diretamente ao que o
 estudo inicial identificou como o desafio técnico central do M4
@@ -429,36 +388,29 @@ interface. O utilizador pode \textbf{escolher a voz} --- masculina ou
 feminina --- no assistente de geração (\texttt{Story.voice}); o M4 resolve
 essa preferência para a voz neuronal correspondente em cada idioma.
 
-Quando a história tem cenas (\Cref{sub:cenas}), o M4 entra em
-\textbf{modo documentário} (\texttt{build\_documentary}): sintetiza
-\emph{uma narração por cena}, mostra as fotografias dessa cena durante
-(aproximadamente) a duração da sua narração e concatena os áudios das
-cenas, em ordem, após um silêncio inicial sobre o cartão de título. Assim,
-o espetador vê a fotografia que está a ser narrada — a sincronização
-semântica que distingue um documentário de uma simples apresentação. O
-\Cref{lst:plandur} mostra o cálculo determinístico (e testado
-unitariamente) da duração de cada fotografia a partir da narração da
-cena. Na ausência de cenas, mantém-se o alinhamento clássico por
-duração total (silêncio no título, narração única, preenchimento/corte
-para igualar a duração A/V). A \Cref{fig:frame_video}
-(Anexo~\ref{ap:capturas}) mostra um fotograma típico do resultado.
+Quando a história tem cenas (\Cref{sub:cenas}), o M4 entra em \textbf{modo
+documentário} (\texttt{build\_documentary}): sintetiza \emph{uma narração
+por cena} e mostra as fotografias dessa cena durante (aproximadamente) a
+duração da sua narração, concatenando os áudios em ordem após o cartão de
+título. Assim, o espetador vê a fotografia que está a ser narrada --- a
+sincronização semântica que distingue um documentário de uma apresentação.
+O \Cref{lst:plandur} mostra o cálculo determinístico (e testado) da duração
+de cada fotografia. Na ausência de cenas, usa-se o alinhamento clássico por
+duração total. A \Cref{fig:frame_video} (Anexo~\ref{ap:capturas}) mostra um
+fotograma do resultado.
 
 
 
 \textbf{Legendas como faixa sincronizada (WebVTT).} Em vez de gravar o
-texto na imagem (o que o tornava pequeno e permanente), a narração é
-exportada como uma \textbf{faixa de legendas WebVTT} (\texttt{.vtt})
-\emph{comutável} no leitor. A sincronização é \textbf{ao nível da palavra}:
-o \emph{edge-tts} devolve, com o áudio, os carimbos temporais de cada
-palavra (\emph{WordBoundary}), a partir dos quais se escreve o ficheiro
-\texttt{.vtt} alinhado exatamente com a fala. O ficheiro é carregado para o
-\emph{Storage} ao lado do MP4 e servido por um \emph{endpoint} próprio; no
-leitor, uma faixa \texttt{<track>} permite ligar/desligar as legendas e
-escolher o tamanho (pequeno/médio/grande, via \texttt{::cue}). Para o
-descarregamento, as legendas são ainda \emph{embutidas} no próprio MP4
-(\emph{mux} \texttt{mov\_text} via FFmpeg), de modo que o ficheiro
-transferido as inclua. Assim, o vídeo no ecrã fica limpo por omissão, mas a
-acessibilidade textual está sempre disponível.
+texto na imagem, a narração é exportada como uma \textbf{faixa WebVTT}
+(\texttt{.vtt}) \emph{comutável} no leitor, sincronizada \textbf{ao nível
+da palavra}: o \emph{edge-tts} devolve, com o áudio, os carimbos temporais
+de cada palavra (\emph{WordBoundary}), a partir dos quais se escreve o
+\texttt{.vtt}. É servido por um \emph{endpoint} próprio e, no leitor, uma
+\texttt{<track>} liga/desliga as legendas e escolhe o tamanho (via
+\texttt{::cue}). Para o descarregamento, são ainda \emph{embutidas} no MP4
+(\emph{mux} \texttt{mov\_text} via FFmpeg). Assim, o vídeo fica limpo por
+omissão, mas a acessibilidade textual está sempre disponível.
 
 \section{Infraestrutura do \emph{Backend}}
 \label{sec:impl_backend}
@@ -491,13 +443,10 @@ A execução é feita por uma de duas vias, transparentes para o cliente:
 
 Ambas as vias partilham os mesmos \emph{corpos} de tarefa
 (\texttt{tasks/bodies.py}) e o mesmo mecanismo de transição de estado
-(\texttt{running}\,$\rightarrow$\,\texttt{done}/\texttt{failed}), pelo que
-a experiência do utilizador é idêntica independentemente do ambiente. O
-executor \emph{in-process} usa um \emph{thread pool} limitado a um
-trabalhador — suficiente para um sistema single-tenant e prudente face aos
-$\approx$512~MB de memória do plano gratuito; cada \emph{thread} corre o seu
-próprio \texttt{asyncio.run}, para não bloquear o \emph{loop} principal do
-FastAPI.
+(\texttt{running}\,$\rightarrow$\,\texttt{done}/\texttt{failed}), pelo que a
+experiência do utilizador é idêntica em qualquer ambiente. O \emph{thread
+pool} in-process limita-se a um trabalhador --- prudente face aos
+$\approx$512~MB do plano gratuito.
 
 Uma decisão de robustez relevante é o \textbf{\emph{sweep} de tarefas
 órfãs} no arranque: como nem um \emph{worker} Celery nem um \emph{thread}
@@ -556,25 +505,20 @@ interativa} do \emph{pipeline} (foto $\rightarrow$ análise por IA $\rightarrow$
 narrativa $\rightarrow$ vídeo), com a descrição e a história a serem
 ``escritas'' ao vivo, comunicando o valor do sistema antes do registo.
 
-\textbf{Gestão de histórias.} A lista de histórias ganhou ferramentas de
-curadoria: \textbf{pesquisa} por título/texto, \textbf{filtro} por projeto,
-\textbf{ordenação} (recentes/antigas/título) e \textbf{favoritos} (estrela
-que fixa as histórias preferidas no topo), além de metadados por cartão
-(número de fotografias e de pessoas usadas). No leitor, cada história pode
-ser \textbf{exportada para PDF} (impressão formatada apenas com o título e a
-prosa, via \emph{stylesheet} de impressão) e \textbf{regenerada com
-\emph{feedback}} (\Cref{sub:regenerar}).
+\textbf{Gestão de histórias.} A lista ganhou ferramentas de curadoria:
+\textbf{pesquisa} por título/texto, \textbf{filtro} por projeto,
+\textbf{ordenação} e \textbf{favoritos} (estrela que fixa as preferidas no
+topo), além de metadados por cartão (fotografias e pessoas usadas). No
+leitor, cada história pode ser \textbf{exportada para PDF} e
+\textbf{regenerada com \emph{feedback}} (\Cref{sub:regenerar}).
 
-\textbf{Árvore familiar interativa.} A vista \emph{React~Flow} da família
-deixou de ser apenas de leitura: permite \textbf{pesquisar} uma pessoa e
-\textbf{centrar} a vista nela, \textbf{destacar a linhagem} ao clicar num nó
-(ascendentes, descendentes e cônjuges iluminam-se enquanto o resto da
-árvore se esbate), \textbf{exportar a árvore como imagem PNG} e
-\textbf{adicionar familiares} diretamente (botões \emph{pai}/\emph{mãe}/\emph{filho(a)}/\emph{cônjuge}
-que criam a pessoa e a ligação no mesmo passo). Toda a interface está
-disponível em \textbf{português europeu} e \textbf{inglês}
-(\Cref{sec:uiux}), incluindo as cadeias geradas no cliente, com o seletor de
-idioma a cobrir a totalidade dos ecrãs.
+\textbf{Árvore familiar interativa.} A vista \emph{React~Flow}
+(\Cref{sec:impl_m2}) permite \textbf{pesquisar e centrar} numa pessoa,
+\textbf{destacar a linhagem} ao clicar num nó (o resto da árvore
+esbate-se), \textbf{exportar} a árvore como PNG e \textbf{adicionar
+familiares} num só passo. Toda a interface está disponível em
+\textbf{português europeu} e \textbf{inglês} (\Cref{sec:uiux}), incluindo as
+cadeias geradas no cliente.
 
 \subsection{Resiliência a \emph{cold starts}}
 \label{sub:coldstart}
