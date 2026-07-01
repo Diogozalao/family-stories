@@ -47,3 +47,18 @@ def test_prompts_expect_event_context_placeholders():
     for key, tpl in NARRATIVE_TEMPLATES.items():
         assert "{events_context}" in tpl["prompt"], key
         assert "{tone}" in tpl["prompt"], key
+
+
+def test_length_specs_cover_all_levels_with_growing_caps():
+    from backend.modules.m3_narrative.templates import LENGTH_SPECS
+
+    levels = ["short", "medium", "long", "epic"]
+    assert list(LENGTH_SPECS) == levels
+    # Token caps grow with the requested duration.
+    caps = [LENGTH_SPECS[lvl]["max_tokens"] for lvl in levels]
+    assert caps == sorted(caps)
+    assert caps[0] < caps[-1]
+    # Every level has a PT and an EN guide.
+    for lvl in levels:
+        assert LENGTH_SPECS[lvl]["pt"].strip()
+        assert LENGTH_SPECS[lvl]["en"].strip()

@@ -86,3 +86,31 @@ def test_plan_scene_durations_respects_floor_and_proportion():
     assert durs[0] == pytest.approx(5.0 + CROSSFADE_SECONDS)
     # Scene 1: 1/2 + crossfade would be below the floor -> clamped.
     assert durs[1] == pytest.approx(MIN_SCENE_PHOTO_DURATION)
+
+
+def test_scenes_alternate_when_few_photos_and_long_narrative():
+    # A long narration with only two photos must keep changing images
+    # (alternating) in the paragraphs that don't reference a specific photo,
+    # instead of leaving scenes empty or freezing on one photo.
+    photos = [
+        _media(1, desc="casamento igreja noivos"),
+        _media(2, desc="fabrica teares lanificios"),
+    ]
+    paras = [
+        "O casamento na igreja com os noivos radiantes.",   # -> foto 1
+        "A fabrica de lanificios e os teares antigos.",     # -> foto 2
+        "A familia reunia-se ao domingo para o almoco.",    # sem foto dedicada
+        "As criancas brincavam no quintal ao fim da tarde.",
+        "Contavam-se historias antigas ao serao.",
+        "A serra cobria-se de neve no inverno.",
+    ]
+    scenes = build_scenes("\n\n".join(paras), photos)
+    assert len(scenes) == 6
+    # Nenhuma cena fica sem fotografia.
+    assert all(s["photo_ids"] for s in scenes)
+    # Cenas consecutivas mostram fotografias diferentes (alternância real).
+    first_ids = [s["photo_ids"][0] for s in scenes]
+    for a, b in zip(first_ids, first_ids[1:]):
+        assert a != b
+    # As duas fotografias são efetivamente reutilizadas.
+    assert set(first_ids) == {1, 2}
