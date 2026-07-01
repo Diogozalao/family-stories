@@ -144,12 +144,25 @@ def build_scenes(narrative: str, media_list: list) -> list[dict]:
     for k, m in enumerate(unscored):
         buckets[k % n].append(m)
 
-    # 3) Fill any empty scene by borrowing from the richest one.
+    # 3) Fill the leftover (empty) scenes by CYCLING through every photo, so a
+    #    long narration with only one or two photos keeps alternating images
+    #    instead of freezing on one. Each photo already appears at its own
+    #    paragraph (step 1, where the narration talks about it); here we REUSE
+    #    the photos — without moving them — only for the scenes that no photo
+    #    matched, i.e. once the narration is no longer about a specific photo.
+    #    We avoid repeating the immediately-preceding scene's photo so
+    #    consecutive scenes actually differ.
+    cyc = 0
     for i in range(n):
-        if not buckets[i]:
-            richest = max(range(n), key=lambda j: len(buckets[j]))
-            if len(buckets[richest]) > 1:
-                buckets[i].append(buckets[richest].pop())
+        if buckets[i]:
+            continue
+        prev = buckets[i - 1][0] if i > 0 and buckets[i - 1] else None
+        for _ in range(len(media)):
+            cand = media[cyc % len(media)]
+            cyc += 1
+            if cand is not prev or len(media) == 1:
+                buckets[i].append(cand)
+                break
 
     scenes: list[dict] = []
     for i, paragraph in enumerate(paragraphs):
