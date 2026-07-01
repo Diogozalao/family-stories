@@ -46,7 +46,10 @@ async def _check_ollama() -> dict:
             "expected_model": settings.OLLAMA_MODEL,
         }
     except Exception as exc:
-        return {"status": "error", "detail": str(exc)}
+        # Ollama is an OPTIONAL local fallback — the text cascade is Groq-first.
+        # When it's unreachable (e.g. in the cloud, which has no local Ollama)
+        # that's expected, not a fatal error, so the aggregate stays healthy.
+        return {"status": "disabled", "detail": f"Ollama not reachable ({exc})"}
 
 
 def _check_gemini() -> dict:

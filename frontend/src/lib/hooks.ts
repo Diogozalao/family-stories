@@ -203,10 +203,26 @@ export function useUploadPhoto() {
 export function useReanalyzePhotos() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () =>
-      (await api.post("/api/v1/narrative/reanalyze-photos")).data as {
-        photos_considered: number; described: number; still_missing: number;
-      },
+    mutationFn: async () => {
+      // Re-analyse in small server-side batches so the free-tier backend never
+      // loads the whole library into memory at once (which crashed it). We keep
+      // calling while photos remain AND the last batch made progress — the
+      // progress guard stops a quota-exhausted run from looping forever.
+      let totalDescribed = 0;
+      let prevRemaining = Number.POSITIVE_INFINITY;
+      for (let i = 0; i < 60; i++) {                       // hard iteration cap
+        const r = (await api.post("/api/v1/narrative/reanalyze-photos")).data as {
+          photos_considered: number; described: number;
+          still_missing: number; remaining: number;
+        };
+        totalDescribed += r.described;
+        qc.invalidateQueries({ queryKey: ["media"] });     // reveal progress live
+        if (r.remaining <= 0) break;                       // done
+        if (r.described === 0 && r.remaining >= prevRemaining) break;  // no progress
+        prevRemaining = r.remaining;
+      }
+      return { described: totalDescribed };
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["media"] }),
   });
 }

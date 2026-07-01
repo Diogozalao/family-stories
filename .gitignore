@@ -30,3 +30,6 @@ logs/
 dist/
 build/
 node_modules/
+
+# Backups locais dos dados (contêm dados pessoais — nunca versionar)
+backups/

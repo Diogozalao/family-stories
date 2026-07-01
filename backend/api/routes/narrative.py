@@ -42,6 +42,7 @@ async def index_facts(
 async def reanalyze_photos(
     request:      Request,
     only_missing: bool         = Query(True),
+    limit:        int          = Query(3, ge=1, le=20),
     db:           AsyncSession = Depends(get_db),
     user:         User         = Depends(get_current_user),
 ):
@@ -65,22 +66,32 @@ async def reanalyze_photos(
     )
     if only_missing:
         q = q.where(MediaFile.ai_description.is_(None))
-    photos = (await db.execute(q)).scalars().all()
+    q = q.order_by(MediaFile.id)
+    pending = (await db.execute(q)).scalars().all()
+
+    # Process at most ``limit`` photos per request. Each analysis loads an
+    # image into memory and makes a Gemini call; doing the whole library in one
+    # request exhausted the free-tier instance (out-of-memory / health-check
+    # timeout, killing it mid-run). Batching bounds the peak memory and lets
+    # the client continue with the ``remaining`` count.
+    batch = pending[:limit]
 
     proc = M1Processor()
     described, still_missing = 0, 0
-    for p in photos:
+    for p in batch:
         rec = await proc.analyze(p.id, db, user.id, force=True)
         if rec and rec.ai_description:
             described += 1
         else:
             still_missing += 1
 
-    log.info("photos_reanalyzed", total=len(photos), described=described)
+    remaining = len(pending) - len(batch)
+    log.info("photos_reanalyzed", batch=len(batch), described=described, remaining=remaining)
     return {
-        "photos_considered": len(photos),
+        "photos_considered": len(batch),
         "described":         described,
         "still_missing":     still_missing,
+        "remaining":         remaining,   # > 0 → call again to continue
     }
 
 
