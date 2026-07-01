@@ -30,7 +30,7 @@ A estratégia de testes assentou em três pilares complementares:
 
 A suíte de testes do \emph{backend} foi implementada com \textbf{pytest}
 (com \texttt{pytest-asyncio} e \texttt{pytest-cov}). Conta atualmente com
-\textbf{50 testes unitários a passar}, a que acresce uma suíte de
+\textbf{56 testes unitários a passar}, a que acresce uma suíte de
 \emph{integração} (autenticação e sondas de saúde) que exige um ambiente
 \textsc{Supabase} configurado para correr. A \Cref{tab:testes} resume a
 distribuição.
@@ -48,9 +48,9 @@ Unitário    & \texttt{test\_upload\_validator} & Validação de tipo, \emph{mag
 Unitário    & \texttt{test\_exif\_extractor} & Parsing de datas e conversão GPS (DMS$\rightarrow$decimal, sinal N/S/E/W) (M1). \\
 Unitário    & \texttt{test\_date\_resolver}  & Resolução de datas incompletas e ambíguas (M2). \\
 Unitário    & \texttt{test\_family\_graph}   & Construção do grafo e resumos de parentesco (M2). \\
-Unitário    & \texttt{test\_templates}       & Integridade e formatação dos \emph{templates} narrativos (M3). \\
-Unitário    & \texttt{test\_pt\_pt}          & Pós-processamento PT-PT: substituições de vocabulário e gerúndio$\rightarrow$infinitivo (M3). \\
-Unitário    & \texttt{test\_scene\_builder}  & Segmentação em cenas e atribuição foto$\rightarrow$parágrafo, e cálculo de durações (M3/M4). \\
+Unitário    & \texttt{test\_templates}       & Integridade dos \emph{templates} e níveis de comprimento da narrativa (M3). \\
+Unitário    & \texttt{test\_pt\_pt}          & Pós-processamento PT-PT: vocabulário, gerúndio$\rightarrow$infinitivo, concordância de género e remoção de repetições (M3). \\
+Unitário    & \texttt{test\_scene\_builder}  & Segmentação em cenas, atribuição e \emph{alternância} foto$\rightarrow$parágrafo, e cálculo de durações (M3/M4). \\
 Unitário    & \texttt{test\_video\_builder}  & Funções de enquadramento e montagem de vídeo (M4). \\
 Integração  & \texttt{test\_auth\_routes}    & Fluxo de autenticação na API. \\
 Integração  & \texttt{test\_health\_route}   & Sondas de \emph{liveness} e \emph{deep health}. \\
@@ -59,7 +59,7 @@ Integração  & \texttt{test\_health\_route}   & Sondas de \emph{liveness} e \em
 \end{table}
 
 A \Cref{fig:pytest} (Anexo~\ref{ap:codigo}) apresenta a saída da execução da
-suíte, com os 50 testes a passar. Os testes incidem deliberadamente sobre a
+suíte, com os 56 testes a passar. Os testes incidem deliberadamente sobre a
 lógica \emph{determinística} (resolução de datas, grafo, validação,
 \emph{templates}): a saída dos \textsc{llm} é não-determinística e, por isso,
 validada por outras vias (\Cref{sec:qualidade}).
