@@ -1,0 +1,392 @@
+0 HEAD
+1 SOUR LivingMemory
+2 VERS 1.0
+2 NAME Living Memory
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 NOTE Arvore genealogica da familia Gomes — quatro geracoes (bisavos, avos, pais/tios, ego/primos), 35 pessoas.
+0 @SUBM@ SUBM
+1 NAME Living Memory
+0 @I1@ INDI
+1 NAME Joaquim /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 12 FEB 1909
+2 PLAC Bragança, Portugal
+1 DEAT
+2 DATE 3 NOV 1978
+2 PLAC Porto, Portugal
+1 NOTE Bisavô paterno e patriarca da família. Ferreiro de uma aldeia do concelho de Bragança, fundou a oficina de ferragens que sustentou a família durante décadas. Homem de poucas palavras e mãos calejadas, era conhecido por nunca recusar trabalho a quem não podia pagar.
+0 @I2@ INDI
+1 NAME Maria do Carmo /Antunes/
+1 SEX F
+1 BIRT
+2 DATE 25 JUL 1913
+2 PLAC Vinhais, Portugal
+1 DEAT
+2 DATE 19 MAR 1986
+2 PLAC Porto, Portugal
+1 NOTE Bisavó paterna. Costureira e guardiã da casa, criou os três filhos enquanto o marido trabalhava na forja. Fazia o melhor pão de centeio da aldeia e conhecia todas as histórias antigas da família, que contava aos netos ao serão.
+0 @I3@ INDI
+1 NAME Manuel /Furtado/
+1 SEX M
+1 BIRT
+2 DATE 8 SEP 1911
+2 PLAC Vinhais, Portugal
+1 DEAT
+2 DATE 27 JAN 1980
+2 PLAC Vinhais, Portugal
+1 NOTE Bisavô paterno, pai da avó Lúcia. Lavrador que trabalhou a terra toda a vida. Emigrou alguns anos para França nos anos 60 para juntar dinheiro e comprar mais um pedaço de terra.
+0 @I4@ INDI
+1 NAME Glória /Lima/
+1 SEX F
+1 BIRT
+2 DATE 14 AUG 1916
+2 PLAC Vinhais, Portugal
+1 DEAT
+2 DATE 2 DEC 1995
+2 PLAC Bragança, Portugal
+1 NOTE Bisavó paterna, mãe da avó Lúcia. Mulher devota e trabalhadora, vendia ovos e queijo na feira semanal. Ficou viúva cedo, mas manteve a quinta de pé sozinha.
+0 @I5@ INDI
+1 NAME Augusto /Vaz/
+1 SEX M
+1 BIRT
+2 DATE 3 APR 1910
+2 PLAC Vila Real, Portugal
+1 DEAT
+2 DATE 16 JUN 1972
+2 PLAC Vila Real, Portugal
+1 NOTE Bisavô materno, pai do avô Eduardo. Sapateiro em Vila Real, herdou o ofício do pai. Gostava de música e tocava concertina nas festas da terra.
+0 @I6@ INDI
+1 NAME Benedita /Rocha/
+1 SEX F
+1 BIRT
+2 DATE 9 OCT 1918
+2 PLAC Vila Real, Portugal
+1 DEAT
+2 DATE 5 MAY 2001
+2 PLAC Vila Real, Portugal
+1 NOTE Bisavó materna, mãe do avô Eduardo. Doméstica e parteira informal da aldeia, ajudou a nascer metade da sua geração. Viveu até aos 83 anos, lúcida até ao fim.
+0 @I7@ INDI
+1 NAME Fernando /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 21 MAR 1937
+2 PLAC Bragança, Portugal
+1 DEAT
+2 DATE 30 OCT 2015
+2 PLAC Porto, Portugal
+1 NOTE Avô paterno. Filho mais velho de Joaquim, deixou a forja do pai e emigrou para o Porto nos anos 60, onde foi mecânico e abriu mais tarde a sua própria oficina. Foi o pilar da família na cidade.
+0 @I8@ INDI
+1 NAME Lúcia /Furtado/
+1 SEX F
+1 BIRT
+2 DATE 11 JUN 1940
+2 PLAC Vinhais, Portugal
+1 NOTE Avó paterna, ainda viva. Filha de lavradores de Vinhais, mudou-se para o Porto após casar com Fernando. Trabalhou numa fábrica têxtil e ajudou na contabilidade da oficina do marido. Conhecida pela doçaria de Natal.
+0 @I9@ INDI
+1 NAME Armando /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 5 DEC 1939
+2 PLAC Bragança, Portugal
+1 DEAT
+2 DATE 18 FEB 2009
+2 PLAC Bragança, Portugal
+1 NOTE Tio-avô paterno, irmão do avô Fernando. Ficou em Bragança a tomar conta da oficina do pai. Era o contador de anedotas da família e a memória viva da aldeia.
+0 @I10@ INDI
+1 NAME Rosa /Cunha/
+1 SEX F
+1 BIRT
+2 DATE 23 SEP 1942
+2 PLAC Macedo de Cavaleiros, Portugal
+1 NOTE Tia-avó paterna, mulher de Armando. Professora primária na escola da aldeia durante mais de trinta anos; ensinou a ler a várias gerações de bragançanos.
+0 @I11@ INDI
+1 NAME Conceição /Gomes/
+1 SEX F
+1 BIRT
+2 DATE 2 FEB 1944
+2 PLAC Bragança, Portugal
+1 NOTE Tia-avó paterna, filha mais nova de Joaquim. Casou com José Maia e mudou-se para Coimbra. Enfermeira de profissão, dedicada e firme.
+0 @I12@ INDI
+1 NAME José /Maia/
+1 SEX M
+1 BIRT
+2 DATE 19 NOV 1941
+2 PLAC Coimbra, Portugal
+1 DEAT
+2 DATE 7 AUG 2017
+2 PLAC Coimbra, Portugal
+1 NOTE Marido de Conceição. Funcionário dos caminhos-de-ferro em Coimbra, apaixonado por comboios; levava os sobrinhos a ver as locomotivas ao domingo.
+0 @I13@ INDI
+1 NAME Eduardo /Vaz/
+1 SEX M
+1 BIRT
+2 DATE 17 MAY 1938
+2 PLAC Vila Real, Portugal
+1 DEAT
+2 DATE 24 DEC 2012
+2 PLAC Vila Real, Portugal
+1 NOTE Avô materno. Filho do sapateiro Augusto, estudou e tornou-se contabilista em Vila Real. Homem metódico, guardava todos os documentos da família em pastas etiquetadas.
+0 @I14@ INDI
+1 NAME Amélia /Teixeira/
+1 SEX F
+1 BIRT
+2 DATE 30 JAN 1943
+2 PLAC Vila Real, Portugal
+1 NOTE Avó materna, matriarca ainda viva do ramo materno. Bordadeira exímia, os seus enxovais eram disputados em toda a região.
+0 @I15@ INDI
+1 NAME Carlos /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 9 JUL 1964
+2 PLAC Porto, Portugal
+1 NOTE Pai. Filho de Fernando, nasceu já no Porto. Engenheiro civil, trabalhou em grandes obras pelo país. Casou com Teresa Vaz, que conheceu na universidade. Pai dedicado de três filhos.
+0 @I16@ INDI
+1 NAME Teresa /Vaz/
+1 SEX F
+1 BIRT
+2 DATE 4 APR 1966
+2 PLAC Vila Real, Portugal
+1 NOTE Mãe. Filha de Eduardo, professora de Português no ensino secundário. Apaixonada por literatura, incutiu nos filhos o gosto pela leitura e pela história da família.
+0 @I17@ INDI
+1 NAME Helena /Gomes/
+1 SEX F
+1 BIRT
+2 DATE 15 MAR 1967
+2 PLAC Porto, Portugal
+1 NOTE Tia paterna, irmã de Carlos. Farmacêutica em Lisboa, casou com Rui Barbosa. Generosa e organizada, é a tia que reúne a família toda no Natal.
+0 @I18@ INDI
+1 NAME Rui /Barbosa/
+1 SEX M
+1 BIRT
+2 DATE 28 OCT 1965
+2 PLAC Lisboa, Portugal
+1 NOTE Marido de Helena. Arquiteto lisboeta, apaixonado por fotografia; documentou em imagens muitos encontros da família.
+0 @I19@ INDI
+1 NAME Miguel /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 6 JAN 1970
+2 PLAC Porto, Portugal
+1 NOTE Tio paterno, irmão mais novo de Carlos. Emigrou para a Suíça, onde trabalha na hotelaria. Casou com Sandra Lopes e volta a Portugal todos os verões.
+0 @I20@ INDI
+1 NAME Sandra /Lopes/
+1 SEX F
+1 BIRT
+2 DATE 12 MAY 1972
+2 PLAC Aveiro, Portugal
+1 NOTE Mulher de Miguel. Cozinheira profissional, famosa pelos pratos que misturam a cozinha portuguesa e a suíça.
+0 @I21@ INDI
+1 NAME Paulo /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 8 JUN 1963
+2 PLAC Bragança, Portugal
+1 NOTE Primo direito do pai, filho do tio-avô Armando. Ficou em Bragança e modernizou a velha oficina da família, transformando-a numa empresa de serralharia. Casou com Isabel Neves.
+0 @I22@ INDI
+1 NAME Isabel /Neves/
+1 SEX F
+1 BIRT
+2 DATE 17 FEB 1965
+2 PLAC Bragança, Portugal
+1 NOTE Mulher de Paulo, gestora da empresa familiar de serralharia.
+0 @I23@ INDI
+1 NAME Cristina /Gomes/
+1 SEX F
+1 BIRT
+2 DATE 21 OCT 1968
+2 PLAC Bragança, Portugal
+1 NOTE Prima direita do pai, filha do tio-avô Armando. Veterinária no interior, casou com Nuno Ferreira; trata dos animais de meia região.
+0 @I24@ INDI
+1 NAME Nuno /Ferreira/
+1 SEX M
+1 BIRT
+2 DATE 3 MAR 1966
+2 PLAC Mirandela, Portugal
+1 NOTE Marido de Cristina. Agricultor biológico, produz mel e azeite premiados.
+0 @I25@ INDI
+1 NAME Vítor /Maia/
+1 SEX M
+1 BIRT
+2 DATE 14 SEP 1969
+2 PLAC Coimbra, Portugal
+1 NOTE Primo do pai, filho da tia-avó Conceição e de José Maia. Médico em Coimbra, casou com Diana Castro. Herdou do pai a paixão pelos comboios.
+0 @I26@ INDI
+1 NAME Diana /Castro/
+1 SEX F
+1 BIRT
+2 DATE 26 JUL 1971
+2 PLAC Coimbra, Portugal
+1 NOTE Mulher de Vítor, investigadora universitária em biologia.
+0 @I27@ INDI
+1 NAME Ricardo /Vaz/
+1 SEX M
+1 BIRT
+2 DATE 1 DEC 1972
+2 PLAC Vila Real, Portugal
+1 NOTE Tio materno, irmão da mãe Teresa. Músico e professor de guitarra em Vila Real, casou com Patrícia Moreira; animou todos os casamentos da família.
+0 @I28@ INDI
+1 NAME Patrícia /Moreira/
+1 SEX F
+1 BIRT
+2 DATE 18 APR 1974
+2 PLAC Vila Real, Portugal
+1 NOTE Mulher de Ricardo, jornalista regional; escreveu uma reportagem sobre a história da família Gomes.
+0 @I29@ INDI
+1 NAME André /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 23 FEB 1992
+2 PLAC Porto, Portugal
+1 NOTE Filho mais velho de Carlos e Teresa. Estudante de informática, é o entusiasta que decidiu reunir e digitalizar a memória da família.
+0 @I30@ INDI
+1 NAME Sofia /Gomes/
+1 SEX F
+1 BIRT
+2 DATE 7 NOV 1994
+2 PLAC Porto, Portugal
+1 NOTE Filha de Carlos e Teresa, estudante de medicina. Curiosa e determinada, é a primeira a oferecer-se para ajudar.
+0 @I31@ INDI
+1 NAME Tomás /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 30 MAY 1998
+2 PLAC Porto, Portugal
+1 NOTE O mais novo dos filhos de Carlos e Teresa, ainda no secundário. Joga futebol e sonha ser jornalista desportivo.
+0 @I32@ INDI
+1 NAME Beatriz /Barbosa/
+1 SEX F
+1 BIRT
+2 DATE 12 AUG 1995
+2 PLAC Lisboa, Portugal
+1 NOTE Prima direita, filha da tia Helena e de Rui. Estuda arquitetura como o pai; gosta de desenhar de memória a casa dos avós.
+0 @I33@ INDI
+1 NAME Gonçalo /Gomes/
+1 SEX M
+1 BIRT
+2 DATE 4 APR 2000
+2 PLAC Genebra, Suíça
+1 NOTE Primo direito, filho do tio Miguel e de Sandra. Nasceu na Suíça e é bilingue; visita Portugal nas férias e adora as histórias dos bisavós.
+0 @I34@ INDI
+1 NAME Mariana /Gomes/
+1 SEX F
+1 BIRT
+2 DATE 16 SEP 1991
+2 PLAC Bragança, Portugal
+1 NOTE Prima em 2.º grau, filha de Paulo e Isabel. Estuda design e quer modernizar a imagem da empresa familiar de serralharia.
+0 @I35@ INDI
+1 NAME Rafael /Maia/
+1 SEX M
+1 BIRT
+2 DATE 29 JUL 1997
+2 PLAC Coimbra, Portugal
+1 NOTE Primo em 2.º grau, filho de Vítor e Diana. Estudante de engenharia, mantém viva a paixão da família pelos comboios.
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I7@
+1 CHIL @I9@
+1 CHIL @I11@
+1 MARR
+2 DATE 14 MAY 1932
+2 PLAC Bragança, Portugal
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 CHIL @I8@
+1 MARR
+2 DATE 9 SEP 1934
+2 PLAC Vinhais, Portugal
+0 @F3@ FAM
+1 HUSB @I5@
+1 WIFE @I6@
+1 CHIL @I13@
+1 MARR
+2 DATE 21 JUN 1933
+2 PLAC Vila Real, Portugal
+0 @F4@ FAM
+1 HUSB @I7@
+1 WIFE @I8@
+1 CHIL @I15@
+1 CHIL @I17@
+1 CHIL @I19@
+1 MARR
+2 DATE 8 JUN 1963
+2 PLAC Porto, Portugal
+0 @F5@ FAM
+1 HUSB @I9@
+1 WIFE @I10@
+1 CHIL @I21@
+1 CHIL @I23@
+1 MARR
+2 DATE 4 OCT 1961
+2 PLAC Bragança, Portugal
+0 @F6@ FAM
+1 HUSB @I12@
+1 WIFE @I11@
+1 CHIL @I25@
+1 MARR
+2 DATE 12 NOV 1967
+2 PLAC Coimbra, Portugal
+0 @F7@ FAM
+1 HUSB @I13@
+1 WIFE @I14@
+1 CHIL @I16@
+1 CHIL @I27@
+1 MARR
+2 DATE 3 FEB 1962
+2 PLAC Vila Real, Portugal
+0 @F8@ FAM
+1 HUSB @I15@
+1 WIFE @I16@
+1 CHIL @I29@
+1 CHIL @I30@
+1 CHIL @I31@
+1 MARR
+2 DATE 12 SEP 1990
+2 PLAC Porto, Portugal
+0 @F9@ FAM
+1 HUSB @I18@
+1 WIFE @I17@
+1 CHIL @I32@
+1 MARR
+2 DATE 18 JUN 1994
+2 PLAC Lisboa, Portugal
+0 @F10@ FAM
+1 HUSB @I19@
+1 WIFE @I20@
+1 CHIL @I33@
+1 MARR
+2 DATE 5 SEP 1998
+2 PLAC Genebra, Suíça
+0 @F11@ FAM
+1 HUSB @I21@
+1 WIFE @I22@
+1 CHIL @I34@
+1 MARR
+2 DATE 1 JUL 1989
+2 PLAC Bragança, Portugal
+0 @F12@ FAM
+1 HUSB @I24@
+1 WIFE @I23@
+1 MARR
+2 DATE 23 SEP 1995
+2 PLAC Mirandela, Portugal
+0 @F13@ FAM
+1 HUSB @I25@
+1 WIFE @I26@
+1 CHIL @I35@
+1 MARR
+2 DATE 10 AUG 1996
+2 PLAC Coimbra, Portugal
+0 @F14@ FAM
+1 HUSB @I27@
+1 WIFE @I28@
+1 MARR
+2 DATE 6 NOV 1999
+2 PLAC Vila Real, Portugal
+0 TRLR

@@ -175,6 +175,14 @@ degradar a qualidade, a geração passou a ser \textbf{exclusivamente local}
 são pré-gerados localmente a 720p e reproduzidos a partir do \emph{Storage},
 nunca correndo o risco de \emph{out-of-memory} em produção. Foi ainda
 adicionada a possibilidade de \textbf{eliminar vídeos} para limpar
-\emph{renders} falhados. Globalmente, o sistema cumpre os requisitos
-funcionais essenciais (\rf{1}--\rf{15}), produzindo narrativas e vídeos
-coerentes a partir de arquivos familiares reais.
+\emph{renders} falhados. Dois defeitos de estado no cliente foram
+igualmente resolvidos: a \emph{cache} de dados era apagada em cada
+\textbf{renovação silenciosa do \emph{token}} de sessão (e não só na
+mudança de utilizador), fazendo a interface ``esvaziar-se'' a meio de uma
+sessão até um recarregamento --- passou a ser limpa apenas quando a
+identidade muda de facto; e a \textbf{re-importação de uma árvore GEDCOM}
+já existente não a movia para o novo âmbito (arquivo geral \emph{vs.}\
+projeto), deixando-a presa e invisível --- o âmbito passou a seguir a
+última importação. Globalmente, o sistema cumpre os requisitos funcionais
+essenciais (\rf{1}--\rf{15}), produzindo narrativas e vídeos coerentes a
+partir de arquivos familiares reais.

@@ -103,11 +103,14 @@ a ser persistidas numa tabela \texttt{relationships} (em vez de um grafo
 JSON em disco, efémero na nuvem), tornando-se a fonte de verdade durável.
 Isto sustenta duas funcionalidades novas na página \emph{Família}: uma
 \textbf{vista interativa da árvore} (\emph{React~Flow}, com \emph{layout}
-por gerações e nós coloridos por sexo) alternável com a lista, e um
-\textbf{editor manual} que permite criar/editar pessoas e ligações à mão
-(\emph{pai}/\emph{mãe}/\emph{filho}/\emph{irmão}/\emph{cônjuge}) —
-incluindo um assistente de \emph{pedigree} pré-estruturado (eu, pais,
-avós, irmãos) — sem depender de um GEDCOM. Após cada edição, o grafo
+por gerações, casais lado a lado e nós coloridos por sexo; as ligações
+genealógicas usam um \textbf{barramento} partilhado --- uma descida a
+partir do casal, uma barra de irmãos e uma ligação curta a cada filho ---,
+evitando linhas sobrepostas) alternável com a lista, e um \textbf{editor
+manual} que permite criar/editar pessoas e ligações à mão
+(\emph{pai}/\emph{mãe}/\emph{filho}/\emph{irmão}/\emph{casado(a)/parceiro(a)})
+--- incluindo um assistente de \textbf{criação rápida de árvore}
+pré-estruturada (eu, pais, avós, irmãos) --- sem depender de um GEDCOM. Após cada edição, o grafo
 \texttt{FamilyGraph} é reconstruído a partir da base de dados, mantendo o
 M3 sincronizado. O grafo continua isolado \emph{por utilizador}. Mais
 importante, os próprios \textbf{caminhos de leitura} (a visualização do
@@ -235,7 +238,35 @@ e a conversão da construção \emph{auxiliar~+~gerúndio} para
 \emph{auxiliar~+~a~+~infinitivo} (``estava chorando''\,$\rightarrow$\,``estava a
 chorar''), o sinal gramatical mais reconhecível da variante. O mesmo
 módulo expõe uma função \texttt{count\_brasileirismos} usada como métrica
-objetiva de aderência ao PT-PT (\Cref{sec:qualidade}).
+objetiva de aderência ao PT-PT (\Cref{sec:qualidade}). O pós-processador foi
+ainda estendido com a correção de \textbf{concordância de género} num conjunto
+curado de substantivos (por exemplo, ``o~lã''\,$\rightarrow$\,``a~lã''), a
+\textbf{remoção de parágrafos repetidos} --- que o modelo por vezes produz
+para preencher extensões longas com poucos factos --- e o \textbf{corte de uma
+frase final incompleta}, deixada por um limite de \emph{tokens} atingido a
+meio.
+
+\textbf{Regras de estilo e integração das imagens.} Dois blocos adicionais
+foram anexados ao \emph{prompt} para elevar a qualidade literária. As
+\texttt{STYLE\_RULES} combatem os defeitos típicos do texto gerado: proíbem a
+repetição de nomes próprios (impondo pronomes, determinantes e perífrases ---
+``o avô'', ``ela''), exigem variedade de verbos e de conectores, e reforçam a
+colocação pronominal europeia. As \texttt{MEDIA\_GROUNDING} instruem o modelo
+a \emph{preparar} a entrada de cada fotografia --- situando o espaço, o lugar
+e as pessoas antes de descrever a cena --- e a fazer transições suaves entre
+momentos, para que a imagem surja em contexto e não de forma abrupta.
+
+\textbf{Controlo de extensão.} O assistente permite escolher a duração da
+narrativa em quatro níveis --- \emph{curta} ($\approx$1\,min), \emph{média}
+($\approx$2--3\,min), \emph{longa} ($\approx$4--5\,min) e \emph{épica}
+($\approx$6--8\,min). Cada nível traduz-se numa instrução de extensão de
+prioridade máxima (que sobrepõe o número de parágrafos do \emph{template}) e
+num limite de \emph{tokens} calibrado para a duração pretendida
+($\approx$140~palavras por minuto de narração), evitando que o texto dispare
+ou fique cortado. Para não sacrificar a qualidade, o \emph{prompt} estabelece
+que a \textbf{não-repetição tem prioridade sobre o comprimento}: se os factos
+não sustentarem a extensão pedida, o modelo escreve um texto mais curto mas
+completo, em vez de encher com repetições.
 
 \subsection{Segmentação em cenas (sincronização narrativa--imagem)}
 \label{sub:cenas}
@@ -255,9 +286,15 @@ parágrafo e a ``impressão digital'' textual de cada fotografia (descrição
 de IA, \emph{tags}, cenário, sugestão narrativa, \textsc{ocr}, local). É,
 na prática, um passo de \emph{retrieval} que ancora os visuais à prosa.
 Quando não há sinal léxico, recorre-se a uma distribuição cronológica
-equitativa, garantindo que nenhuma cena fica sem fotografia. Toda a etapa
-é defensiva: qualquer falha deixa \texttt{scenes\,=\,None} e o M4 regressa
-ao \emph{slideshow} clássico. Esta abordagem responde diretamente ao que o
+equitativa. Numa narrativa \textbf{longa ilustrada por poucas fotografias},
+os parágrafos que sobram --- aqueles em que a narração já não se refere a
+uma imagem em concreto --- são preenchidos \textbf{alternando} ciclicamente
+as fotografias disponíveis (evitando repetir a da cena anterior), de modo
+que o vídeo continua a mudar de imagem em vez de congelar numa só; cada
+fotografia surge primeiro no parágrafo que a descreve e só depois é
+reaproveitada. Assim, nenhuma cena fica sem fotografia. Toda a etapa é
+defensiva: qualquer falha deixa \texttt{scenes\,=\,None} e o M4 regressa ao
+\emph{slideshow} clássico. Esta abordagem responde diretamente ao que o
 estudo inicial identificou como o desafio técnico central do M4
 (\Cref{sub:geracao_video}): cada fotografia visível exatamente durante a
 sua narração.
@@ -268,8 +305,9 @@ sua narração.
 A narrativa \textbf{não} se baseia apenas na árvore e nas notas que o
 utilizador escreve: o construtor de contexto (\texttt{\_build\_events\_from\_media})
 incorpora, para cada fotografia, a \textbf{descrição gerada pela visão}, o
-\textsc{ocr} (texto de documentos, como certidões), o cenário, a emoção, as
-\emph{tags} e \emph{quem aparece} na imagem. São estes factos visuais que
+\textsc{ocr} (texto de documentos, como certidões), o cenário (o
+\emph{espaço} da cena) e o \textbf{lugar} (topónimo derivado do GPS), a
+emoção, as \emph{tags} e \emph{quem aparece} na imagem. São estes factos visuais que
 ancoram o texto a momentos concretos --- e, por via da segmentação em cenas
 descrita acima, determinam também a \textbf{ordem das imagens no vídeo}.
 
@@ -282,7 +320,11 @@ que restringe o contexto a essas imagens (saltando o \emph{retrieval}
 automático). Como a narrativa alimenta a segmentação em cenas, esta escolha
 propaga-se ao vídeo. O mecanismo funciona tanto no arquivo geral como
 \emph{dentro de um projeto} (onde a seleção se limita às fotografias do
-projeto), dando ao utilizador controlo curatorial sobre o produto final.
+projeto), dando ao utilizador controlo curatorial sobre o produto final. Um
+projeto pode ainda \textbf{reutilizar fotografias já analisadas} da
+biblioteca geral, ligando-as sem novo carregamento nem nova análise --- a
+análise de visão é feita uma única vez e reaproveitada ---, para além de
+poder receber fotografias carregadas diretamente para si.
 
 A seleção é ainda \textbf{organizada por pessoa}: ao escolher os
 intervenientes da história, as fotografias surgem agrupadas por cada pessoa

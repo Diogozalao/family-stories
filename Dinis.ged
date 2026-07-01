@@ -1,0 +1,392 @@
+0 HEAD
+1 SOUR LivingMemory
+2 VERS 1.0
+2 NAME Living Memory
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Portuguese
+1 NOTE Arvore genealogica da familia Dinis — quatro geracoes (bisavos, avos, pais/tios, ego/primos), 35 pessoas, raizes na Covilha.
+0 @SUBM@ SUBM
+1 NAME Living Memory
+0 @I1@ INDI
+1 NAME Herculano /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 3 MAR 1909
+2 PLAC Covilhã, Portugal
+1 DEAT
+2 DATE 14 OCT 1979
+2 PLAC Covilhã, Portugal
+1 NOTE Bisavô paterno e tronco da família Dinis. Operário e depois mestre da lã numa fábrica de lanifícios da Covilhã, a cidade das fábricas junto à ribeira. Homem íntegro, de mãos ásperas do trabalho, criou os filhos com o rigor de quem conheceu tempos difíceis.
+0 @I2@ INDI
+1 NAME Rosária /Fonseca/
+1 SEX F
+1 BIRT
+2 DATE 8 SEP 1913
+2 PLAC Covilhã, Portugal
+1 DEAT
+2 DATE 22 JAN 1988
+2 PLAC Covilhã, Portugal
+1 NOTE Bisavó paterna. Fiandeira nas fábricas de lanifícios, conhecia o ruído dos teares como uma segunda língua. Guardava as receitas e as rezas da família e mantinha a casa aquecida no frio da serra.
+0 @I3@ INDI
+1 NAME Alípio /Saraiva/
+1 SEX M
+1 BIRT
+2 DATE 19 JUN 1911
+2 PLAC Belmonte, Portugal
+1 DEAT
+2 DATE 5 FEB 1982
+2 PLAC Belmonte, Portugal
+1 NOTE Bisavô paterno, pai da avó Guilhermina. Lavrador de Belmonte, cultivava a cerejeira e a oliveira nas encostas da Cova da Beira. Homem de festa, tocava viola nas vindimas.
+0 @I4@ INDI
+1 NAME Ermelinda /Proença/
+1 SEX F
+1 BIRT
+2 DATE 2 NOV 1916
+2 PLAC Belmonte, Portugal
+1 DEAT
+2 DATE 17 APR 1996
+2 PLAC Belmonte, Portugal
+1 NOTE Bisavó paterna, mãe da avó Guilhermina. Cuidava da quinta e do gado; era ela quem levava os produtos à feira de Belmonte todas as semanas.
+0 @I5@ INDI
+1 NAME Firmino /Cabral/
+1 SEX M
+1 BIRT
+2 DATE 27 JAN 1910
+2 PLAC Guarda, Portugal
+1 DEAT
+2 DATE 30 JUL 1974
+2 PLAC Guarda, Portugal
+1 NOTE Bisavô materno, pai do avô Leonel. Ferroviário na linha da Beira Baixa, passava dias fora ao serviço dos comboios. Trouxe à família as histórias das estações por onde parava.
+0 @I6@ INDI
+1 NAME Deolinda /Matos/
+1 SEX F
+1 BIRT
+2 DATE 11 DEC 1918
+2 PLAC Guarda, Portugal
+1 DEAT
+2 DATE 9 MAR 2003
+2 PLAC Guarda, Portugal
+1 NOTE Bisavó materna, mãe do avô Leonel. Costureira da Guarda, remendava e cosia para meia vizinhança. Viveu quase até aos 85 anos, sempre com a agulha na mão.
+0 @I7@ INDI
+1 NAME José /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 APR 1936
+2 PLAC Covilhã, Portugal
+1 DEAT
+2 DATE 28 NOV 2016
+2 PLAC Covilhã, Portugal
+1 NOTE Avô paterno e memória da família. Seguiu o pai para os lanifícios e chegou a mestre têxtil, respeitado pelos operários mais novos. Ao serão contava as histórias da Covilhã antiga — das fábricas, da ribeira e da serra. Casou com Guilhermina, de Belmonte.
+0 @I8@ INDI
+1 NAME Guilhermina /Saraiva/
+1 SEX F
+1 BIRT
+2 DATE 6 JUN 1939
+2 PLAC Belmonte, Portugal
+1 NOTE Avó paterna, ainda viva. Filha de lavradores de Belmonte, veio para a Covilhã ao casar. Costureira habilidosa, é a matriarca que junta a família nos almoços de domingo.
+0 @I9@ INDI
+1 NAME Adelino /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 20 SEP 1938
+2 PLAC Covilhã, Portugal
+1 DEAT
+2 DATE 3 MAY 2011
+2 PLAC Covilhã, Portugal
+1 NOTE Tio-avô paterno, irmão do avô José. Também dos lanifícios, mais tarde abriu uma pequena retrosaria na Covilhã. Alegre e brincalhão, era padrinho de meia família.
+0 @I10@ INDI
+1 NAME Idalina /Roque/
+1 SEX F
+1 BIRT
+2 DATE 15 MAR 1942
+2 PLAC Fundão, Portugal
+1 NOTE Tia-avó paterna, mulher de Adelino. Do Fundão, ajudava na retrosaria e era famosa pelos bolos de castanha.
+0 @I11@ INDI
+1 NAME Palmira /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 1 FEB 1944
+2 PLAC Covilhã, Portugal
+1 NOTE Tia-avó paterna, filha mais nova de Herculano. Professora do ensino primário na Covilhã durante décadas. Casou com Osvaldo Bento e viveu uns anos na Guarda.
+0 @I12@ INDI
+1 NAME Osvaldo /Bento/
+1 SEX M
+1 BIRT
+2 DATE 24 OCT 1941
+2 PLAC Guarda, Portugal
+1 DEAT
+2 DATE 12 JUL 2019
+2 PLAC Guarda, Portugal
+1 NOTE Marido de Palmira. Funcionário dos correios na Guarda, meticuloso e pontual; conhecia toda a gente da cidade pelo nome.
+0 @I13@ INDI
+1 NAME Leonel /Cabral/
+1 SEX M
+1 BIRT
+2 DATE 9 MAY 1938
+2 PLAC Guarda, Portugal
+1 DEAT
+2 DATE 18 DEC 2013
+2 PLAC Guarda, Portugal
+1 NOTE Avô materno. Filho do ferroviário Firmino, tornou-se guarda-livros (contabilista) na Guarda. Metódico e reservado, guardava as contas da família num caderno de capa preta.
+0 @I14@ INDI
+1 NAME Zulmira /Andrade/
+1 SEX F
+1 BIRT
+2 DATE 3 AUG 1943
+2 PLAC Guarda, Portugal
+1 NOTE Avó materna, ainda viva. Bordadeira da Guarda, os seus panos de linho eram peça obrigatória nos enxovais. Mãe de Fátima e Bruno.
+0 @I15@ INDI
+1 NAME Mário /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 17 JUL 1963
+2 PLAC Covilhã, Portugal
+1 NOTE Pai. Filho do avô José, cresceu entre os teares da Covilhã mas seguiu os estudos: engenheiro têxtil, modernizou processos numa das últimas fábricas de lanifícios. Casou com Fátima, da Guarda.
+0 @I16@ INDI
+1 NAME Fátima /Cabral/
+1 SEX F
+1 BIRT
+2 DATE 25 APR 1966
+2 PLAC Guarda, Portugal
+1 NOTE Mãe. Filha do avô Leonel, enfermeira no hospital da Covilhã. Serena e dedicada, foi quem manteve viva a ligação aos dois lados da família.
+0 @I17@ INDI
+1 NAME Lurdes /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 8 MAR 1967
+2 PLAC Covilhã, Portugal
+1 NOTE Tia paterna, irmã do pai Mário. Farmacêutica em Castelo Branco, casou com Joaquim Tavares. Organizada e afetuosa, guarda o álbum de fotografias da família.
+0 @I18@ INDI
+1 NAME Joaquim /Tavares/
+1 SEX M
+1 BIRT
+2 DATE 14 NOV 1964
+2 PLAC Castelo Branco, Portugal
+1 NOTE Marido de Lurdes. Professor de História em Castelo Branco, apaixonado pelo passado da Beira; foi quem começou a investigar a árvore dos Dinis.
+0 @I19@ INDI
+1 NAME Rui /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 2 JAN 1971
+2 PLAC Covilhã, Portugal
+1 NOTE Tio paterno, o irmão mais novo do pai. Emigrou para França, onde trabalha na construção civil. Casou com Célia e regressa à Covilhã todos os agostos.
+0 @I20@ INDI
+1 NAME Célia /Marques/
+1 SEX F
+1 BIRT
+2 DATE 19 MAY 1973
+2 PLAC Fundão, Portugal
+1 NOTE Mulher de Rui. Do Fundão, trabalha na restauração em França; cozinha a melhor tigelada da família.
+0 @I21@ INDI
+1 NAME Nelson /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 10 JUN 1962
+2 PLAC Covilhã, Portugal
+1 NOTE Primo direito do pai, filho do tio-avô Adelino. Ficou na Covilhã e transformou a retrosaria do pai numa loja de tecidos. Casou com Sandra.
+0 @I22@ INDI
+1 NAME Sandra /Pires/
+1 SEX F
+1 BIRT
+2 DATE 28 FEB 1965
+2 PLAC Covilhã, Portugal
+1 NOTE Mulher de Nelson, gere com ele a loja de tecidos da Covilhã.
+0 @I23@ INDI
+1 NAME Odete /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 21 OCT 1968
+2 PLAC Covilhã, Portugal
+1 NOTE Prima direita do pai, filha do tio-avô Adelino. Cabeleireira na Covilhã, casou com Carlos Nunes; conhece as alegrias e as tristezas de toda a freguesia.
+0 @I24@ INDI
+1 NAME Carlos /Nunes/
+1 SEX M
+1 BIRT
+2 DATE 7 MAR 1966
+2 PLAC Fundão, Portugal
+1 NOTE Marido de Odete. Eletricista do Fundão, sempre pronto a arranjar o que avaria em casa dos parentes.
+0 @I25@ INDI
+1 NAME Hélder /Bento/
+1 SEX M
+1 BIRT
+2 DATE 14 SEP 1969
+2 PLAC Guarda, Portugal
+1 NOTE Primo do pai, filho da tia-avó Palmira e de Osvaldo Bento. Médico de família na Guarda, calmo e atento. Casou com Marta.
+0 @I26@ INDI
+1 NAME Marta /Reis/
+1 SEX F
+1 BIRT
+2 DATE 26 JUL 1971
+2 PLAC Guarda, Portugal
+1 NOTE Mulher de Hélder, técnica de análises clínicas na Guarda.
+0 @I27@ INDI
+1 NAME Bruno /Cabral/
+1 SEX M
+1 BIRT
+2 DATE 5 DEC 1972
+2 PLAC Guarda, Portugal
+1 NOTE Tio materno, irmão da mãe Fátima. Músico e professor na Guarda, toca acordeão nas festas da Beira. Casou com Paula.
+0 @I28@ INDI
+1 NAME Paula /Freitas/
+1 SEX F
+1 BIRT
+2 DATE 16 APR 1974
+2 PLAC Covilhã, Portugal
+1 NOTE Mulher de Bruno, educadora de infância na Covilhã.
+0 @I29@ INDI
+1 NAME Diogo /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 23 FEB 1992
+2 PLAC Covilhã, Portugal
+1 NOTE Filho mais velho de Mário e Fátima, nasceu na Covilhã. Estudante de informática, é quem decidiu reunir e preservar a memória da família Dinis.
+0 @I30@ INDI
+1 NAME Inês /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 11 NOV 1995
+2 PLAC Covilhã, Portugal
+1 NOTE Filha de Mário e Fátima, estuda enfermagem como a mãe. Meiga e prática, é o braço direito da avó Guilhermina.
+0 @I31@ INDI
+1 NAME Simão /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 4 MAY 1999
+2 PLAC Covilhã, Portugal
+1 NOTE O mais novo dos filhos de Mário e Fátima, ainda no secundário. Apaixonado pela Serra da Estrela, sonha ser guia de natureza.
+0 @I32@ INDI
+1 NAME Carolina /Tavares/
+1 SEX F
+1 BIRT
+2 DATE 30 AUG 1996
+2 PLAC Castelo Branco, Portugal
+1 NOTE Prima direita, filha da tia Lurdes e de Joaquim. Estuda História, como o pai; ajuda-o a decifrar os documentos antigos dos Dinis.
+0 @I33@ INDI
+1 NAME Tiago /Dinis/
+1 SEX M
+1 BIRT
+2 DATE 12 APR 2001
+2 PLAC Covilhã, Portugal
+1 NOTE Primo direito, filho do tio Rui e de Célia. Nasceu em França e é bilingue; passa os verões na Covilhã com os primos.
+0 @I34@ INDI
+1 NAME Matilde /Dinis/
+1 SEX F
+1 BIRT
+2 DATE 16 SEP 1991
+2 PLAC Covilhã, Portugal
+1 NOTE Prima em 2.º grau, filha de Nelson e Sandra. Estuda design de moda e quer levar os tecidos da Covilhã a novos caminhos.
+0 @I35@ INDI
+1 NAME Duarte /Bento/
+1 SEX M
+1 BIRT
+2 DATE 29 JUL 1997
+2 PLAC Guarda, Portugal
+1 NOTE Primo em 2.º grau, filho de Hélder e Marta. Estudante de medicina na Guarda, sereno e determinado como o pai.
+0 @F1@ FAM
+1 HUSB @I1@
+1 WIFE @I2@
+1 CHIL @I7@
+1 CHIL @I9@
+1 CHIL @I11@
+1 MARR
+2 DATE 20 MAY 1934
+2 PLAC Covilhã, Portugal
+0 @F2@ FAM
+1 HUSB @I3@
+1 WIFE @I4@
+1 CHIL @I8@
+1 MARR
+2 DATE 12 SEP 1936
+2 PLAC Belmonte, Portugal
+0 @F3@ FAM
+1 HUSB @I5@
+1 WIFE @I6@
+1 CHIL @I13@
+1 MARR
+2 DATE 3 JUN 1935
+2 PLAC Guarda, Portugal
+0 @F4@ FAM
+1 HUSB @I7@
+1 WIFE @I8@
+1 CHIL @I15@
+1 CHIL @I17@
+1 CHIL @I19@
+1 MARR
+2 DATE 8 JUN 1962
+2 PLAC Covilhã, Portugal
+0 @F5@ FAM
+1 HUSB @I9@
+1 WIFE @I10@
+1 CHIL @I21@
+1 CHIL @I23@
+1 MARR
+2 DATE 5 OCT 1960
+2 PLAC Covilhã, Portugal
+0 @F6@ FAM
+1 HUSB @I12@
+1 WIFE @I11@
+1 CHIL @I25@
+1 MARR
+2 DATE 14 NOV 1967
+2 PLAC Covilhã, Portugal
+0 @F7@ FAM
+1 HUSB @I13@
+1 WIFE @I14@
+1 CHIL @I16@
+1 CHIL @I27@
+1 MARR
+2 DATE 3 FEB 1962
+2 PLAC Guarda, Portugal
+0 @F8@ FAM
+1 HUSB @I15@
+1 WIFE @I16@
+1 CHIL @I29@
+1 CHIL @I30@
+1 CHIL @I31@
+1 MARR
+2 DATE 22 SEP 1990
+2 PLAC Covilhã, Portugal
+0 @F9@ FAM
+1 HUSB @I18@
+1 WIFE @I17@
+1 CHIL @I32@
+1 MARR
+2 DATE 18 JUN 1994
+2 PLAC Castelo Branco, Portugal
+0 @F10@ FAM
+1 HUSB @I19@
+1 WIFE @I20@
+1 CHIL @I33@
+1 MARR
+2 DATE 5 SEP 1998
+2 PLAC Covilhã, Portugal
+0 @F11@ FAM
+1 HUSB @I21@
+1 WIFE @I22@
+1 CHIL @I34@
+1 MARR
+2 DATE 1 JUL 1989
+2 PLAC Covilhã, Portugal
+0 @F12@ FAM
+1 HUSB @I24@
+1 WIFE @I23@
+1 MARR
+2 DATE 23 SEP 1995
+2 PLAC Fundão, Portugal
+0 @F13@ FAM
+1 HUSB @I25@
+1 WIFE @I26@
+1 CHIL @I35@
+1 MARR
+2 DATE 10 AUG 1996
+2 PLAC Guarda, Portugal
+0 @F14@ FAM
+1 HUSB @I27@
+1 WIFE @I28@
+1 MARR
+2 DATE 6 NOV 1999
+2 PLAC Guarda, Portugal
+0 TRLR
