@@ -33,3 +33,9 @@ node_modules/
 
 # Backups locais dos dados (contêm dados pessoais — nunca versionar)
 backups/
+
+# Artefactos de ferramentas de IA / assistentes (não pertencem ao projeto)
+.claude/
+CLAUDE.md
+.cursor/
+.aider*

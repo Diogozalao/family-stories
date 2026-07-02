@@ -1,337 +1,225 @@
-# Sistema de Geração Automática de Histórias Familiares
+# Living Memory — Family Stories AI
 
-Fluxo Básico (Sempre que alteras ficheiros)
-git add .              # 1. Adiciona TODAS as alterações
-git commit -m "msg"    # 2. Cria um snapshot com descrição
-git push               # 3. Envia para o GitHub
+Sistema que transforma automaticamente um **arquivo familiar** (fotografias,
+documentos digitalizados e árvores genealógicas) num **produto narrativo
+multimédia**: linhas temporais, histórias escritas e **vídeos documentais
+narrados** — sem que o utilizador tenha de escrever textos ou descrever o
+conteúdo à mão.
 
-
-Ver o que mudou antes de adicionar:
-    git status             # Vê quais ficheiros foram alterados/adicionados
-    git diff               # Vê o conteúdo das alterações
-
-
-Adicionar apenas ficheiros específicos (em vez de git add .)
-    git add backend/app.py        # Apenas um ficheiro
-    git add backend/              # Toda uma pasta
-    git add *.py                  # Todos os ficheiros .py
-
-
-
-------------------------------------
-rm -f ~/family-stories/family_stories.db
-rm -f ~/family-stories/data/raw/photos/*
-
-
-fuser -k 8000/tcp
-cd ~/family-stories
-source venv/bin/activate
-uvicorn backend.main:app --reload --port 8000
-
-
-
-# Family Stories AI
-
-Sistema local de geração automática de histórias e vídeos documentais a partir do arquivo familiar (fotografias, documentos, árvore genealógica).
-
-**Projeto de tese** — Universidade da Beira Interior, 2026.
+> Projeto de tese — Universidade da Beira Interior, Departamento de Informática.
 
 ---
 
-## O que o sistema faz
+## 1. O que o sistema faz
 
-Pega em fotografias antigas + árvore genealógica (GEDCOM) + documentos digitalizados e produz, de forma completamente local (sem enviar dados para a nuvem):
+A partir de fotos + árvore genealógica (GEDCOM) + documentos, produz:
 
-1. **Factos estruturados** extraídos automaticamente das fotos (EXIF, OCR, análise visual).
-2. **Linha temporal** coerente da família, ordenada por data, ligada a pessoas reais.
-3. **Narrativas escritas** em português europeu, geradas por LLM com contexto familiar real (RAG + grafo genealógico).
-4. **Vídeos documentais** com as fotos, voz narrada, transições cinematográficas e legendas.
+1. **Factos estruturados** de cada foto — data e local (EXIF/GPS), texto de
+   documentos (OCR) e uma descrição do conteúdo visual (IA de visão).
+2. **Linha temporal** da família, ordenada por data e ligada a pessoas reais.
+3. **Narrativas escritas** em português europeu, geradas por IA com base nos
+   factos reais (nunca inventa pessoas nem relações).
+4. **Vídeos documentais** com as fotografias, voz narrada, transições
+   cinematográficas e legendas sincronizadas.
 
-Tudo fica na máquina do utilizador. Nada sai para servidores externos (exceto opcionalmente o Gemini como fallback do LLM).
-
----
-
-## Estado atual (abril 2026)
-
-### Módulos funcionais
-
-| Módulo | Estado | Descrição |
-|---|---|---|
-| **M1 — Ingestão Multimodal** | ✅ | Upload de fotos, extração EXIF, OCR (Tesseract), análise visual com Gemini Vision, parsing GEDCOM |
-| **M2 — Organização Temporal** | ✅ | Validação de datas, resolução de conflitos, construção de grafo familiar (NetworkX) |
-| **M3 — Geração Narrativa** | ✅ | LLM local (Llama 3.1 via Ollama), RAG com ChromaDB, 6 templates PT-PT, fallback para Gemini Flash |
-| **M4 — Geração Multimédia** | ✅ | Ken Burns com letterbox não-destrutivo, crossfades, TTS europeu (gTTS), exportação MP4 H.264 |
-
-### Infraestrutura (Fase A — concluída)
-
-- ✅ Autenticação JWT (bcrypt + python-jose), modelo single-owner
-- ✅ Rate limiting por IP (slowapi)
-- ✅ Validação de uploads (libmagic + magic bytes + limites de tamanho)
-- ✅ Logging estruturado (structlog, stdout + ficheiro rotativo)
-- ✅ Health checks profundos (`/healthz` sonda DB, Ollama, Gemini, Redis, ChromaDB, disco)
-- ✅ Fila assíncrona com Celery + Redis para tarefas longas
-- ✅ Endpoints de polling de estado (`/api/v1/tasks/{id}`)
-- ✅ Suite pytest (37 testes a passar — unit + integration)
-
-### Por fazer
-
-- ⏳ **Fase B — Frontend React**: UI completa (login, upload drag-and-drop, player de vídeo, lista de narrativas). Actualmente só existe o esqueleto em `frontend/src/`.
-- ⏳ Dockerização
-- ⏳ Métricas para a tese (tempos de geração, qualidade de narrativa, benchmark de templates)
+O sistema é uma **aplicação Web completa** que corre de forma idêntica em
+ambiente local e online, a **custo essencialmente nulo** (usa camadas
+gratuitas de serviços de IA).
 
 ---
 
-## Stack técnico
+## 2. O *pipeline* (como funciona por dentro)
 
-### Backend
-- **FastAPI** (async) + **SQLAlchemy** (aiosqlite)
-- **Celery** + **Redis** — fila de tarefas
-- **slowapi** — rate limiting
-- **structlog** — logs estruturados
-- **bcrypt** + **python-jose** — auth JWT
+O processamento organiza-se em quatro módulos sequenciais:
 
-### IA / ML
-- **Ollama** (Llama 3.1) — LLM local
-- **Gemini Flash** — fallback remoto opcional
-- **ChromaDB** — vector store para RAG
-- **sentence-transformers** — embeddings
-- **Tesseract** — OCR
-- **NetworkX** — grafo familiar
-
-### Multimédia
-- **MoviePy** + **FFmpeg** — composição de vídeo
-- **Pillow** — processamento de imagem (letterbox + Gaussian blur + Ken Burns)
-- **gTTS** — text-to-speech português europeu (`tld="pt"`)
-
-### Persistência
-- **SQLite** (`family_stories.db`) — metadados
-- **Sistema de ficheiros** (`data/`) — fotos, vídeos, áudio, grafo genealógico
-- **ChromaDB** (`data/processed/chroma_db/`) — embeddings RAG
-
----
-
-## Estrutura do projeto
-
-```
-family-stories/
-├── backend/
-│   ├── api/routes/          # auth, upload, timeline, narrative, genealogy,
-│   │                        # multimedia, tasks, health
-│   ├── core/                # config, database, security, auth, logging,
-│   │                        # rate_limit, upload_validator, celery_app
-│   ├── models/              # user, media, timeline, narrative, video, task
-│   ├── modules/
-│   │   ├── m1_ingestion/    # processor, exif, ocr, gedcom, gemini_analyzer
-│   │   ├── m2_temporal/     # date_resolver, family_graph, timeline_builder
-│   │   ├── m3_narrative/    # generator, llm_client, rag_system, templates
-│   │   └── m4_multimedia/   # processor, video_builder, tts_generator
-│   ├── schemas/             # Pydantic request/response models
-│   ├── tasks/               # Celery task definitions
-│   └── main.py              # FastAPI entry point
-├── frontend/                # React (ainda por construir — Fase B)
-├── data/
-│   ├── raw/                 # photos, gedcom, documents (input do utilizador)
-│   └── processed/           # videos, audio, chroma_db, family_graph.json
-├── tests/
-│   ├── unit/                # security, upload_validator, date_resolver,
-│   │                        # family_graph, templates, video_builder
-│   └── integration/         # auth_routes, health_route
-├── logs/                    # ficheiros de log rotativos
-├── requirements.txt
-├── pytest.ini
-└── README.md
-```
-
----
-
-## Como correr o projeto
-
-### Pré-requisitos (uma única vez)
-```bash
-sudo service redis-server start     # Redis
-ollama serve                        # Ollama (noutro terminal)
-ollama pull llama3.1                # Modelo LLM local
-```
-
-### Arranque (3 terminais)
-
-**Terminal 1 — Servidor FastAPI:**
-```bash
-cd ~/family-stories
-source venv/bin/activate
-uvicorn backend.main:app --reload --port 8000
-```
-
-**Terminal 2 — Worker Celery (só para `mode=background`):**
-```bash
-cd ~/family-stories
-source venv/bin/activate
-celery -A backend.core.celery_app:celery_app worker --loglevel=info --concurrency=1
-```
-
-**Terminal 3 — Interagir com a API:**
-```bash
-# Abre http://127.0.0.1:8000/docs no browser (Swagger UI)
-# Ou usa curl — ver "Fluxo típico" abaixo.
-```
-
----
-
-## Fluxo típico de utilização
-
-### 1. Criar o dono do arquivo (primeira vez)
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"diogo","password":"apalavrapassealonga"}'
-```
-
-### 2. Login para obter token JWT
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/auth/login \
-  -d "username=diogo&password=apalavrapassealonga"
-```
-
-### 3. Enviar fotografias
-```bash
-export TOKEN="cola-aqui-o-token"
-
-curl -X POST http://127.0.0.1:8000/api/v1/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@caminho/para/foto.jpg"
-```
-
-### 4. Importar árvore genealógica (GEDCOM)
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/genealogy/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@caminho/para/arvore.ged"
-```
-
-### 5. Indexar factos no RAG
-```bash
-curl -X POST http://127.0.0.1:8000/api/v1/narrative/index \
-  -H "Authorization: Bearer $TOKEN"
-```
-
-### 6. Gerar narrativa
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/narrative/generate?mode=sync" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Memórias do Avô","event_type":"default","query":"família","person_ids":[]}'
-```
-
-### 7. Gerar vídeo documental
-```bash
-curl -X POST "http://127.0.0.1:8000/api/v1/multimedia/generate/1?mode=sync" \
-  -H "Authorization: Bearer $TOKEN"
-# O MP4 fica em data/processed/videos/
-```
-
----
-
-## Endpoints principais
-
-| Método | Rota | Descrição |
-|---|---|---|
-| GET | `/` | Info geral + lista de módulos |
-| GET | `/health` | Liveness (200 se servidor está vivo) |
-| GET | `/healthz` | Deep health — sonda todas as dependências |
-| POST | `/api/v1/auth/register` | Criar dono do arquivo (1× apenas) |
-| POST | `/api/v1/auth/login` | Login → JWT |
-| GET | `/api/v1/auth/me` | Perfil do utilizador autenticado |
-| POST | `/api/v1/upload` | Upload fotografia |
-| POST | `/api/v1/upload/batch` | Upload múltiplo |
-| GET | `/api/v1/media` | Listar ficheiros enviados |
-| POST | `/api/v1/genealogy/upload` | Importar GEDCOM |
-| GET | `/api/v1/timeline` | Linha temporal da família |
-| GET | `/api/v1/narrative/templates` | 6 templates disponíveis |
-| POST | `/api/v1/narrative/index` | Indexar factos no RAG |
-| POST | `/api/v1/narrative/generate` | Gerar história (sync/background) |
-| GET | `/api/v1/narrative/stories` | Listar narrativas geradas |
-| POST | `/api/v1/multimedia/generate/{story_id}` | Gerar vídeo (sync/background) |
-| GET | `/api/v1/multimedia/videos` | Listar vídeos |
-| GET | `/api/v1/multimedia/video/{filename}` | Descarregar MP4 |
-| GET | `/api/v1/tasks` | Listar tarefas Celery |
-| GET | `/api/v1/tasks/{id}` | Estado de uma tarefa |
-
-Documentação interativa completa: **http://127.0.0.1:8000/docs**
-
----
-
-## Testes
-
-```bash
-cd ~/family-stories
-source venv/bin/activate
-pytest -W ignore::DeprecationWarning          # todos os testes
-pytest tests/unit -v                          # só unit tests
-pytest tests/integration -v                   # só integration
-pytest --cov=backend --cov-report=term-missing  # com cobertura
-```
-
-Resultado atual: **37/37 testes a passar**.
-
----
-
-## Rate limits (por IP)
-
-| Endpoint | Limite |
+| Módulo | Faz |
 |---|---|
-| Por defeito | 100/minuto |
-| Upload | 20/minuto |
-| Geração (narrativa + vídeo) | 5/minuto |
-| Login | 10/minuto |
-| Register | 3/minuto |
+| **M1 — Ingestão** | Lê os ficheiros; extrai EXIF/GPS, faz OCR (Tesseract) e descreve a foto com o **Gemini Vision**; importa árvores **GEDCOM**. |
+| **M2 — Organização temporal** | Resolve datas incompletas e constrói o **grafo de parentesco** (quem é quem). |
+| **M3 — Geração narrativa** | Escreve a história com um **LLM** (Groq → Ollama → Gemini), ancorada nos factos via **RAG** + grafo, e segmenta-a em **cenas** ligadas a fotos. |
+| **M4 — Geração multimédia** | Converte a narrativa num **vídeo MP4** com enquadramento cinematográfico, **voz** e **legendas**. |
+
+**Estratégia de IA (custo nulo):** texto pelo **Groq** (Llama 3.3 70B, na
+nuvem) → **Ollama** (local, offline) → **Gemini** como alternativas; visão
+sempre pelo **Gemini**. Assim, texto e visão repartem-se por serviços
+gratuitos distintos.
 
 ---
 
-## Comandos úteis
+## 3. Funcionalidades e opções
 
-### Git
+- **Biblioteca** de fotografias com *drag-and-drop* e re-análise sob procura.
+- **Família:** importar GEDCOM, árvore interativa (pesquisar, destacar
+  linhagem, exportar imagem), editor manual e "criação rápida de árvore".
+- **Linha Temporal** automática.
+- **Gerar história**, com escolha de:
+  - **Tema/tom** (6 temas + personalizado);
+  - **Idioma** (Português europeu / Inglês);
+  - **Comprimento**: *curta* (~1 min), *média* (~2-3), *longa* (~4-5) ou
+    *épica* (~6-8);
+  - **Fotografias** específicas (ou automáticas).
+- **Leitor de histórias:** editar, **regenerar com *feedback***, favoritar,
+  pesquisar e **exportar para PDF**.
+- **Vídeo:** escolher a **voz** (masculina/feminina), ligar/desligar
+  **legendas** e o seu tamanho.
+- **Projetos:** organizar fotos/histórias/vídeos por coleção; um projeto pode
+  **reutilizar fotos já analisadas** da biblioteca (sem re-analisar).
+- **Idioma da interface** comutável (PT/EN) e tema claro/escuro.
+
+---
+
+## 4. Pré-requisitos
+
+- **Python 3.12+** e **Node.js 18+**
+- **FFmpeg** (montagem de vídeo) e **Tesseract** (OCR) instalados no sistema
+- Opcional: **Redis** (fila Celery — o sistema funciona sem ele, com um
+  executor interno) e **Ollama** (LLM local)
+- Contas gratuitas: **Supabase** (auth + base de dados + *storage*),
+  **Google Gemini** e **Groq** (chaves de API)
+
+---
+
+## 5. Instalação e configuração
+
 ```bash
-git status                 # ver o que mudou
-git add <ficheiro>         # preparar alteração
-git commit -m "mensagem"   # snapshot
-git push                   # enviar para GitHub
+# 1. Clonar e entrar
+git clone <repo> && cd family-stories
+
+# 2. Backend (Python)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Frontend
+cd frontend && npm install && cd ..
 ```
 
-### Manutenção
-```bash
-fuser -k 8000/tcp                   # matar processo na porta 8000
-rm -f family_stories.db             # limpar base de dados
-rm -rf data/processed/*             # limpar outputs gerados
-tail -f logs/app.log                # seguir logs em tempo real
+Cria um ficheiro **`.env`** na raiz com as chaves (nunca as escrevas no
+código nem as partilhes):
+
+```dotenv
+# --- IA (texto + visão) ---
+GEMINI_API_KEY=...            # aistudio.google.com  (visão + fallback de texto)
+GROQ_API_KEY=gsk_...          # console.groq.com     (texto principal, grátis)
+
+# --- Supabase (auth, base de dados, storage) ---
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_DB_URL=postgresql://...:6543/postgres   # pooler (porta 6543)
+
+# --- Opcional ---
+OLLAMA_BASE_URL=http://localhost:11434   # LLM local (se tiveres Ollama)
+SECRET_KEY=<uma-string-aleatória-longa>
 ```
 
-### Verificar dependências
+**Base de dados:** corre o *schema* SQL uma única vez no Supabase
+(SQL Editor) — os ficheiros estão em `backend/sql/` (por ordem: `0001`,
+`0002`, …). **Nunca voltes a correr o `0001_initial.sql` numa BD com
+dados** — ele apaga tudo (já vem com os `DROP` comentados por segurança).
+
+---
+
+## 6. Como executar
+
+**Forma simples (tudo de uma vez):**
+
 ```bash
-redis-cli ping                       # Redis vivo?
-curl http://localhost:11434/api/tags # Ollama vivo?
-curl http://127.0.0.1:8000/healthz   # tudo vivo?
+./start.sh
+```
+
+Arranca o Redis (se existir), o **backend** (FastAPI em `:8000`) e o
+**frontend** (Vite em `:5173`), espera que respondam e abre o *browser* em
+`http://localhost:5173`. `Ctrl+C` termina tudo.
+
+**Forma manual (terminais separados):**
+
+```bash
+# Backend
+source venv/bin/activate
+uvicorn backend.main:app --reload --port 8000
+
+# Frontend
+cd frontend && npm run dev
+```
+
+Saúde do sistema: `http://localhost:8000/healthz`.
+
+---
+
+## 7. Como usar — passo a passo
+
+1. **Registar / entrar** (a autenticação é gerida pelo Supabase).
+2. **Biblioteca → Carregar** as fotografias (arrasta ou escolhe). O sistema
+   analisa-as em segundo plano (aparece "a analisar"); quando termina, cada
+   foto tem descrição, data e local.
+3. **Família → Importar GEDCOM** (opcional) para trazer a árvore genealógica.
+   A narrativa fica muito mais rica com as relações e as notas das pessoas.
+4. **Gerar** → escolhe o **tema**, o **tom**, o **idioma**, o **comprimento**
+   e (opcional) as **fotografias**. Carrega em gerar.
+5. **Histórias** → lê, edita ou **regenera com feedback** ("mais curta",
+   "foca-te no avô João", etc.).
+
+### Como gerar um vídeo
+
+1. Cria (ou abre) uma **história** no leitor.
+2. Carrega em **"Gerar vídeo"**.
+3. Antes de gerar, no assistente escolhes a **voz** (masculina/feminina) e se
+   queres **legendas** (e o tamanho).
+4. O sistema sintetiza a narração, sincroniza cada fotografia com a parte da
+   narração que lhe corresponde (as fotos **alternam** quando a narração é
+   longa e há poucas fotos), aplica transições e produz um **MP4**.
+5. Vê o resultado em **Vídeos**, com *player* e botão de descarregar. As
+   legendas são uma faixa comutável no leitor e ficam embutidas no ficheiro
+   descarregado.
+
+> Nota: o *render* de vídeo é feito **localmente** (o plano gratuito da nuvem
+> não tem memória para 720p); o ficheiro final é depois carregado para o
+> *storage* e reproduzido a partir de lá.
+
+---
+
+## 8. *Deploy* online (opcional)
+
+- **Backend:** Render (Docker) — `git push` faz o *deploy* automático.
+- **Frontend:** Vercel — `git push` reconstrói.
+- **Supabase:** auth, base de dados e *storage*.
+- **Keep-alive:** aponta um *cron* (ex.: cron-job.org) ao endpoint
+  `…/healthz` a cada ~10 min — mantém o backend acordado **e** a base de
+  dados ativa (evita a pausa do plano gratuito).
+
+---
+
+## 9. Testes e cópia de segurança
+
+```bash
+# Testes unitários (56 a passar)
+venv/bin/python -m pytest tests/unit -q
+
+# Backup de todos os dados para JSON (o free tier não tem restauro)
+venv/bin/python -m backend.scripts.backup_data   # cria backups/backup_*.json
 ```
 
 ---
 
-## Troubleshooting
+## 10. Stack técnico
 
-| Sintoma | Causa provável | Solução |
-|---|---|---|
-| `401 Unauthorized` | Token expirado (7 dias) ou em falta | Fazer `/auth/login` de novo |
-| `409 Conflict` no register | Dono já existe | Usar `/auth/login` |
-| `429 Too Many Requests` | Rate limit atingido | Esperar 1 minuto |
-| Task fica `pending` para sempre | Worker Celery não está a correr | Arrancar Terminal 2 |
-| `/healthz` mostra ollama: error | Ollama não está a correr | `ollama serve` |
-| `/healthz` mostra redis: error | Redis não está a correr | `sudo service redis-server start` |
-| Vídeo demora muito | Normal em CPU — 1 a 5 min | Ter paciência ou usar `mode=background` |
-| Narrativa em português do Brasil | Templates corretos, LLM derivou | Repetir geração (PT_PT_RULES está em todos os templates) |
+- **Backend:** FastAPI (assíncrono), SQLAlchemy, asyncpg, Celery/Redis
+  (opcional), structlog, slowapi.
+- **Frontend:** React + TypeScript, Vite, TanStack Query, Zustand, React Flow.
+- **IA:** Groq (Llama 3.3 70B), Ollama (local), Google Gemini (texto + visão),
+  ChromaDB (RAG), edge-tts (voz).
+- **Multimédia:** MoviePy + FFmpeg, exifread, Tesseract (OCR).
+- **Nuvem:** Render (backend), Vercel (frontend), Supabase (auth/DB/storage).
 
 ---
 
-## Notas de desenvolvimento
+## 11. Estrutura do projeto
 
-- O `venv/` pesa ~5 GB por causa das dependências CUDA do PyTorch arrastadas pelo `sentence-transformers`. Pode-se reinstalar PyTorch em modo CPU-only para poupar ~4 GB sem perda de funcionalidade.
-- A base de dados (`family_stories.db`) é SQLite e persiste tudo entre sessões.
-- O grafo genealógico é serializado em `data/processed/family_graph.json`.
-- Os logs persistem em `logs/app.log` com rotação automática (10 MB × 5 ficheiros).
+```
+backend/        API FastAPI + módulos M1–M4 + modelos + scripts + sql/
+frontend/       Aplicação React/TypeScript
+tests/          Testes unitários (pytest)
+Projetos/       Relatório de tese (LaTeX)
+start.sh        Arranque de tudo num comando
+```
